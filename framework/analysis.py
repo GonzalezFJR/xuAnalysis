@@ -15,6 +15,10 @@ def loopAnal(listOfInputs):
 
 class analysis:
 
+  #############################################################################################
+  #############################################################################################
+  ### Setting funcitons
+
   def SetFiles(self, path, fname = ''):
     ''' Search and store the files '''
     if fname == '':
@@ -39,6 +43,10 @@ class analysis:
     ''' Sets the name of the folder where the job outputs will be stored '''
     if len(folder) > 0 and not folder[-1] == '/': folder += '/'
     self.jobFolder = folder
+
+  def AddToOutputs(self, obj):
+    ''' Add an object to the output list '''
+    self.outputList.append(obj)
 
   def SetXsec(self, _xsec):
     self.xsec = _xsec
@@ -104,11 +112,30 @@ class analysis:
     h = TH1F()
     if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
     else:                     h = TH1F(name, title, nbins, b0, bN)
-    self.outputList.append(h)
+    self.AddToOutputs(h)
     return h
+
+  def CreateTH2F(self, name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY):
+    ''' Constructor for TH2F '''
+    h = TH1F(name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY)
+    self.AddToOutputs(h)
+    return h
+
+  def CreateTH2F(self, name, title, nbinsX, binsX, nbinsY, binsY):
+    ''' Constructor for TH2F '''
+    h = TH1F(name, title, nbinsX, binsX, nbinsY, binsY)
+    self.AddToOutputs(h)
+    return h
+
+  def CreateTTree(self, name, title):
+    ''' Constructor for a TTree '''
+    t = TTree(name, title)
+    self.AddToOutputs(t)
+    return t
 
   #############################################################################################
   #############################################################################################
+  ### Create and send jobs
 
   def divideFiles(self): 
     ''' Get a list with initial and final event numbers '''
@@ -156,16 +183,8 @@ class analysis:
 
   #############################################################################################
   #############################################################################################
+  ### Functions to run the analysis
 
-  def init(self):
-    ''' [Override this method!] Executes once, before looping... '''
-    pass
-
-  def createHistos(self):
-    ''' [Override this method] Create the histos to be filled. 
-        You could use the inif function to create the histos '''
-    pass
- 
   def run(self, first = -1, last = -1, nSlots = -1):
     ''' Run the analysis, taking into account the number of slots '''
     if nSlots > 1: print ' Number of slots: ', nSlots
@@ -214,10 +233,6 @@ class analysis:
     pool.join()
     return
 
-  def insideLoop(self, t):
-    ''' [Override this method!] Implement your analysis here. It's executed one per event. '''
-    pass
-
   def saveOutput(self):
     ''' Creates the out file and save the histos '''
     out = self.outpath + self.outname + '.root'
@@ -229,12 +244,31 @@ class analysis:
     fout.Close()
     return
 
+  #############################################################################################
+  #############################################################################################
+  ### Functions to be overriden
+
+  def init(self):
+    ''' [Override this method!] Executes once, before looping... '''
+    pass
+
+  def createHistos(self):
+    ''' [Override this method] Create the histos to be filled. 
+        You could use the inif function to create the histos '''
+    pass
+
+  def insideLoop(self, t):
+    ''' [Override this method!] Implement your analysis here. It's executed one per event. '''
+    pass
+ 
   def log(self):
     ''' [Override this method!] Prints a logfile at the end of the loop '''
     pass
 
   #############################################################################################
   #############################################################################################
+  ### Init method
+
   def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1):
     # Default values:
     self.inpath = fname
@@ -242,6 +276,7 @@ class analysis:
     self.outpath = './temp/'
     self.jobFolder = './jobs/'
     self.outname = ''
+    self.loadedSF = {}
     self.files = []
     self.outputList = []
     self.nEvents = -1

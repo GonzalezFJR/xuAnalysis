@@ -1,0 +1,14 @@
+# Exclude compiled files
+*.so
+*.d
+*.pcm
+*.pyc
+
+# Exclude files by emacs
+*~
+.~*
+
+# Exclude files in temp and jobs directories:
+temp/*
+jobs/*
+

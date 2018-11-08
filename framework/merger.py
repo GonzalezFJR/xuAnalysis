@@ -1,7 +1,6 @@
 import os, sys, argparse
 from fileReader import guessPathAndName, findValidRootfiles, getDicFiles
 
-
 def manageMergedOutput(folder, sampleName, force = False):
   ''' Checks if out dir exits, manages the 'force'... '''
   if not os.path.isdir(folder):
@@ -16,7 +15,7 @@ def manageMergedOutput(folder, sampleName, force = False):
     else:
       print 'Moving to .bck...'
       os.system('mv ' + folder + sampleName + '.root ' + folder + sampleName + '.root.bkg')
-      return True
+      return True 
   return True
 
 def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False, pretend = False, force = False, rm = False):
@@ -32,10 +31,14 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
     if outputDir == '': outputDir = inputdir
     if path == '': listOfFiles = [inputdir + x for x in listOfFiles]
   if not manageMergedOutput(outputDir, name, force): return
-  print ' >> Adding ' + name + ' (%i files)'%len(listOfFiles)
   out = outputDir + name + '.root'
   inf = ''; 
-  for x in listOfFiles: inf += x + ' ' 
+  nfiles = 0
+  for x in listOfFiles: 
+    if not x == out: 
+      nfiles += 1
+      inf += x + ' ' 
+  print ' >> Adding ' + name + ' (%i files)'%nfiles
   command = 'hadd ' + out + ' ' + inf
   if not pretend:
     if verbose: print 'Executing command: ' + command

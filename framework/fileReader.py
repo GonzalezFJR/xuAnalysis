@@ -3,6 +3,13 @@ from ROOT import TFile, TTree
 
 defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l'
 
+def isdigit(a):
+  ''' Redefinition of str.isdigit() that takes into account negative numbers '''
+  if a.isdigit(): return True
+  m = a[0]; n = a[1:]
+  if m == '-' and n.isdigit(): return True
+  return False
+
 def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verbose = False, FullPaths = False):
   ''' Find rootfiles in path with a given name '''
   files = []
@@ -13,14 +20,14 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
     if not '_' in f: continue
     n = f[:-5].split('_')[-1]
     s = f[:-5].split('_')[:-1]
-    if not n.isdigit(): s.append(n)
+    if not isdigit(n): s.append(n)
     fname = ''
     for e in s: fname+=e+'_'
     if fname[-1] == '_': fname = fname[:-1]
     if getOnlyNumberedFiles and not n.isdigit(): continue
     if sampleName != '' and fname != sampleName and (fname+'_'+n) != sampleName: continue
-    files.append(f)
     if verbose: print ' >> Adding file: ', f
+    files.append(f)
   if FullPaths: files = [path + x for x in files]
   if len(files) == 0: print '[ERROR]: Not files "' + sampleName + '" found in: ' + path
   return files
@@ -28,26 +35,6 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
 def GetFiles(path, name, verbose = False):
   ''' Get all rootfiles in path for a given process name'''
   return findValidRootfiles(path, name, False, verbose, FullPaths = True)
-  '''
-  outlist = []
-  if not path[-1] == '/': path += '/'
-  for f in os.listdir(path):
-    if not f[-5:] == '.root': continue
-    f = f[:-5]
-    if f == name: 
-      newfile = path+f+'.root'
-      outlist.append(newfile)
-      if verbose: print ' >> Found file: ' + newfile
-    elif f.startswith(name+'_'):
-      n = f[len(name)+1:]
-      if n.isdigit():
-        newfile = path+f+'.root'
-        outlist.append(newfile)
-        if verbose: print ' >> Found file: ' + newfile
-  if len(outlist) == 0: print '[ERROR]: Not files "' + name + '" found in: ' + path
-  #else: print '[INFO]: Found ' + str(len(outlist)) + ' files'
-  return outlist
-  '''
 
 def GetNGenEvents(fname):
   ''' Returns number of events from the 'Count' histograms '''
@@ -107,7 +94,7 @@ def guessPathAndName(p):
   if '_' in p: 
     n = p.split('_')[-1]
     s = p.split('_')[:-1]
-    if not n.isdigit(): 
+    if not isdigit(n): 
       s.append(n)
       n = '-1'
     p = ''
@@ -131,7 +118,7 @@ def groupFilesInDic(listOfFiles, name, i=-1, verbose = False):
       path, nam, n = guessPathAndName(e)  
       groupFilesInDic(listOfFiles, nam, n)
     return
-  fname = name + '_' + str(i) + '.root'
+  fname = name + '_' + str(i) + '.root' if str(i).isdigit() else name + '.root'
   if name in listOfFiles: listOfFiles[name].append(fname)
   else: 
     newList = [fname]

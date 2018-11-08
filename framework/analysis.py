@@ -1,9 +1,11 @@
 from ROOT import *
+from ROOT.TMath import Sqrt as sqrt
 from fileReader import *
 from jobManager import *
 from multiprocessing import Pool
 from array import array
 from copy import deepcopy
+from functions import *
 
 def loopAnal(listOfInputs): 
   ''' External function to run de loop... needed for the multiprocessing ''' 
@@ -14,6 +16,78 @@ def loopAnal(listOfInputs):
   analcopy.loop(i0, iN)
 
 class analysis:
+
+  #############################################################################################
+  #############################################################################################
+  ### Getting inputs
+
+  def AddInput(self, name, Object):
+    ''' Add an input to the dictionaty '''
+    self.inputs[name] = Object
+
+  def LoadHisto(self, name, fname, hname):
+    ''' Open file "fname" and gets the histo "hname" '''
+    print ' >> Getting histogram "' + hname + '" in file "' + fname +'"'
+    if not os.path.isfile(fname):
+      print 'ERROR: file not found'
+      return
+    f = TFile.Open(fname)
+    h = f.Get(hname)
+    h.SetDirectory(0)
+    self.AddInput(name, h)
+
+  def GetSF(self, name, var1, var2 = ''):
+    ''' Get SF from an input hitogram '''
+    nx = self.inputs[name].GetNbinsX()
+    maxx   = self.inputs[name].GetXaxis().GetBinUpEdge(nx)
+    maxxm1 = self.inputs[name].GetXaxis().GetBinUpEdge(nx-1)
+    if var1 > maxx: var1 = (maxx+maxxm1)/2
+    if var2 != '':
+      ny     = self.inputs[name].GetNbinsY()
+      maxy   = self.inputs[name].GetYaxis().GetBinUpEdge(ny)
+      maxym1 = self.inputs[name].GetYaxis().GetBinUpEdge(ny-1)
+      if var2 > maxy: var2 = (maxy+maxym1)/2
+    ibin = self.inputs[name].FindBin(var1) if var2 == '' else self.inputs[name].FindBin(var1, var2, 1)
+    return self.inputs[name].GetBinContent(ibin)
+
+  def GetSFerr(self, name, var1, var2 = ''):
+    ''' Get SF error from an input hitogram '''
+    nx = self.inputs[name].GetNbinsX()
+    maxx   = self.inputs[name].GetXaxis().GetBinUpEdge(nx)
+    maxxm1 = self.inputs[name].GetXaxis().GetBinUpEdge(nx-1)
+    if var1 > maxx: var1 = (maxx+maxxm1)/2
+    if var2 != '':
+      ny     = self.inputs[name].GetNbinsY()
+      maxy   = self.inputs[name].GetYaxis().GetBinUpEdge(ny)
+      maxym1 = self.inputs[name].GetYaxis().GetBinUpEdge(ny-1)
+      if var2 > maxy: var2 = (maxy+maxym1)/2
+    ibin = self.inputs[name].FindBin(var1) if var2 == '' else self.inputs[name].FindBin(var1, var2, 1)
+    return self.inputs[name].GetBinError(ibin)
+
+  def GetSFandErr(self, name, var1, var2 = ''):
+    ''' Get SF and SF error from an input hitogram '''
+    if ',' in name: return self.GetSFandErr([x.replace(' ', '') for x in name.split(',')], var1, var2)
+    if isinstance(name, list):
+      s = 1; e = 0
+      for n in name:
+        sf, err = self.GetSFandErr(n, var1, var2)
+        s *= sf; e += e*e
+      return s, sqrt(e)
+    nx = self.inputs[name].GetNbinsX()
+    maxx   = self.inputs[name].GetXaxis().GetBinUpEdge(nx)
+    maxxm1 = self.inputs[name].GetXaxis().GetBinUpEdge(nx-1)
+    if var1 > maxx: var1 = (maxx+maxxm1)/2
+    if var2 != '':
+      ny     = self.inputs[name].GetNbinsY()
+      maxy   = self.inputs[name].GetYaxis().GetBinUpEdge(ny)
+      maxym1 = self.inputs[name].GetYaxis().GetBinUpEdge(ny-1)
+      if var2 > maxy: var2 = (maxy+maxym1)/2
+    ibin = self.inputs[name].FindBin(var1) if var2 == '' else self.inputs[name].FindBin(var1, var2, 1)
+    sf    = self.inputs[name].GetBinContent(ibin)
+    sferr = self.inputs[name].GetBinError(ibin)
+    return sf, sferr
+
+
 
   #############################################################################################
   #############################################################################################
@@ -28,6 +102,10 @@ class analysis:
       else: print '[ERROR] Wrong input'
     else:
       self.files = GetFiles(path, fname, self.verbose >= 2)
+    if len(self.files) == 0: exit()
+    ### Set sample name
+    path, sample, n = guessPathAndName(self.files[0])
+    self.sampleName = sample
 
   def SetOutDir(self, _outpath):
     ''' Sets the output directory '''
@@ -44,9 +122,9 @@ class analysis:
     if len(folder) > 0 and not folder[-1] == '/': folder += '/'
     self.jobFolder = folder
 
-  def AddToOutputs(self, obj):
+  def AddToOutputs(self, name, a):
     ''' Add an object to the output list '''
-    self.outputList.append(obj)
+    self.obj[name] = a
 
   def SetXsec(self, _xsec):
     self.xsec = _xsec
@@ -112,25 +190,25 @@ class analysis:
     h = TH1F()
     if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
     else:                     h = TH1F(name, title, nbins, b0, bN)
-    self.AddToOutputs(h)
+    self.AddToOutputs(name,h)
     return h
 
   def CreateTH2F(self, name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY):
     ''' Constructor for TH2F '''
     h = TH1F(name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY)
-    self.AddToOutputs(h)
+    self.AddToOutputs(name,h)
     return h
 
   def CreateTH2F(self, name, title, nbinsX, binsX, nbinsY, binsY):
     ''' Constructor for TH2F '''
     h = TH1F(name, title, nbinsX, binsX, nbinsY, binsY)
-    self.AddToOutputs(h)
+    self.AddToOutputs(name,h)
     return h
 
   def CreateTTree(self, name, title):
     ''' Constructor for a TTree '''
     t = TTree(name, title)
-    self.AddToOutputs(t)
+    self.AddToOutputs(name,t)
     return t
 
   #############################################################################################
@@ -163,7 +241,7 @@ class analysis:
     pycom =  'python -c \''
     pycom += 'from ' + modulname + ' import *; '
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
-    pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = ' + str(eventRange) + ', '
+    pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
     pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ')\''
     return t + pycom
 
@@ -212,7 +290,8 @@ class analysis:
       self.printprocess(iEv)
       tchain.GetEntry(iEv)
       self.hRunEvents.Fill(1)
-      self.weight = self.xsec*tchain.genWeight/self.nSumOfWeights
+      if not self.isData: self.EventWeight = self.xsec*tchain.genWeight/self.nSumOfWeights
+      else: self.EventWeight = 1
 
       ### Start the analysis here!
       self.insideLoop(tchain)
@@ -240,7 +319,7 @@ class analysis:
     if self.verbose >= 1: print ' >> Saving output in: ' + out
     self.out = out
     fout = TFile.Open(out, "recreate")
-    for element in self.outputList: element.Write()
+    for element in self.obj: self.obj[element].Write()
     fout.Close()
     return
 
@@ -254,7 +333,7 @@ class analysis:
 
   def createHistos(self):
     ''' [Override this method] Create the histos to be filled. 
-        You could use the inif function to create the histos '''
+        You could use the init function to create the histos '''
     pass
 
   def insideLoop(self, t):
@@ -278,7 +357,7 @@ class analysis:
     self.outname = ''
     self.loadedSF = {}
     self.files = []
-    self.outputList = []
+    self.obj = {}
     self.nEvents = -1
     self.nGenEvents = -1
     self.nSumOfWeights = -1
@@ -294,6 +373,7 @@ class analysis:
     self.treeName = 'Events'
     self.SetVerbose(verbose)
     self.fileName = fileName
+    self.inputs = {}
     if fileName != '': self.SetFiles(fname, fileName)
     else:              self.SetFiles(fname)
     self.SetXsec(xsec)

@@ -280,15 +280,13 @@ class analysis:
     ''' Loop over the events and fill the histograms '''
     self.manageOutput()
     self.createHistos()
+    self.tchain = TChain(self.treeName,self.treeName)
+    for f in self.files: self.tchain.Add(f)
     self.init()
-    _hGenEvents = self.CreateTH1F("nGenEvents", "", 1, 0, 2)
-    _hXsec      = self.CreateTH1F("xsec",       "", 1, 0, 2)
-    _hGenEvents.SetBinContent(self,self.nGenEvents)
-    _hXsec.SetBinContent(self,self.xsec)
-    self.obj.append(_hGenEvents)
-    self.obj.append(_hXsec)
-    tchain = TChain(self.treeName,self.treeName)
-    for f in self.files: tchain.Add(f)
+    self.CreateTH1F("nGenEvents", "", 1, 0, 2)
+    self.CreateTH1F("hxsec",       "", 1, 0, 2)
+    self.obj['nGenEvents'].SetBinContent(1,self.nGenEvents)
+    self.obj['hxsec'].SetBinContent(1,self.xsec)
     if isinstance(ev0, list): ev0, evN = ev0
     if ev0 >= 0: self.firstEvent = ev0
     if evN >  0: self.nRunEvents = evN - ev0
@@ -299,13 +297,13 @@ class analysis:
       print '[INFO] Created %i outputs'%len(self.obj)
     for iEv in range(first, last):
       self.printprocess(iEv)
-      tchain.GetEntry(iEv)
+      self.tchain.GetEntry(iEv)
       self.hRunEvents.Fill(1)
-      if not self.isData: self.EventWeight = self.xsec*tchain.genWeight/self.nSumOfWeights
+      if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
       else: self.EventWeight = 1
 
       ### Start the analysis here!
-      self.insideLoop(tchain)
+      self.insideLoop(self.tchain)
 
     self.saveOutput()
     return

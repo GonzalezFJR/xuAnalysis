@@ -1,5 +1,5 @@
 import os, sys, argparse
-from ROOT import TFile, TTree
+from ROOT import TFile, TTree, TH1F
 
 defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l'
 
@@ -151,8 +151,8 @@ def GetAllInfoFromFile(fname):
     hs = f.Get('SumWeights')
     hc = f.Get('Count')
     nEvents = t.GetEntries()
-    nGenEvents = hc.GetBinContent(1)
-    nSumOfWeights = hs.GetBinContent(1)
+    nGenEvents = hc.GetBinContent(1) if isinstance(hc,TH1F) else 1
+    nSumOfWeights = hs.GetBinContent(1) if isinstance(hs,TH1F) else 1
     isData = not hasattr(t,'genWeight')
     return [nEvents, nGenEvents, nSumOfWeights, isData]
   else: print '[ERROR] [GetAllInfoFromFile]: wrong input' 

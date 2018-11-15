@@ -12,6 +12,7 @@ def loopAnal(listOfInputs):
   anal, i0, iN, k = listOfInputs
   analcopy = deepcopy(anal) 
   analcopy.SetIndex(k)
+  analcopy.SetVerbose(0)
   analcopy.SetNSlots(1)
   analcopy.loop(i0, iN)
 
@@ -71,7 +72,7 @@ class analysis:
       s = 1; e = 0
       for n in name:
         sf, err = self.GetSFandErr(n, var1, var2)
-        s *= sf; e += e*e
+        s *= sf; e += err*err
       return s, sqrt(e)
     nx = self.inputs[name].GetNbinsX()
     maxx   = self.inputs[name].GetXaxis().GetBinUpEdge(nx)
@@ -188,6 +189,7 @@ class analysis:
   def CreateTH1F(self, name, title, nbins, b0, bN = -999):
     ''' Constructor for TH1F '''
     h = TH1F()
+    h.Sumw2()
     if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
     else:                     h = TH1F(name, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
@@ -265,9 +267,9 @@ class analysis:
 
   def run(self, first = -1, last = -1, nSlots = -1):
     ''' Run the analysis, taking into account the number of slots '''
-    if nSlots > 1: print ' Number of slots: ', nSlots
-    else: print ' Secuential mode!'
-    print ' Cross section: ', self.xsec
+    if nSlots > 1: print '[INFO] Number of slots: ', nSlots
+    else: print '[INFO] Secuential mode!'
+    print '[INFO] Cross section: ', self.xsec
     if self.verbose >= 1: GetProcessInfo(self.files)
     if nSlots != -1: self.SetNSlots(nSlots)
     if self.nSlots == 1: self.loop(first, last)
@@ -279,6 +281,12 @@ class analysis:
     self.manageOutput()
     self.createHistos()
     self.init()
+    _hGenEvents = self.CreateTH1F("nGenEvents", "", 1, 0, 2)
+    _hXsec      = self.CreateTH1F("xsec",       "", 1, 0, 2)
+    _hGenEvents.SetBinContent(self,self.nGenEvents)
+    _hXsec.SetBinContent(self,self.xsec)
+    self.obj.append(_hGenEvents)
+    self.obj.append(_hXsec)
     tchain = TChain(self.treeName,self.treeName)
     for f in self.files: tchain.Add(f)
     if isinstance(ev0, list): ev0, evN = ev0
@@ -286,6 +294,9 @@ class analysis:
     if evN >  0: self.nRunEvents = evN - ev0
     first = self.firstEvent
     last  = self.firstEvent + self.nRunEvents
+    if self.verbose >= 1: 
+      print '[INFO] Loaded %i inputs'%len(self.inputs)
+      print '[INFO] Created %i outputs'%len(self.obj)
     for iEv in range(first, last):
       self.printprocess(iEv)
       tchain.GetEntry(iEv)
@@ -355,7 +366,6 @@ class analysis:
     self.outpath = './temp/'
     self.jobFolder = './jobs/'
     self.outname = ''
-    self.loadedSF = {}
     self.files = []
     self.obj = {}
     self.nEvents = -1
@@ -387,4 +397,5 @@ class analysis:
       self.nRunEvents = nf-n0
     if run: self.run(self.firstEvent, self.firstEvent+self.nRunEvents)
     elif sendJobs: self.sendJobs()
+    
 

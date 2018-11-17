@@ -60,6 +60,21 @@ def GetSumWeights(fname):
     return h.GetBinContent(1)
   else: print '[ERROR] [GetSumWeights]: wrong input' 
 
+def GetHistoFromSetOfFiles(fname, histoname):
+  ''' Returns the sum of a histo with a name in a list of files '''
+  if isinstance(fname, list):
+    h = GetHistoFromSetOfFiles(fname[0], histoname)
+    for f in fname[1:]: h.Add(GetHistoFromSetOfFiles(f))
+    return h
+  elif isinstance(fname, str):
+    f = TFile.Open(fname)
+    if not hasattr(f, histoname):
+      print '[ERROR] [GetHistoFromSetOfFiles] Histogram \'%s\' does not exist in file %s !!'%(hitoname, fnmae)
+    h = f.Get(histoname)
+    h.SetDirectory(0)
+    return h
+  else: print '[ERROR] [GetHistoFromSetOfFiles]: wrong input' 
+
 def GetEntries(fname):
   ''' Returns number of events from the tree 'Events' in a file '''
   if isinstance(fname, list):

@@ -108,6 +108,10 @@ class analysis:
     path, sample, n = guessPathAndName(self.files[0])
     self.sampleName = sample
 
+  def SetOptions(self, op):
+    ''' Set options '''
+    self.options = op
+
   def SetOutDir(self, _outpath):
     ''' Sets the output directory '''
     self.outpath = _outpath
@@ -154,6 +158,10 @@ class analysis:
     self.nRunEvents    = self.nEvents
     if self.outname == '': self.SetOutName(guessProcessName(self.files))
 
+  def GetFiles(self):
+    ''' Retuns the list of files '''
+    return self.files
+
   def manageOutput(self):
     ''' Checks if output existis and creates output dir '''
     out = self.outpath + self.outname + '.root'
@@ -185,6 +193,10 @@ class analysis:
       print ' >> Intervals: '
       for i in inputs: print '    ' + i
     return inputs
+
+  def GetOptions(self):
+    ''' Returns the options '''
+    return self.options
 
   def CreateTH1F(self, name, title, nbins, b0, bN = -999):
     ''' Constructor for TH1F '''
@@ -270,6 +282,7 @@ class analysis:
     if nSlots > 1: print '[INFO] Number of slots: ', nSlots
     else: print '[INFO] Secuential mode!'
     print '[INFO] Cross section: ', self.xsec
+    if self.options != '': print '[INFO] Options = ', self.options
     if self.verbose >= 1: GetProcessInfo(self.files)
     if nSlots != -1: self.SetNSlots(nSlots)
     if self.nSlots == 1: self.loop(first, last)
@@ -283,10 +296,11 @@ class analysis:
     self.tchain = TChain(self.treeName,self.treeName)
     for f in self.files: self.tchain.Add(f)
     self.init()
-    self.CreateTH1F("nGenEvents", "", 1, 0, 2)
-    self.CreateTH1F("hxsec",       "", 1, 0, 2)
-    self.obj['nGenEvents'].SetBinContent(1,self.nGenEvents)
-    self.obj['hxsec'].SetBinContent(1,self.xsec)
+    if self.index <= 0:
+      self.CreateTH1F("nGenEvents", "", 1, 0, 2)
+      self.CreateTH1F("hxsec",       "", 1, 0, 2)
+      self.obj['nGenEvents'].SetBinContent(1,self.nGenEvents)
+      self.obj['hxsec'].SetBinContent(1,self.xsec)
     if isinstance(ev0, list): ev0, evN = ev0
     if ev0 >= 0: self.firstEvent = ev0
     if evN >  0: self.nRunEvents = evN - ev0
@@ -357,7 +371,7 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = ''):
     # Default values:
     self.inpath = fname
     self.out = ''
@@ -382,6 +396,7 @@ class analysis:
     self.SetVerbose(verbose)
     self.fileName = fileName
     self.inputs = {}
+    self.SetOptions(options)
     if fileName != '': self.SetFiles(fname, fileName)
     else:              self.SetFiles(fname)
     self.SetXsec(xsec)

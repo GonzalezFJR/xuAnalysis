@@ -28,7 +28,7 @@ class analysis:
 
   def LoadHisto(self, name, fname, hname):
     ''' Open file "fname" and gets the histo "hname" '''
-    print ' >> Getting histogram "' + hname + '" in file "' + fname +'"'
+    if self.index <= 0: print ' >> Getting histogram "' + hname + '" in file "' + fname +'"'
     if not os.path.isfile(fname):
       print 'ERROR: file not found'
       return
@@ -167,10 +167,11 @@ class analysis:
     out = self.outpath + self.outname + '.root'
     if self.index >= 0: out = self.outpath + self.outname + '_' + str(self.index) + '.root'
     if not os.path.isdir(self.outpath):
-      print ' >> Creating output directory: ' + self.outpath
-      os.mkdir(self.outpath)
+      if self.index <= 0:
+        print ' >> Creating output directory: ' + self.outpath
+        os.mkdir(self.outpath)
     elif os.path.isfile(out):
-      print ' >> WARNING: output already existis... it will be overwritten!!'
+      print ' >> WARNING: output \'%s\' already existis... it will be overwritten!!'%out
 
   def printprocess(self, i):
     ''' Prints some output from time to time... '''
@@ -279,12 +280,12 @@ class analysis:
 
   def run(self, first = -1, last = -1, nSlots = -1):
     ''' Run the analysis, taking into account the number of slots '''
-    if nSlots > 1: print '[INFO] Number of slots: ', nSlots
-    else: print '[INFO] Secuential mode!'
+    if nSlots != -1: self.SetNSlots(nSlots)
+    if self.nSlots > 1: print '[INFO] Number of slots: ', self.nSlots
+    elif self.index == -1: print '[INFO] Secuential mode!'
     print '[INFO] Cross section: ', self.xsec
     if self.options != '': print '[INFO] Options = ', self.options
     if self.verbose >= 1: GetProcessInfo(self.files)
-    if nSlots != -1: self.SetNSlots(nSlots)
     if self.nSlots == 1: self.loop(first, last)
     else:                self.multiloop(first, last)
     self.log()

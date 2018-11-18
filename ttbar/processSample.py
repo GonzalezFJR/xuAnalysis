@@ -7,6 +7,9 @@ from framework.fileReader import getDicFiles, GetAllInfoFromFile
 defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/'
 
 xsecdic = {
+ 'HighEGJet':1,
+ 'SingleMuon':1,
+ 'DoubleMuon':1,
  'DYJetsToLL_MLL50' : 2055,
  'DYJetsToLL_M_10to50' : 1506,
  'WJetsToLNu' : 21159,

@@ -16,8 +16,25 @@ The MC histograms are normalized to 1 pb-1 for a given input cross section. The 
 
     self.weight = (cross\_section * genWeight)/(sum\_of\_gen\_weights)
 
-### Create an analysis (example)
+Anyway, this is fully customizable.
 
+### Run the test
+
+    cd test/
+
+This is an easy analysis that selects events with two leptons and save two histograms for the lepton pT and invariant mass.
+You can run the analysis by executing the file executeTest.sh:
+
+    source executeTest.sh
+
+Or just executing the command:
+
+    python -c 'from testAnalysis import testAnalysis; testAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "DYJetsToLL_MLL50", eventRange = [0, 100000], xsec = 10, run = True, nSlots = 4)'
+
+If you are not running on lxplus or you wish to run on another sample, just modify the path and sample name.
+By default, divides the sample in 4 pieces. The output is saved in a folder called temp. You can merge the output rootfiles:
+
+    python ../framework/merger.py -frv temp/
 
 ### Secuential or multicore processing
 

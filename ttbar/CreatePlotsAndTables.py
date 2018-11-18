@@ -6,7 +6,7 @@ from ROOT.TMath import Sqrt as sqrt
 from ROOT import *
 
 ### Input and output
-path = './tthistos/'
+path = './temp/'
 outpath = './outputs/'
 
 ### Definition of the processes

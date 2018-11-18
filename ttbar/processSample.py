@@ -4,7 +4,7 @@ sys.path.append(basepath)
 from ttanalysis import *
 from framework.fileReader import getDicFiles, GetAllInfoFromFile
 
-path = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/'
+defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/'
 
 xsecdic = {
  'DYJetsToLL_MLL50' : 2055,
@@ -29,7 +29,8 @@ xsecdic = {
 
 nSlots = 8
 doAll = False; doSendJobs = False;
-def runSample(sample, dosend,options):
+def runSample(sample, dosend,options, path = ''):
+  if path == '': path = defaultPath
   if not sample in dic:
     print ' << Process \''+sample+'\' not found!'
     exit()
@@ -45,15 +46,17 @@ def runSample(sample, dosend,options):
   else: a.run()
 
 # Get files
-dic = getDicFiles(path)
 arg = sys.argv[1:]
 if len(arg) == 0:
   print ' >> Usage:   python processSample.py [sample] [nSlots (8)] [options]'
   print ' >> Example: python processSample.py TT 6'
+  print '             python processSample.py --all 8'
   print ' >> Options: --all, --sendJobs, --options'
   exit()
 
+path = ''
 samp = arg[0]
+if samp == '--all' or samp == 'all': doAll = True
 i = 1; options = ''
 if len(arg) >= 2: nSlots = int(arg[1])
 if len(arg) >= 3:
@@ -63,7 +66,9 @@ if len(arg) >= 3:
     if a[2:] == 'all': doAll = True
     if a[2:] == 'sendJobs': doSendJobs = True
     if a[2:] == 'options': options = arg[i+1]
+    if a[2:] == 'path': path = arg[i+1]
+dic = getDicFiles(path)
 if doAll: 
-  for s in xsecdic.keys(): print s #runSample(s,doSendJobs)
-else: runSample(samp,doSendJobs,options)
+  for s in xsecdic.keys(): runSample(s,doSendJobs,options,path)
+else: runSample(samp,doSendJobs,options,path)
 

@@ -1,6 +1,6 @@
 ### Process all the files
 
-Change the path to point to the n-tuples. In lxplus, you can take the n-tuples (skimmed nanoAOD) from:
+Look for the path to point to the n-tuples. In lxplus, you can take the n-tuples (skimmed nanoAOD) from:
  
     /afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/ 
 
@@ -8,7 +8,7 @@ Run the analysis over all the samples. You can do it automatically by executing:
 
     python processSample.py --all 8 --path [PATH]
 
-Using, in this example, 8 cores.
+In this example, you are using 8. You could send jobs to the lxplus batch system. You can explore the file to change the cross sections of the samples or you can run the samples one by one.
 The output will be stored, by default, in the ./temp/ directory. Merge the output executing:
 
     python ../framework/merger.py temp/ -frv

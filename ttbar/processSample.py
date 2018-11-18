@@ -19,12 +19,12 @@ xsecdic = {
  'tbarW_noFullHad' : 1.629072,
  'TT' : 68.9,
  'TTsemilep' : 68.9,
- 'TT_hdampUP' : 68.9,
- 'TT_hdampDOWN' : 68.9,
+# 'TT_TuneCP5up' : 68.9,
+# 'TT_TuneCP5down' : 68.9
+# 'TT_hdampUP' : 68.9,
+# 'TT_hdampDOWN' : 68.9,
  'TT_mtop166p5' : 68.9,
- 'TT_mtop178p5' : 68.9,
- 'TT_TuneCP5up' : 68.9,
- 'TT_TuneCP5down' : 68.9
+ 'TT_mtop178p5' : 68.9
 }
 
 nSlots = 8

@@ -6,4 +6,4 @@ python -c 'from testAnalysis import testAnalysis; testAnalysis("/afs/cern.ch/wor
 # Or send jobs
 # python -c 'from testAnalysis import testAnalysis; testAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "DYJetsToLL_MLL50", eventRange = [0, 100000], xsec = 10, sendJobs = True, nSlots = 8)'
 
-python ../framework/merger.py -vfr temp/
+# python ../framework/merger.py -vfr temp/

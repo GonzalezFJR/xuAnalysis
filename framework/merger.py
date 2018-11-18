@@ -38,6 +38,7 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
     if not x == out: 
       nfiles += 1
       inf += x + ' ' 
+  if nfiles <= 1: return
   print ' >> Adding ' + name + ' (%i files)'%nfiles
   command = 'hadd ' + out + ' ' + inf
   if not pretend:

@@ -30,7 +30,6 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
     if not inputdir[-1] == '/': inputdir += '/'
     if outputDir == '': outputDir = inputdir
     if path == '': listOfFiles = [inputdir + x for x in listOfFiles]
-  if not manageMergedOutput(outputDir, name, force): return
   out = outputDir + name + '.root'
   inf = ''; 
   nfiles = 0
@@ -39,6 +38,7 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
       nfiles += 1
       inf += x + ' ' 
   if nfiles <= 1: return
+  if not manageMergedOutput(outputDir, name, force): return
   print ' >> Adding ' + name + ' (%i files)'%nfiles
   command = 'hadd ' + out + ' ' + inf
   if not pretend:

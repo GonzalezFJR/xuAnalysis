@@ -83,7 +83,7 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = True):
 ######################################################################################
 ## PDF and scale systematics
 def DrawWeightSystematics(chan = 'ElMu', lev = '2jets'):
-  w = WeightReader(path, chan, lev)
+  w = WeightReader(path, outpath, chan, lev)
   w.PrintMEscale('ScaleMEuncertainty_'+chan+'_'+lev)
   w.PrintPDFyields('PDFuncertainty_'+chan+'_'+lev)
 

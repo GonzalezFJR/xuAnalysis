@@ -1074,7 +1074,7 @@ class WeightReader:
    t.bar()
    t.write()
 
- def __init__(self, path = '', chan = 'ElMu', level = '2jets', sampleName = 'TT', outpath = './temp/', PDFname = 'PDFweights', ScaleName = 'ScaleWeights', PDFsumName= 'SumOfPDFweights', ScaleSumName = 'SumOfScaleWeights', lumi = 308.54, nGenEvents = -1):
+ def __init__(self, path = '', outpath = './temp/', chan = 'ElMu', level = '2jets', sampleName = 'TT', PDFname = 'PDFweights', ScaleName = 'ScaleWeights', PDFsumName= 'SumOfPDFweights', ScaleSumName = 'SumOfScaleWeights', lumi = 308.54, nGenEvents = -1):
    self.SetPath(path)
    self.SetOutPath(outpath)
    self.SetChan(chan)

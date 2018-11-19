@@ -356,7 +356,7 @@ class CrossSection:
     for e in expUnc: self.AddExpUnc(e, t.GetUnc(signal[1], chan, level, e))
     # Modeling uncertainties
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modunc or 'scale' in modUnc:
-      w = WeightReader(path, chan, level)
+      w = WeightReader(path, '',chan, level)
       w.SetSampleName(signalName)
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())

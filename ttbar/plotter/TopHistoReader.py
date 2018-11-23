@@ -58,6 +58,25 @@ class TopHistoReader:
    if len(self.syst) > 0: name += '_' + self.syst
    return name
 
+ def IsHisto(self, pr, name, syst = ''):
+   ''' Check if histo exists '''
+   if pr    != '': self.SetProcess(pr)
+   if ',' in self.process: self.process = self.process.replace(' ', '').split(',')
+   if ',' in self.process: self.process = self.process.replace(' ', '').split(',')
+   if isinstance(self.process, list):
+     for p in self.process: 
+       if not self.IsHisto(p, name, syst): return False
+     return True
+   if syst != '':
+     if self.IsHisto(pr, name + '_' + syst) or
+        self.IsHisto(pr, name + '_' + syst+'Up') or
+        self.IsHisto(pr, name + '_' + syst+'Down'): return True
+     return False
+   filename = self.path + pr + '.root'
+   f = TFile.Open(filename)
+   if not hasattr(f, name): return False
+   else: return True
+
  def GetNamedHisto(self, name, pr = '', rebin = -1):
    ''' Load an histo from process pr '''
    if pr    != '': self.SetProcess(pr)
@@ -163,7 +182,6 @@ class TopHistoReader:
    self.SetIsData(False)
    y = h.GetBinContent(self.GetBinNumberForLevel(self.level))
    return y
-
 
  def GetUnc(self, pr = '', ch = '', ilev = '', s = ''):
    ''' Return a systematic uncertainty (relative) ''' 
@@ -366,7 +384,6 @@ class Process:
     syst = self.GetUnc()*y # relative
     e = norm*norm + syst*syst
     return sqrt(e)
-    
 
   def __init__(self, name, color = 1, samples = '', isData = False, isSignal = False, Yield = 0, systName = '', NormUnc = 0, SystUnc = -999, StatUnc = 0, ExpUnc = {}, ModUnc = {}):
     self.SetColor(color)
@@ -1088,3 +1105,89 @@ class WeightReader:
    self.SetNgenEvents(nGenEvents)
    self.loadHistos()
 
+class HistoSaver:
+
+ def SetPath(self, p):
+  if not p.endswith('/'): p += '/'
+  if p == '/': p = './'
+  self.path = p
+  self.t.SetPath(self.path)
+
+ def SetOutputDir(self, d):
+  self.outdir = d
+
+ def SetOutName(self, n):
+  self.outname = n
+  self.t.SetOutPath
+
+ def SetSystematics(self, s):
+  self.syst = s
+
+ def SetVarName(self, var):
+  self.var = var
+
+ def SetChan(self, chan):
+   self.chan = chan
+  
+ def SetLevel(self, ilevel):
+   self.level = ilevel
+
+ def SetHistoName(self, h = ''):
+   self.histoName = h
+
+ def SetLumi(self, lumi):
+   self.lumi = lumi
+   self.t.SetLumi(self.lumi)
+
+ def SetVarChanLev(self, var, ch, ilev):
+  self.SetVar(var)
+  self.SetChan(ch)
+  self.SetLevel(ilev)
+
+ def SetRebin(self, r = 1):
+  self.rebin = r
+  self.t.SetRebin(self.rebin)
+
+ def AddProcess(self, prName, files):
+  self.dpr[prName] = files
+
+ def AddHisto(self, h, prName, systname = ''):
+  hOut = prName if systname == '' else prName + '_' + systname
+  h.SetName(hOut)
+  self.histos.append(h)
+
+ def LoadHisto(self, fname, process, syst = '',hname = '', ):
+  if fname in self.dpr.keys(): fname = self.dpr[fname]
+  if hname != '': self.SetHistoName(hname,syst)
+  hname = self.GetHistoName()
+  if syst != '':
+    if self.t.IsHisto(fname, hname+'_'+syst): 
+      self.LoadHisto(fname, process, hname = hname+'_'+syst)
+      return
+    else:
+      if self.t.IsHisto(fname, hname+'_'+syst+'Up'):   self.LoadHisto(fname, process, hname = hname+'_'+syst+'Up')
+      if self.t.IsHisto(fname, hname+'_'+syst+'Down'): self.LoadHisto(fname, process, hname = hname+'_'+syst+'Down')
+      return
+  h = t.GetNamedHisto(hname, fname, self.rebin)
+  self.AddHisto(h, process, syst)
+  
+ def GetHistoName(self):
+  if self.histoName != '': return self.histoName
+  hname = var + ('_' + self.chan if self.chan != '' else '') + ('_' + self.level if self.level != '' else '')
+  self.SetHistoName(hname)
+  return hname
+
+ def ReadHistos(self):
+   for k in self.dpr.keys():
+     self.LoadHisto(self.dpr[k], k, '')
+     for s in self.syst:
+       self.LoadHisto(self.dpr[k], k, s)
+
+ def __init__(self, path, hname = '', outpath = '/temp/', outname = '', rebin = 1):
+  self.SetRebin(1)
+  self.t = TopHistoReader(path)
+  self.SetPath(path)
+  self.SetHistoName(hname)
+  self.SetOutputDir(outpath)
+  self.SetOutName(outname)
+  self.dpr = {}

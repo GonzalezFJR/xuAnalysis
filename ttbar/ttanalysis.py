@@ -33,7 +33,11 @@ class systematic():
   MuonEffDo = 1
   ElecEffUp = 2
   ElecEffDo = 3
-systlabel = {systematic.nom:'', systematic.MuonEffUp:'MuonEffUp', systematic.MuonEffDo:'MuonEffDown', systematic.ElecEffUp:'ElecEffUp', systematic.ElecEffDo:'ElecEffDown'}
+  JESUp = 4
+  JESDo = 5
+  PUUp = 6
+  PUDo = 7
+systlabel = {systematic.nom:'', systematic.MuonEffUp:'MuonEffUp', systematic.MuonEffDo:'MuonEffDown', systematic.ElecEffUp:'ElecEffUp', systematic.ElecEffDo:'ElecEffDown', systematic.JESUp:'JESUp', systematic.JESDo:'JESDown', systematic.PUUp:'PUUp', systematic.PUDo:'PUDown'}
 
 ### Datasets to ints
 class datasets():
@@ -190,11 +194,13 @@ class ttanalysis(analysis):
           self.NewHisto('Jet1DCsv',   ichan,ilevel,isyst, 40, 0, 1)
           self.NewHisto('JetAllDCsv', ichan,ilevel,isyst, 40, 0, 1)
 
-  def FillHistograms(self, leptons, jets, pmet, ich, ilev):
+  def FillHistograms(self, leptons, jets, pmet, ich, ilev, isys):
     ''' Fill all the histograms. Take the inputs from lepton list, jet list, pmet '''
     if self.SS: return               # Do not fill histograms for same-sign events
     if not len(leptons) >= 2: return # Just in case
-    # Calculate the observables
+    self.SetWeight(isys)
+
+    # Re-calculate the observables
     lep0  = leptons[0]; lep1 = leptons[1]
     l0pt  = lep0.Pt();  l1pt  = lep1.Pt()
     l0eta = lep0.Eta(); l1eta = lep1.Eta()
@@ -235,67 +241,63 @@ class ttanalysis(analysis):
       j0csv = -1; j0deepcsv = -1;
     
     ### Fill the histograms
-    
-    for isys in systlabel.keys():
-      self.SetWeight(isys)
-      #if ich == ch.ElMu and ilev == lev.dilepton: print 'Syst = ', isys, ', weight = ', self.weight
-      self.GetHisto("InvMass", ich, ilev, isys).Fill(mll, self.weight)
-      self.GetHisto('HT',   ich,ilev,isys).Fill(ht, self.weight)
-      self.GetHisto('MET',  ich,ilev,isys).Fill(met, self.weight)
-      self.GetHisto('NJets',ich,ilev,isys).Fill(njet, self.weight)
-      self.GetHisto('Btags',ich,ilev,isys).Fill(nbtag, self.weight)
-      self.GetHisto('Vtx',  ich,ilev,isys).Fill(self.nvtx, self.weight)
+    #if ich == ch.ElMu and ilev == lev.dilepton: print 'Syst = ', isys, ', weight = ', self.weight
+    self.GetHisto("InvMass", ich, ilev, isys).Fill(mll, self.weight)
+    self.GetHisto('HT',   ich,ilev,isys).Fill(ht, self.weight)
+    self.GetHisto('MET',  ich,ilev,isys).Fill(met, self.weight)
+    self.GetHisto('NJets',ich,ilev,isys).Fill(njet, self.weight)
+    self.GetHisto('Btags',ich,ilev,isys).Fill(nbtag, self.weight)
+    self.GetHisto('Vtx',  ich,ilev,isys).Fill(self.nvtx, self.weight)
 
-      if   njet == 0: nbtagnjetsnum = nbtag
-      elif njet == 1: nbtagnjetsnum = nbtag + 1
-      elif njet == 2: nbtagnjetsnum = nbtag + 3
-      else          : nbtagnjetsnum = 6
-      self.GetHisto('NBtagNJets', ich, ilev,isys).Fill(nbtagnjetsnum, self.weight)
+    if   njet == 0: nbtagnjetsnum = nbtag
+    elif njet == 1: nbtagnjetsnum = nbtag + 1
+    elif njet == 2: nbtagnjetsnum = nbtag + 3
+    else          : nbtagnjetsnum = 6
+    self.GetHisto('NBtagNJets', ich, ilev,isys).Fill(nbtagnjetsnum, self.weight)
 
-      # Leptons
-      self.GetHisto('Lep0Pt', ich,ilev,isys).Fill(l0pt, self.weight)
-      self.GetHisto('Lep1Pt', ich,ilev,isys).Fill(l1pt, self.weight)
-      self.GetHisto('Lep0Eta', ich,ilev,isys).Fill(l0eta, self.weight)
-      self.GetHisto('Lep1Eta', ich,ilev,isys).Fill(l1eta, self.weight)
-      self.GetHisto('Lep0Phi', ich,ilev,isys).Fill(l0phi/3.141592, self.weight)
-      self.GetHisto('Lep1Phi', ich,ilev,isys).Fill(l1phi/3.141592, self.weight)
-      self.GetHisto('DilepPt', ich,ilev,isys).Fill(dipt, self.weight)
-      self.GetHisto('DeltaPhi',  ich,ilev,isys).Fill(dphi/3.141592, self.weight)
-      self.GetHisto('InvMass', ich,ilev,isys).Fill(mll, self.weight)
-      if mll > 70 and mll < 110: self.GetHisto('DYMass',  ich,ilev,isys).Fill(mll, self.weight)
-      if ich == ch.ElMu:
-        self.GetHisto('ElecEta', ich,ilev,isys).Fill(eleta, self.weight)
-        self.GetHisto('ElecPt',  ich,ilev,isys).Fill(elpt, self.weight)
-        self.GetHisto('ElecPhi', ich,ilev,isys).Fill(elphi, self.weight)
-        self.GetHisto('MuonEta', ich,ilev,isys).Fill(mueta, self.weight)
-        self.GetHisto('MuonPt',  ich,ilev,isys).Fill(mupt, self.weight)
-        self.GetHisto('MuonPhi', ich,ilev,isys).Fill(muphi, self.weight)
+    # Leptons
+    self.GetHisto('Lep0Pt', ich,ilev,isys).Fill(l0pt, self.weight)
+    self.GetHisto('Lep1Pt', ich,ilev,isys).Fill(l1pt, self.weight)
+    self.GetHisto('Lep0Eta', ich,ilev,isys).Fill(l0eta, self.weight)
+    self.GetHisto('Lep1Eta', ich,ilev,isys).Fill(l1eta, self.weight)
+    self.GetHisto('Lep0Phi', ich,ilev,isys).Fill(l0phi/3.141592, self.weight)
+    self.GetHisto('Lep1Phi', ich,ilev,isys).Fill(l1phi/3.141592, self.weight)
+    self.GetHisto('DilepPt', ich,ilev,isys).Fill(dipt, self.weight)
+    self.GetHisto('DeltaPhi',  ich,ilev,isys).Fill(dphi/3.141592, self.weight)
+    self.GetHisto('InvMass', ich,ilev,isys).Fill(mll, self.weight)
+    if mll > 70 and mll < 110: self.GetHisto('DYMass',  ich,ilev,isys).Fill(mll, self.weight)
+    if ich == ch.ElMu:
+      self.GetHisto('ElecEta', ich,ilev,isys).Fill(eleta, self.weight)
+      self.GetHisto('ElecPt',  ich,ilev,isys).Fill(elpt, self.weight)
+      self.GetHisto('ElecPhi', ich,ilev,isys).Fill(elphi, self.weight)
+      self.GetHisto('MuonEta', ich,ilev,isys).Fill(mueta, self.weight)
+      self.GetHisto('MuonPt',  ich,ilev,isys).Fill(mupt, self.weight)
+      self.GetHisto('MuonPhi', ich,ilev,isys).Fill(muphi, self.weight)
 
-      # Jets
-      if njet >= 1:
-        self.GetHisto('Jet0Pt',   ich,ilev,isys).Fill(j0pt, self.weight)
-        self.GetHisto('Jet0Eta',   ich,ilev,isys).Fill(j0eta, self.weight)
-        self.GetHisto('Jet0Csv',   ich,ilev,isys).Fill(j0csv, self.weight)
-        self.GetHisto('Jet0DCsv',   ich,ilev,isys).Fill(j0deepcsv, self.weight)
+    # Jets
+    if njet >= 1:
+      self.GetHisto('Jet0Pt',   ich,ilev,isys).Fill(j0pt, self.weight)
+      self.GetHisto('Jet0Eta',   ich,ilev,isys).Fill(j0eta, self.weight)
+      self.GetHisto('Jet0Csv',   ich,ilev,isys).Fill(j0csv, self.weight)
+      self.GetHisto('Jet0DCsv',   ich,ilev,isys).Fill(j0deepcsv, self.weight)
 
-      if njet >= 2:
-        self.GetHisto('Jet1Pt',   ich,ilev,isys).Fill(j1pt, self.weight)
-        self.GetHisto('Jet1Eta',   ich,ilev,isys).Fill(j1eta, self.weight)
-        self.GetHisto('Jet1Csv',   ich,ilev,isys).Fill(j1csv, self.weight)
-        self.GetHisto('Jet1DCsv',   ich,ilev,isys).Fill(j1deepcsv, self.weight)
+    if njet >= 2:
+      self.GetHisto('Jet1Pt',   ich,ilev,isys).Fill(j1pt, self.weight)
+      self.GetHisto('Jet1Eta',   ich,ilev,isys).Fill(j1eta, self.weight)
+      self.GetHisto('Jet1Csv',   ich,ilev,isys).Fill(j1csv, self.weight)
+      self.GetHisto('Jet1DCsv',   ich,ilev,isys).Fill(j1deepcsv, self.weight)
 
-      for ijet in jets:
-        self.GetHisto('JetAllPt', ich,ilev,isys).Fill(ijet.Pt(), self.weight)
-        self.GetHisto('JetAllEta', ich,ilev,isys).Fill(ijet.Eta(), self.weight)
-        self.GetHisto('JetAllCsv', ich,ilev,isys).Fill(ijet.GetCSVv2(), self.weight)
-        self.GetHisto('JetAllDCsv', ich,ilev,isys).Fill(ijet.GetDeepCSV(), self.weight)
+    for ijet in jets:
+      self.GetHisto('JetAllPt', ich,ilev,isys).Fill(ijet.Pt(), self.weight)
+      self.GetHisto('JetAllEta', ich,ilev,isys).Fill(ijet.Eta(), self.weight)
+      self.GetHisto('JetAllCsv', ich,ilev,isys).Fill(ijet.GetCSVv2(), self.weight)
+      self.GetHisto('JetAllDCsv', ich,ilev,isys).Fill(ijet.GetDeepCSV(), self.weight)
 
-  def FillYieldsHistos(self, ich, ilev):
+  def FillYieldsHistos(self, ich, ilev, isyst):
     ''' Fill histograms for yields. Also for SS events for the nonprompt estimate '''
-    for isyst in systlabel.keys():
-      self.SetWeight(isyst)
-      if not self.SS: self.GetHisto('Yields',   ich, '', isyst).Fill(ilev, self.weight)
-      else          : self.GetHisto('YieldsSS', ich, '', isyst).Fill(ilev, self.weight)
+    self.SetWeight(isyst)
+    if not self.SS: self.GetHisto('Yields',   ich, '', isyst).Fill(ilev, self.weight)
+    else          : self.GetHisto('YieldsSS', ich, '', isyst).Fill(ilev, self.weight)
 
   def FillDYHistos(self, leptons, ich, ilev):
     ''' Fill DY histos used for the R_out/in method for DY estimate '''
@@ -311,6 +313,17 @@ class ttanalysis(analysis):
     mll = InvMass(leptons[0], leptons[1])
     self.GetHisto('DYHistoElMu', ich, ilev).Fill(mll, self.weight)
 
+  def FillAll(self, ich, ilev, isyst, leps, jets, pmet):
+    ''' Fill histograms for a given variation, channel and level '''
+    self.FillYieldsHistos(ich, ilev, isyst)
+    self.FillHistograms(leps, jets, pmet, ich, ilev, isyst)
+    if self.isTTnom and isyst == systematic.norm: self.FillLHEweights(ich, ilev)
+
+  def FillLHEweights(self, ich, ilev):
+    weight = self.weight
+    for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, ilev, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
+    for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, ilev, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
+
   def SetWeight(self, syst):
     ''' Sets the event weight according to the systematic variation '''
     # elec, muon, pu, trigger...
@@ -321,6 +334,15 @@ class ttanalysis(analysis):
     elif syst == systematic.ElecEffDo: self.weight *= self.SFmuon * (self.SFelec - self.SFelecErr)
     elif syst == systematic.MuonEffUp: self.weight *= (self.SFmuon + self.SFmuonErr) * self.SFelec
     elif syst == systematic.MuonEffDo: self.weight *= (self.SFmuon - self.SFmuonErr) * self.SFelec
+
+  def SetVariables(self, isyst):
+    leps = self.leps
+    jets = self.jets
+    pmet = self.pmet
+    if   isyst == systematic.norm:  pass
+    elif isyst == systematic.JESUp: pass
+    elif isyst == systematic.JESDo: pass
+    return leps, jets, pmet
 
   def insideLoop(self, t):
     self.resetObjects()
@@ -451,11 +473,12 @@ class ttanalysis(analysis):
       flav = t.Jet_hadronFlavour[i] if not self.isData else -99;
       # Jet ID > 1, tight Id
       if not jid > 1: continue
-      # pT >= 25, |eta| < 2.4 
-      if p.Pt() < 25 or abs(p.Eta()) > 2.4: continue
+      # |eta| < 2.4 
+      if abs(p.Eta()) > 2.4: continue
       j = jet(p, csv, flav, jid, deepcsv)
       if csv >= 0.8484 : j.SetBtag() ### Misssing CSVv2 SFs !!!! 
       if not j.IsClean(self.selLeptons, 0.4): continue
+      if p.Pt() < 25: continue
       self.selJets.append(j)
     jets = self.selJets
     pts  = [j.Pt() for j in jets]
@@ -463,6 +486,7 @@ class ttanalysis(analysis):
 
     ##### MET
     self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, t.MET_sumEt)
+
     nJets = len(self.selJets)
     nBtag = GetNBtags(self.selJets)
 
@@ -507,82 +531,58 @@ class ttanalysis(analysis):
     self.nvtx   = t.PV_npvs
     # Missing the PU re-weighting, lepton ID/ISO SFs, etc...
  
-
     ### Event selection
     ###########################################
     self.SetWeight(systematic.nom)
     weight = self.weight
     
-    ### Dilepton pair
     if not passTrig: return
-    if l0.Pt() < 20: return
-    if InvMass(l0,l1) < 20: return
     self.SS = l0.charge*l1.charge > 0
-    ilev = lev.dilepton
-    self.FillYieldsHistos(ich, ilev)
-    self.FillHistograms(self.selLeptons, self.selJets, self.pmet, ich, ilev)
-    if self.isTTnom:
-      for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, lev.dilepton, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
-      for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, lev.dilepton, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
+    for isyst in systlabel.keys():
+      leps, jets, pmet = self.SetVariables(isyst)
+      if not len(leps) >= 2: continue
+      l0 = leps[0]; l1 = leps[1]
 
-    ##### Count fidutial events
+      ### Dilepton pair
+      if l0.Pt() < 20: continue
+      if InvMass(l0,l1) < 20: continue
+      self.FillAll(ich, lev.dilepton, isyst, leps, jets, pmet)
 
-    # >> Fill the DY histograms
-    if self.isData or self.isDY:
-      self.FillDYHistos(self.selLeptons, ich, ilev)
-      if self.pmet.Pt() > 35:
-        self.FillDYHistos(self.selLeptons, ich, lev.MET)
-        if   nJets == 1: self.FillDYHistos(self.selLeptons, ich, 'eq1jet')
-        elif nJets == 2: self.FillDYHistos(self.selLeptons, ich, 'eq2jet')
-        elif nJets >= 3: self.FillDYHistos(self.selLeptons, ich, 'geq3jet')
+      # >> Fill the DY histograms
+      if (self.isData or self.isDY) and isyst == systematic.norm:
+        self.FillDYHistos(self.selLeptons, ich, lev.dilepton)
+        if self.pmet.Pt() > 35:
+          self.FillDYHistos(self.selLeptons, ich, lev.MET)
+          if   nJets == 1: self.FillDYHistos(self.selLeptons, ich, 'eq1jet')
+          elif nJets == 2: self.FillDYHistos(self.selLeptons, ich, 'eq2jet')
+          elif nJets >= 3: self.FillDYHistos(self.selLeptons, ich, 'geq3jet')
+          if nJets >= 2:
+            self.FillDYHistos(self.selLeptons, ich, lev.jets2)
+            if nBtag >= 1:
+              self.FillDYHistos(self.selLeptons, ich, lev.btag1)
+              if nBtag >= 2:
+                self.FillDYHistos(self.selLeptons, ich, '2btag')
+        if   nJets == 1: self.FillDYHistosElMu(self.selLeptons, ich, 'eq1jet')
+        elif nJets == 2: self.FillDYHistosElMu(self.selLeptons, ich, 'eq2jet')
+        elif nJets >= 3: self.FillDYHistosElMu(self.selLeptons, ich, 'geq3jet')
         if nJets >= 2:
-          self.FillDYHistos(self.selLeptons, ich, lev.jets2)
+          self.FillDYHistosElMu(self.selLeptons, ich, lev.jets2)
           if nBtag >= 1:
-            self.FillDYHistos(self.selLeptons, ich, lev.btag1)
+            self.FillDYHistosElMu(self.selLeptons, ich, lev.btag1)
             if nBtag >= 2:
-              self.FillDYHistos(self.selLeptons, ich, '2btag')
-      if   nJets == 1: self.FillDYHistosElMu(self.selLeptons, ich, 'eq1jet')
-      elif nJets == 2: self.FillDYHistosElMu(self.selLeptons, ich, 'eq2jet')
-      elif nJets >= 3: self.FillDYHistosElMu(self.selLeptons, ich, 'geq3jet')
-      if nJets >= 2:
-        self.FillDYHistosElMu(self.selLeptons, ich, lev.jets2)
-        if nBtag >= 1:
-          self.FillDYHistosElMu(self.selLeptons, ich, lev.btag1)
-          if nBtag >= 2:
-            self.FillDYHistosElMu(self.selLeptons, ich, '2btag')
+              self.FillDYHistosElMu(self.selLeptons, ich, '2btag')
   
-    ### Z Veto + MET cut
-    if ich == ch.MuMu or ich == ch.ElEl:
-      if abs(InvMass(l0,l1) - 91) < 15: return
-      ilev = lev.ZVeto
-      self.FillYieldsHistos(ich, ilev)
-      self.FillHistograms(self.selLeptons, self.selJets, self.pmet, ich, ilev)
-      if self.isTTnom:
-        for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, lev.ZVeto, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
-        for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, lev.ZVeto, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
-      if self.pmet.Pt() < 35: return
-      ilev = lev.MET
-      self.FillYieldsHistos(ich, ilev)
-      self.FillHistograms(self.selLeptons, self.selJets, self.pmet, ich, ilev)
-      if self.isTTnom:
-        for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, lev.MET, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
-        for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, lev.MET, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
+      ### Z Veto + MET cut
+      if ich == ch.MuMu or ich == ch.ElEl:
+        if abs(InvMass(l0,l1) - 91) < 15: continue
+        self.FillAll(ich, lev.ZVeto, isyst, leps, jets, pmet)
+        if pmet.Pt() < 35: continue
+        self.FillAll(ich,lev.MET,isyst,lepts,jets,pmet)
 
-    ### 2 jets
-    if nJets < 2: return
-    ilev = lev.jets2
-    self.FillYieldsHistos(ich, ilev)
-    self.FillHistograms(self.selLeptons, self.selJets, self.pmet, ich, ilev)
-    if self.isTTnom:
-      for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, lev.jets2, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
-      for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, lev.jets2, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
+      ### 2 jets
+      if nJets < 2: continue
+      self.FillAll(ich, lev.jets2, isyst, leps, jets, pmet)
 
-    ### 1 b-tag, CSVv2 Medium
-    if nBtag < 1: return
-    ilev = lev.btag1
-    self.FillYieldsHistos(ich, ilev)
-    self.FillHistograms(self.selLeptons, self.selJets, self.pmet, ich, ilev)
-    if self.isTTnom:
-      for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, lev.btag1, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
-      for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, lev.btag1, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
-
+      ### 1 b-tag, CSVv2 Medium
+      if nBtag < 1: continue 
+      self.FillAll(ich, lev.btag1, isyst, leps, jets, pmet)

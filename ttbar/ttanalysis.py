@@ -317,9 +317,8 @@ class ttanalysis(analysis):
     ''' Fill histograms for a given variation, channel and level '''
     self.FillYieldsHistos(ich, ilev, isyst)
     self.FillHistograms(leps, jets, pmet, ich, ilev, isyst)
-    if self.isTTnom and isyst == systematic.norm: self.FillLHEweights(ich, ilev)
 
-  def FillLHEweights(self, ich, ilev):
+  def FillLHEweights(self, t, ich, ilev):
     weight = self.weight
     for i in range(t.nLHEPdfWeight):   self.GetHisto("PDFweights",   ich, ilev, -1).Fill(i+1, t.LHEPdfWeight[i]*weight)
     for i in range(t.nLHEScaleWeight): self.GetHisto("ScaleWeights", ich, ilev, -1).Fill(i+1, t.LHEScaleWeight[i]*weight)
@@ -336,10 +335,10 @@ class ttanalysis(analysis):
     elif syst == systematic.MuonEffDo: self.weight *= (self.SFmuon - self.SFmuonErr) * self.SFelec
 
   def SetVariables(self, isyst):
-    leps = self.leps
-    jets = self.jets
+    leps = self.selLeptons
+    jets = self.selJets
     pmet = self.pmet
-    if   isyst == systematic.norm:  pass
+    if   isyst == systematic.nom:  pass
     elif isyst == systematic.JESUp: pass
     elif isyst == systematic.JESDo: pass
     return leps, jets, pmet
@@ -547,9 +546,10 @@ class ttanalysis(analysis):
       if l0.Pt() < 20: continue
       if InvMass(l0,l1) < 20: continue
       self.FillAll(ich, lev.dilepton, isyst, leps, jets, pmet)
+      if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.dilepton)
 
       # >> Fill the DY histograms
-      if (self.isData or self.isDY) and isyst == systematic.norm:
+      if (self.isData or self.isDY) and isyst == systematic.nom:
         self.FillDYHistos(self.selLeptons, ich, lev.dilepton)
         if self.pmet.Pt() > 35:
           self.FillDYHistos(self.selLeptons, ich, lev.MET)
@@ -576,13 +576,17 @@ class ttanalysis(analysis):
       if ich == ch.MuMu or ich == ch.ElEl:
         if abs(InvMass(l0,l1) - 91) < 15: continue
         self.FillAll(ich, lev.ZVeto, isyst, leps, jets, pmet)
+        if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.ZVeto)
         if pmet.Pt() < 35: continue
-        self.FillAll(ich,lev.MET,isyst,lepts,jets,pmet)
+        self.FillAll(ich,lev.MET,isyst,leps,jets,pmet)
+        if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.MET)
 
       ### 2 jets
       if nJets < 2: continue
       self.FillAll(ich, lev.jets2, isyst, leps, jets, pmet)
+      if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.jets2)
 
       ### 1 b-tag, CSVv2 Medium
       if nBtag < 1: continue 
       self.FillAll(ich, lev.btag1, isyst, leps, jets, pmet)
+      if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.btag1)

@@ -68,9 +68,7 @@ class TopHistoReader:
        if not self.IsHisto(p, name, syst): return False
      return True
    if syst != '':
-     if self.IsHisto(pr, name + '_' + syst) or
-        self.IsHisto(pr, name + '_' + syst+'Up') or
-        self.IsHisto(pr, name + '_' + syst+'Down'): return True
+     if self.IsHisto(pr, name + '_' + syst) or self.IsHisto(pr, name + '_' + syst+'Up') or self.IsHisto(pr, name + '_' + syst+'Down'): return True
      return False
    filename = self.path + pr + '.root'
    f = TFile.Open(filename)
@@ -1115,15 +1113,19 @@ class HistoSaver:
 
  def SetOutputDir(self, d):
   self.outdir = d
+  if not self.outdir.endswith('/'): self.outdir += '/'
 
  def SetOutName(self, n):
+  if n == '': n = 'histos'
   self.outname = n
-  self.t.SetOutPath
+
+ def GetOutFileName(self):
+  return self.outdir + self.outname + '.root'
 
  def SetSystematics(self, s):
   self.syst = s
 
- def SetVarName(self, var):
+ def SetVar(self, var):
   self.var = var
 
  def SetChan(self, chan):
@@ -1148,8 +1150,15 @@ class HistoSaver:
   self.rebin = r
   self.t.SetRebin(self.rebin)
 
- def AddProcess(self, prName, files):
-  self.dpr[prName] = files
+ def AddProcess(self, prName, files = ''):
+  if isinstance(prName, dict):
+    self.dpr = prName
+  elif isinstance(prName, list):
+    for pr,f in zip(prName, files): self.dpr[pr] = f
+  else: self.dpr[prName] = files
+
+ def AddData(self, files = ''):
+  self.dataFiles = files
 
  def AddHisto(self, h, prName, systname = ''):
   hOut = prName if systname == '' else prName + '_' + systname
@@ -1168,7 +1177,7 @@ class HistoSaver:
       if self.t.IsHisto(fname, hname+'_'+syst+'Up'):   self.LoadHisto(fname, process, hname = hname+'_'+syst+'Up')
       if self.t.IsHisto(fname, hname+'_'+syst+'Down'): self.LoadHisto(fname, process, hname = hname+'_'+syst+'Down')
       return
-  h = t.GetNamedHisto(hname, fname, self.rebin)
+  h = self.t.GetNamedHisto(hname, fname, self.rebin)
   self.AddHisto(h, process, syst)
   
  def GetHistoName(self):
@@ -1182,12 +1191,21 @@ class HistoSaver:
      self.LoadHisto(self.dpr[k], k, '')
      for s in self.syst:
        self.LoadHisto(self.dpr[k], k, s)
+   self.LoadHisto(self.dataFiles,'data_obs','')
+
+ def Write(self):
+  fname = self.GetOutFileName()
+  f = TFile(fname)
+  print ' >> Saving histograms in: ' + fname
+  for h in self.histos: h.Write()
+  f.Close()
 
  def __init__(self, path, hname = '', outpath = '/temp/', outname = '', rebin = 1):
-  self.SetRebin(1)
   self.t = TopHistoReader(path)
   self.SetPath(path)
+  self.SetRebin(rebin)
   self.SetHistoName(hname)
   self.SetOutputDir(outpath)
   self.SetOutName(outname)
   self.dpr = {}
+  self.AddData()

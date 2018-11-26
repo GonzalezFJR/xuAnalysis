@@ -1122,8 +1122,12 @@ class HistoSaver:
  def GetOutFileName(self):
   return self.outdir + self.outname + '.root'
 
- def SetSystematics(self, s):
-  self.syst = s
+ def AddSystematic(self, *s):
+  if len(s) == 1: s = s[0] 
+  if isinstance(s, list) or isinstance(s, tuple): 
+    for e in s: self.AddSystematic(e)
+  else:
+    self.syst.append(s)
 
  def SetVar(self, var):
   self.var = var
@@ -1167,15 +1171,14 @@ class HistoSaver:
 
  def LoadHisto(self, fname, process, syst = '',hname = '', ):
   if fname in self.dpr.keys(): fname = self.dpr[fname]
-  if hname != '': self.SetHistoName(hname,syst)
-  hname = self.GetHistoName()
+  if hname == '': hname = self.GetHistoName()
   if syst != '':
     if self.t.IsHisto(fname, hname+'_'+syst): 
-      self.LoadHisto(fname, process, hname = hname+'_'+syst)
+      self.LoadHisto(fname, process+'_'+syst, hname = hname+'_'+syst)
       return
     else:
-      if self.t.IsHisto(fname, hname+'_'+syst+'Up'):   self.LoadHisto(fname, process, hname = hname+'_'+syst+'Up')
-      if self.t.IsHisto(fname, hname+'_'+syst+'Down'): self.LoadHisto(fname, process, hname = hname+'_'+syst+'Down')
+      if self.t.IsHisto(fname, hname+'_'+syst+'Up'):   self.LoadHisto(fname, process+'_'+syst+'Up', hname = hname+'_'+syst+'Up')
+      if self.t.IsHisto(fname, hname+'_'+syst+'Down'): self.LoadHisto(fname, process+'_'+syst+'Down', hname = hname+'_'+syst+'Down')
       return
   h = self.t.GetNamedHisto(hname, fname, self.rebin)
   self.AddHisto(h, process, syst)
@@ -1195,17 +1198,21 @@ class HistoSaver:
 
  def Write(self):
   fname = self.GetOutFileName()
-  f = TFile(fname)
+  if not os.path.isdir(self.outdir): os.mkdir(self.outdir)
+  if os.path.isfile(fname): os.rename(fname, fname+'.bak')
+  f = TFile(fname, 'recreate')
   print ' >> Saving histograms in: ' + fname
   for h in self.histos: h.Write()
   f.Close()
 
- def __init__(self, path, hname = '', outpath = '/temp/', outname = '', rebin = 1):
+ def __init__(self, path, hname = '', outpath = './temp/', outname = '', rebin = 1):
   self.t = TopHistoReader(path)
   self.SetPath(path)
   self.SetRebin(rebin)
   self.SetHistoName(hname)
   self.SetOutputDir(outpath)
   self.SetOutName(outname)
+  self.histos = []
+  self.syst = []
   self.dpr = {}
   self.AddData()

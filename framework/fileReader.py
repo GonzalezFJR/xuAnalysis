@@ -64,7 +64,7 @@ def GetHistoFromSetOfFiles(fname, histoname):
   ''' Returns the sum of a histo with a name in a list of files '''
   if isinstance(fname, list):
     h = GetHistoFromSetOfFiles(fname[0], histoname)
-    for f in fname[1:]: h.Add(GetHistoFromSetOfFiles(f))
+    for f in fname[1:]: h.Add(GetHistoFromSetOfFiles(f, histoname))
     return h
   elif isinstance(fname, str):
     f = TFile.Open(fname)

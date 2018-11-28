@@ -293,10 +293,10 @@ class analysis:
   def loop(self, ev0 = -1, evN = -1):
     ''' Loop over the events and fill the histograms '''
     self.manageOutput()
-    self.createHistos()
     self.tchain = TChain(self.treeName,self.treeName)
     for f in self.files: self.tchain.Add(f)
     self.init()
+    self.createHistos()
     if self.index <= 0:
       self.CreateTH1F("nGenEvents", "", 1, 0, 2)
       self.CreateTH1F("hxsec",       "", 1, 0, 2)

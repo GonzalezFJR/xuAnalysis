@@ -194,6 +194,12 @@ class jet(object):
     self.SetJetId(jid)
     self.resetValues()
 
+def SortByPt(vec):
+  pt = [v.Pt() for v in vec]
+  vec = [j for _,j in sorted(zip(pt,vec))]
+  return vec
+
+
 ########################################################################################
 ########################################################################################
 ### Kinematics

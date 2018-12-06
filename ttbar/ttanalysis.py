@@ -35,8 +35,10 @@ class systematic():
   ElecEffDo = 3
   JESUp = 4
   JESDo = 5
-  PUUp = 6
-  PUDo = 7
+  JERUp = 6
+  JERDo = 7
+  PUUp = 8
+  PUDo = 9
 systlabel = {systematic.nom:'', systematic.MuonEffUp:'MuonEffUp', systematic.MuonEffDo:'MuonEffDown', systematic.ElecEffUp:'ElecEffUp', systematic.ElecEffDo:'ElecEffDown', systematic.JESUp:'JESUp', systematic.JESDo:'JESDown', systematic.PUUp:'PUUp', systematic.PUDo:'PUDown'}
 
 ### Datasets to ints
@@ -57,10 +59,23 @@ class ttanalysis(analysis):
       self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, abseta
       self.LoadHisto('ElecSF',    basepath+'./inputs/ElecTightCBid94X.root',  'EGamma_SF2D') # eta, pt
 
+    # Uncertainties
+    self.doSyst = False if ('noSyst' in self.options or self.isData) else True
+
     # Objects for the analysis
     self.selLeptons = []
     self.selJets = []
     self.pmet = TLorentzVector()
+
+    if not self.isData and self.doSyst:
+      self.selJetsJESUp = []
+      self.selJetsJESDo = []
+      self.selJetsJERUp = []
+      self.selJetsJERDo = []
+      self.pmetJESUp = TLorentzVector()
+      self.pmetJESDo = TLorentzVector()
+      self.pmetJERUp = TLorentzVector()
+      self.pmetJERDo = TLorentzVector()
 
     # Sample name
     name = self.sampleName
@@ -85,10 +100,24 @@ class ttanalysis(analysis):
     for i, dataName in dataset.items(): 
       if dataName == name: self.sampleDataset = i
 
+    # Jet and lep pT
+    self.JetPtCut  = 20
+    self.LepPtCut  = 12
+    self.Lep0PtCut = 20
+
   def resetObjects(self):
     self.selLeptons = []
     self.selJets = []
     self.pmet = TLorentzVector()
+    if not self.isData and self.doSyst:
+      self.selJetsJESUp = []
+      self.selJetsJESDo = []
+      self.selJetsJERUp = []
+      self.selJetsJERDo = []
+      self.pmetJESUp = TLorentzVector()
+      self.pmetJESDo = TLorentzVector()
+      self.pmetJERUp = TLorentzVector()
+      self.pmetJERDo = TLorentzVector()
 
   def GetName(self, var, ichan, ilevel = '', isyst = ''):
     ''' Crafts the name for a histo '''
@@ -117,6 +146,7 @@ class ttanalysis(analysis):
     for key_chan in chan:
       ichan = chan[key_chan]
       for key_syst in systlabel.keys():
+        if not self.doSyst and key_syst != systematic.nom: continue
         isyst = systlabel[key_syst]
         self.NewHisto('Yields',   ichan, '', isyst, 5, 0, 5)
         self.NewHisto('YieldsSS', ichan, '', isyst, 5, 0, 5)
@@ -151,6 +181,8 @@ class ttanalysis(analysis):
           self.NewHisto('PDFweights',ichan,ilevel,'',33,0.5,33.5)
           self.NewHisto('ScaleWeights',ichan,ilevel,'',9,0.5,9.5)
         for key_syst in systlabel.keys():
+          if key_syst != systematic.nom and self.isData: return
+          if not self.doSyst and key_syst != systematic.nom: continue
             
           isyst = systlabel[key_syst]
           # Event
@@ -328,19 +360,31 @@ class ttanalysis(analysis):
     # elec, muon, pu, trigger...
     if not isinstance(syst, int): print '[WARNING] Label ', syst, ' is not an integer...'
     self.weight = self.EventWeight
-    if   syst == systematic.nom:       self.weight *= self.SFmuon * self.SFelec
-    elif syst == systematic.ElecEffUp: self.weight *= self.SFmuon * (self.SFelec + self.SFelecErr)
-    elif syst == systematic.ElecEffDo: self.weight *= self.SFmuon * (self.SFelec - self.SFelecErr)
-    elif syst == systematic.MuonEffUp: self.weight *= (self.SFmuon + self.SFmuonErr) * self.SFelec
-    elif syst == systematic.MuonEffDo: self.weight *= (self.SFmuon - self.SFmuonErr) * self.SFelec
+    if   syst == systematic.nom:       self.weight *= self.SFmuon * self.SFelec * self.PUSF
+    elif syst == systematic.ElecEffUp: self.weight *= self.SFmuon * (self.SFelec + self.SFelecErr) * self.PUSF
+    elif syst == systematic.ElecEffDo: self.weight *= self.SFmuon * (self.SFelec - self.SFelecErr) * self.PUSF
+    elif syst == systematic.MuonEffUp: self.weight *= (self.SFmuon + self.SFmuonErr) * self.SFelec * self.PUSF
+    elif syst == systematic.MuonEffDo: self.weight *= (self.SFmuon - self.SFmuonErr) * self.SFelec * self.PUSF
+    elif syst == systematic.PUUp:      self.weight *= self.SFmuon * self.SFelec * self.PUUpSF
+    elif syst == systematic.PUDo:      self.weight *= self.SFmuon * self.SFelec * self.PUDoSF
 
   def SetVariables(self, isyst):
     leps = self.selLeptons
     jets = self.selJets
     pmet = self.pmet
-    if   isyst == systematic.nom:  pass
-    elif isyst == systematic.JESUp: pass
-    elif isyst == systematic.JESDo: pass
+    if   isyst == systematic.nom: return leps, jets, pmet
+    elif isyst == systematic.JESUp:
+      jets = self.selJetsJESUp
+      pmet = self.pmetJESUp
+    elif isyst == systematic.JESDo:
+      jets = self.selJetsJESDo
+      pmet = self.pmetJESDo
+    elif isyst == systematic.JERUp:
+      jets = self.selJetsJERUp
+      pmet = self.pmetJERUp
+    elif isyst == systematic.JERDo:
+      jets = self.selJetsJERDo
+      pmet = self.pmetJERDo
     return leps, jets, pmet
 
   def insideLoop(self, t):
@@ -474,17 +518,44 @@ class ttanalysis(analysis):
       if not jid > 1: continue
       # |eta| < 2.4 
       if abs(p.Eta()) > 2.4: continue
-      j = jet(p, csv, flav, jid, deepcsv)
+      j      = jet(p,      csv, flav, jid, deepcsv)
       if csv >= 0.8484 : j.SetBtag() ### Misssing CSVv2 SFs !!!! 
       if not j.IsClean(self.selLeptons, 0.4): continue
-      if p.Pt() < 25: continue
-      self.selJets.append(j)
-    jets = self.selJets
-    pts  = [j.Pt() for j in jets]
-    self.selJets = [j for _,j in sorted(zip(pts,jets))]
+      if p.Pt()      >= self.JetPtCut: self.selJets.append(j)
+      if not self.isData and self.doSyst:
+        pJESUp = TLorentzVector(); pJERUp = TLorentzVector()
+        pJESDo = TLorentzVector(); pJERDo = TLorentzVector()
+        pJESUp.SetPtEtaPhiE(t.Jet_pt_jesTotalUp[i],   t.Jet_eta[i], t.Jet_phi[i], t.Jet_mass_jesTotalUp[i])
+        pJESDo.SetPtEtaPhiE(t.Jet_pt_jesTotalDown[i], t.Jet_eta[i], t.Jet_phi[i], t.Jet_mass_jesTotalDown[i])
+        pJERUp.SetPtEtaPhiE(t.Jet_pt_jerUp[i],        t.Jet_eta[i], t.Jet_phi[i], t.Jet_mass_jerUp[i])
+        pJERDo.SetPtEtaPhiE(t.Jet_pt_jerDown[i],      t.Jet_eta[i], t.Jet_phi[i], t.Jet_mass_jerDown[i])
+        jJESUp = jet(pJESUp, csv, flav, jid, deepcsv)
+        jJESDo = jet(pJESDo, csv, flav, jid, deepcsv)
+        jJERUp = jet(pJERUp, csv, flav, jid, deepcsv)
+        jJERDo = jet(pJERDo, csv, flav, jid, deepcsv)
+        if csv >= 0.8484:
+          jJESUp.SetBtag()
+          jJESDo.SetBtag()
+          jJERUp.SetBtag()
+          jJERDo.SetBtag()
+        if pJESUp.Pt() >= self.JetPtCut: self.selJetsJESUp.append(jJESUp)
+        if pJESDo.Pt() >= self.JetPtCut: self.selJetsJESDo.append(jJESDo)
+        if pJERUp.Pt() >= self.JetPtCut: self.selJetsJERUp.append(jJERUp)
+        if pJERDo.Pt() >= self.JetPtCut: self.selJetsJERDo.append(jJERDo)
+    self.selJets = SortByPt(self.selJets)
+    if not self.isData and self.doSyst:
+      self.selJetsJESUp = SortByPt(self.selJetsJESUp)
+      self.selJetsJESDo = SortByPt(self.selJetsJESDo)
+      self.selJetsJERUp = SortByPt(self.selJetsJERUp)
+      self.selJetsJERDo = SortByPt(self.selJetsJERDo)
 
     ##### MET
-    self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, t.MET_sumEt)
+    self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, 0)
+    if not self.isData and self.doSyst:
+      self.pmetJESUp.SetPtEtaPhiM(t.MET_pt_jesTotalUp,   0, t.MET_phi_jesTotalUp,   0) 
+      self.pmetJESDo.SetPtEtaPhiM(t.MET_pt_jesTotalDown, 0, t.MET_phi_jesTotalDown, 0) 
+      self.pmetJERUp.SetPtEtaPhiM(t.MET_pt_jerUp,        0, t.MET_phi_jerUp,        0) 
+      self.pmetJERDo.SetPtEtaPhiM(t.MET_pt_jerDown,      0, t.MET_phi_jerDown,      0) 
 
     nJets = len(self.selJets)
     nBtag = GetNBtags(self.selJets)
@@ -528,7 +599,13 @@ class ttanalysis(analysis):
     ### Event weight and othe global variables
     ###########################################
     self.nvtx   = t.PV_npvs
-    # Missing the PU re-weighting, lepton ID/ISO SFs, etc...
+    if not self.isData:
+      self.PUSF   = t.puWeight
+      self.PUUpSF = t.puWeightUp
+      self.PUDoSF = t.puWeightDown
+    else:
+      self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
+
  
     ### Event selection
     ###########################################
@@ -538,7 +615,11 @@ class ttanalysis(analysis):
     if not passTrig: return
     self.SS = l0.charge*l1.charge > 0
     for isyst in systlabel.keys():
+      if not self.doSyst and isyst != systematic.nom: continue
+      if self.isData and isyst != systematic.nom: continue
       leps, jets, pmet = self.SetVariables(isyst)
+      nJets = len(jets)
+      nBtag = GetNBtags(jets)
       if not len(leps) >= 2: continue
       l0 = leps[0]; l1 = leps[1]
 

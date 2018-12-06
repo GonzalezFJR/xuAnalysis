@@ -658,10 +658,11 @@ class StackPlot:
     # Systematic samples
     for pr in self.systSamples:
       pr.SetHisto(self.t.GetNamedHisto(self.histoName))
-    self.t.SetIsData(True)
-    self.t.SetProcess(self.data.GetSamples())
-    self.data.SetHisto(self.t.GetNamedHisto(self.histoName))
-    self.t.SetIsData(False)
+    if hasattr(self,'data'):
+      self.t.SetIsData(True)
+      self.t.SetProcess(self.data.GetSamples())
+      self.data.SetHisto(self.t.GetNamedHisto(self.histoName))
+      self.t.SetIsData(False)
 
   #############################################################################################
   ### Histograms and systematics
@@ -761,21 +762,24 @@ class StackPlot:
     for pr in self.pr: hStack.Add(pr.histo())
     hStack.Draw('hist')
 
-    data = self.data.histo()
-    data.Draw(self.data.GetDrawStyle())
+    datamax = -999
+    if hasattr(self, 'data'):
+      data = self.data.histo()
+      data.Draw(self.data.GetDrawStyle())
+      datamax = data.GetMaximum()
     
     bkg = hStack.GetStack().Last().Clone('AllBkg')
 
-    dmax = max(data.GetMaximum(), bkg.GetMaximum())
+    dmax = max(datamax, bkg.GetMaximum())
     if isinstance(self.PlotMaximum, float): hStack.SetMaximum(self.PlotMaximum)
     else: hStack.SetMaximum(dmax*self.PlotMaxScale)
     if isinstance(self.PlotMinimum, float): hStack.SetMinimum(self.PlotMinimum)
 
-    hRatio = data.Clone()
+    hRatio = data.Clone() if hasattr(self, 'data') else bkg.Clone()
     nbins = hRatio.GetNbinsX()
-    for i in range(nbins):
+    for i in range(nbins+1):
       b = bkg. GetBinContent(i)
-      d = data.GetBinContent(i)
+      d = data.GetBinContent(i) if hasattr(self, 'data') else b
       if b == 0: b = 1
       e = 0 if d == 0 else d/b*(sqrt(d)/d)
       hRatio.SetBinContent(i, d/b)
@@ -808,7 +812,7 @@ class StackPlot:
 
     if len(self.binLabels) > 0: 
       for i in range(len(self.binLabels)):
-        hRatio.GetXaxis().SetBinLabels(self.binLabels[i])
+        hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
 
     # Set syst histo
     self.AddStatUnc()
@@ -825,16 +829,17 @@ class StackPlot:
     # Legend
     legend = self.SetLegend()
     for pr in self.pr: legend.AddEntry(pr.histo(), pr.GetName(), 'f')
-    legend.AddEntry(self.data.histo(), 'Data', 'pe')
+    if hasattr(self, 'data'): legend.AddEntry(self.data.histo(), 'Data', 'pe')
     legend.Draw()
 
     # Ratio
     ratio.cd()
     hRatio.SetMaximum(self.PlotRatioMax)
     hRatio.SetMinimum(self.PlotRatioMin)
-    hRatio.Draw(self.data.GetDrawStyle())
+    if hasattr(self, 'data'): hRatio.Draw(self.data.GetDrawStyle())
+    else:                     hRatio.Draw('lsame')
     hRatioErr = bkg.Clone("hratioerr")
-    for i in range(1, self.nbins+1):
+    for i in range(1, self.nbins+2):
       hRatioErr.SetBinContent(i, 1)   
       val = bkg.GetBinContent(i)
       err = bkg.GetBinError(i)
@@ -1103,7 +1108,14 @@ class WeightReader:
    self.SetNgenEvents(nGenEvents)
    self.loadHistos()
 
+#################################################################################################
+### Histo saver
+#################################################################################################
+
 class HistoSaver:
+ ''' Class to save histograms from different process and prepare a .root file 
+     to use with the Higgs Combine tool
+ '''
 
  def SetPath(self, p):
   if not p.endswith('/'): p += '/'

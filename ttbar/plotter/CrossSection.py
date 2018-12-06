@@ -23,9 +23,18 @@ class CrossSection:
     ''' Add the uncertainty 'name' with value 'val' to the experimental uncertainties '''
     self.effUnc[name] = val
 
-  def AddModUnc(self, name, val):
-    ''' Add the uncertainty 'name' with value 'val' to the modeling uncertainties (on acceptance) '''
-    self.accUnc[name] = val
+  def AddModUnc(self, name, val = 0., do = ''):
+    ''' Add the uncertainty 'name' with value 'val' to the modeling uncertainties (on acceptance) 
+        if sample names are given (up/down) the uncertainty is read from the histos in that samples 
+    '''
+    if isinstance(val, float):
+      self.accUnc[name] = val
+    else:
+      nom = self.GetSignalYield()
+      up = self.t.GetYield(val)
+      do = self.t.GetYield(do)
+      var = max(abs(up-nom),abs(do-nom))/nom
+      self.AddModUnc(name, var)
 
   ### Setting methods
   def SetChan(self, ch):
@@ -331,13 +340,13 @@ class CrossSection:
     if isinstance(expUnc, str): expUnc = expUnc.replace(' ', '').split(',')
     if isinstance(modUnc, str): modUnc = modUnc.replace(' ', '').split(',')
     self.SetChan(chan); self.SetLevel(level)
-    t = TopHistoReader(path)
-    t.SetLumi(lumi)
-    t.SetChan(chan); t.SetLevel(level)
+    self.t = TopHistoReader(path)
+    self.t.SetLumi(lumi)
+    self.t.SetChan(chan); self.t.SetLevel(level)
     signalName = signal[0]
     signalSample = signal[1]
-    fiduEvents = t.GetFiduEvents(signalSample,level)
-    nGenEvents = t.GetNGenEvents(signalSample)
+    fiduEvents = self.t.GetFiduEvents(signalSample,level)
+    nGenEvents = self.t.GetNGenEvents(signalSample)
     self.SetLumiUnc(lumiunc)
     self.SetLumi(lumi)
     self.SetFiduEvents(fiduEvents)
@@ -348,12 +357,12 @@ class CrossSection:
         expunc = expUnc
       elif len(l) == 4:
         name, pr, unc, expunc = l
-      self.AddBkg(name, t.GetYield(pr), unc, t.GetUnc(pr, chan, level, expUnc), t.GetYieldStatUnc(pr))
-    self.SetSignal(signalName, t.GetYield(signalSample), t.GetYieldStatUnc(signalSample))
-    t.SetIsData(True)
-    self.SetData(t.GetYield(data))
-    t.SetIsData(False)
-    for e in expUnc: self.AddExpUnc(e, t.GetUnc(signal[1], chan, level, e))
+      self.AddBkg(name, self.t.GetYield(pr), unc, self.t.GetUnc(pr, chan, level, expUnc), self.t.GetYieldStatUnc(pr))
+    self.SetSignal(signalName, self.t.GetYield(signalSample), self.t.GetYieldStatUnc(signalSample))
+    self.t.SetIsData(True)
+    self.SetData(self.t.GetYield(data))
+    self.t.SetIsData(False)
+    for e in expUnc: self.AddExpUnc(e, self.t.GetUnc(signal[1], chan, level, e))
     # Modeling uncertainties
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modunc or 'scale' in modUnc:
       w = WeightReader(path, '',chan, level)

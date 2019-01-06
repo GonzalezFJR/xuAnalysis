@@ -670,7 +670,7 @@ class StackPlot:
   def GetAllBkg(self, syst = ''):
     processes = [x.GetSamples() for x in self.pr]
     self.SetSyst(syst)
-    histoName = self.CraftHistoName()
+    histoName = self.CraftHistoName() if self.histoName == '' else self.histoName
     return self.t.GetNamedHisto(histoName, processes)
 
   def AddToSyst(self, syst):

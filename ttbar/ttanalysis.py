@@ -181,7 +181,7 @@ class ttanalysis(analysis):
           self.NewHisto('PDFweights',ichan,ilevel,'',33,0.5,33.5)
           self.NewHisto('ScaleWeights',ichan,ilevel,'',9,0.5,9.5)
         for key_syst in systlabel.keys():
-          if key_syst != systematic.nom and self.isData: return
+          if key_syst != systematic.nom and self.isData: continue
           if not self.doSyst and key_syst != systematic.nom: continue
             
           isyst = systlabel[key_syst]
@@ -203,6 +203,10 @@ class ttanalysis(analysis):
           self.NewHisto('DilepPt', ichan,ilevel,isyst, 40, 0, 200)
           self.NewHisto('InvMass', ichan,ilevel,isyst, 60, 0, 300)
           self.NewHisto('DYMass',  ichan,ilevel,isyst, 200, 70, 110)
+          self.NewHisto('DYMassBB',  ichan,ilevel,isyst, 200, 70, 110)
+          self.NewHisto('DYMassBE',  ichan,ilevel,isyst, 200, 70, 110)
+          self.NewHisto('DYMassEB',  ichan,ilevel,isyst, 200, 70, 110)
+          self.NewHisto('DYMassEE',  ichan,ilevel,isyst, 200, 70, 110)
           self.NewHisto('DeltaPhi',  ichan,ilevel,isyst, 20, 0, 1)
           if ichan == chan[ch.ElMu]:
             self.NewHisto('ElecEta', 'ElMu',ilevel,isyst, 50, -2.5, 2.5)
@@ -274,12 +278,12 @@ class ttanalysis(analysis):
     
     ### Fill the histograms
     #if ich == ch.ElMu and ilev == lev.dilepton: print 'Syst = ', isys, ', weight = ', self.weight
-    self.GetHisto("InvMass", ich, ilev, isys).Fill(mll, self.weight)
     self.GetHisto('HT',   ich,ilev,isys).Fill(ht, self.weight)
     self.GetHisto('MET',  ich,ilev,isys).Fill(met, self.weight)
     self.GetHisto('NJets',ich,ilev,isys).Fill(njet, self.weight)
     self.GetHisto('Btags',ich,ilev,isys).Fill(nbtag, self.weight)
     self.GetHisto('Vtx',  ich,ilev,isys).Fill(self.nvtx, self.weight)
+    self.GetHisto("InvMass", ich, ilev, isys).Fill(mll, self.weight)
 
     if   njet == 0: nbtagnjetsnum = nbtag
     elif njet == 1: nbtagnjetsnum = nbtag + 1
@@ -297,7 +301,14 @@ class ttanalysis(analysis):
     self.GetHisto('DilepPt', ich,ilev,isys).Fill(dipt, self.weight)
     self.GetHisto('DeltaPhi',  ich,ilev,isys).Fill(dphi/3.141592, self.weight)
     self.GetHisto('InvMass', ich,ilev,isys).Fill(mll, self.weight)
-    if mll > 70 and mll < 110: self.GetHisto('DYMass',  ich,ilev,isys).Fill(mll, self.weight)
+    if mll > 70 and mll < 110: 
+      self.GetHisto('DYMass',  ich,ilev,isys).Fill(mll, self.weight)
+      l0eta = abs(l0eta); l1eta = abs(l1eta)
+      if ich == ch.ElEl:
+        if   l0eta <= 1.479 and l1eta <= 1.479: self.GetHisto('DYMassBB',  ich,ilev,isys).Fill(mll, self.weight)
+        elif l0eta <= 1.479 and l1eta  > 1.479: self.GetHisto('DYMassBE',  ich,ilev,isys).Fill(mll, self.weight)
+        elif l0eta  > 1.479 and l1eta <= 1.479: self.GetHisto('DYMassEB',  ich,ilev,isys).Fill(mll, self.weight)
+        elif l0eta  > 1.479 and l1eta  > 1.479: self.GetHisto('DYMassEE',  ich,ilev,isys).Fill(mll, self.weight)
     if ich == ch.ElMu:
       self.GetHisto('ElecEta', ich,ilev,isys).Fill(eleta, self.weight)
       self.GetHisto('ElecPt',  ich,ilev,isys).Fill(elpt, self.weight)
@@ -469,12 +480,13 @@ class ttanalysis(analysis):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Electron_pt[i], t.Electron_eta[i], t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
-      etaSC    = p.Eta();
+      etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
       convVeto = t.Electron_convVeto[i]
       R9       = t.Electron_r9[i]
       # Tight cut-based Id
       if not t.Electron_cutBased[i] >= 4: continue # Tightcut-based Id
+      if not convVeto: continue
       # Isolation (RelIso03) tight
       relIso03 = t.Electron_pfRelIso03_all[i]
       if   etaSC <= 1.479 and relIso03 > 0.0361: continue
@@ -599,12 +611,16 @@ class ttanalysis(analysis):
     ### Event weight and othe global variables
     ###########################################
     self.nvtx   = t.PV_npvs
+    #'''
     if not self.isData:
       self.PUSF   = t.puWeight
       self.PUUpSF = t.puWeightUp
       self.PUDoSF = t.puWeightDown
     else:
       self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
+    #'''
+    #self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
+    ''' Check that the PU weights are in the trees!!! '''
 
  
     ### Event selection

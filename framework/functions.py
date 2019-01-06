@@ -90,7 +90,8 @@ class object:
     return self.p.DeltaR(obj.p)
 
   def DeltaPhi(self, obj):
-    return self.p.DeltaPhi(obj.p)
+    t = obj if isinstance(obj, TLorentzVector) else obj.p
+    return self.p.DeltaPhi(t)
 
   def MatchToParticle(self, listOfParticles, dRval = 0.4):
     ''' Return index of matched paricle in the list, or -1 if not matched. '''
@@ -226,3 +227,39 @@ def GetNBtags(listOfJets):
   for jet in listOfJets:
     if jet.IsBtag(): nbtags+=1
   return nbtags
+
+def GetObjMinDR(list1, list2 = ''):
+  ''' DR '''
+  minDR = 999
+  o1 = 0; o2 = 0
+  if list2 == '':
+    for obj1 in list1:
+      for obj2 in list1:
+        if obj1 == obj2: continue
+        dr = obj1.DeltaR(obj2)
+        if dr < minDR:
+          minDR = dr
+          o1 = obj1
+          o2 = obj2
+    return o1, o2
+  else:
+    l = list1
+    for obj in list2:
+      dr = l.DeltaR(obj)
+      if dr < minDR:
+        minDR = dr
+        o1 = obj
+    return o1
+  return o1, o2
+
+
+def GetLbMass(lep, jets, btags):
+  ''' Returns the invariant mass of a b jet and lepton '''
+  m = 0
+  if len(btags) == 0:
+    m = (lep.p + jets[0].p).M()
+  elif len(btags) == 1:
+    m = (lep.p + btags[0].p).M()
+  elif len(btags) >= 2:
+    m = (lep.p + GetObjMinDR(lep, btags).p).M()
+  return m

@@ -17,6 +17,7 @@ process = {
 'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
 'tt'  : 'TT',
 'data': 'HighEGJet,SingleMuon, DoubleMuon'}
+prk = ['VV', 'fake', 'DY', 'tt', 'tW']
 
 ### Definition of colors for the processes
 colors ={
@@ -37,10 +38,10 @@ def DrawStack(out, *listOfPlots):
   s = StackPlot(path)
   s.SetVerbose(1)
   s.SetOutPath(out)
-  s.SetLumi(308.54)
-  for pr in process.keys()[:-1]: s.AddProcess(pr, process[pr], colors[pr])
+  s.SetLumi(296.08)
+  for pr in prk: s.AddProcess(pr, process[pr], colors[pr])
   s.AddData(process['data'])
-  s.AddToSyst('ElecEffUp, ElecEffDown, MuonEffUp,MuonEffDown')
+  s.AddToSyst('ElecEffUp, ElecEffDown, MuonEffUp,MuonEffDown,PUUp, PUDown,JESUp,JESDown')
   s.SetRatioMin(0.5); s.SetRatioMax(1.5)
   for p in listOfPlots:
     if not isinstance(p, list): p = [p]
@@ -53,6 +54,7 @@ def GetName(var, chan, lev):
 ## Cross section
 def xsec(chan = 'ElMu', lev = '2jets', doDD = True):
   x = CrossSection(outpath, chan, lev)
+  x.SetTextFormat("tex")
   bkg = []
   bkg.append(['tW',            process['tW'],   0.30])
   if not doDD: 
@@ -61,10 +63,14 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = True):
   bkg.append(['VV',            process['VV'],   0.30])
   signal   = ['tt',            process['tt']]
   data     = process['data']
-  expunc = "MuonEff, ElecEff"
+  expunc = "MuonEff, ElecEff, PU, JES, JER"
   modunc = "pdf, scale"
 
   x.ReadHistos(path, chan, lev, bkg = bkg, signal = signal, data = data, expUnc = expunc, modUnc = modunc)
+  x.AddModUnc('Underlying Event','TT_TuneCP5up','TT_TuneCP5down')
+  x.SetLumi(296.1)
+  x.SetLumiUnc(0.035)
+  x.AddModUnc('hdamp','TT_hdampUP','TT_hdampDOWN')
 
   if doDD:
     d = DYDD(path,outpath,chan,lev) 
@@ -112,9 +118,8 @@ def DrawSS(lev = '2jets'):
 #######################################################################################
 #######################################################################################
 
-levels   = ['dilepton', '2jets','1btag']
-channels = ['ElMu', 'ElEl', 'MuMu']
-
+levels   = ['dilepton', 'MET','2jets']
+channels = ['ElMu','ElEl', 'MuMu']
 # Plots
 for ch in channels:
   if   ch == 'MuMu': lepstr = '#mu#mu'
@@ -123,6 +128,7 @@ for ch in channels:
   for lev in levels:
     if lev == '1btag' and ch != 'ElMu': continue
     if ch != 'ElMu' and lev == 'dilepton': DrawStack(outpath+'leptons',[GetName('DYMass',ch,lev),  'M_{'+lepstr+'} (GeV)'])
+    if lev == 'MET' and ch == 'ElMu': continue
     if lev == 'dilepton':
       DrawStack(outpath + 'global', 
       [GetName('NJets',ch,lev), 'Jet multiplicity'],

@@ -94,7 +94,7 @@ class analysis:
   #############################################################################################
   ### Setting funcitons
 
-  def SetFiles(self, path, fname = ''):
+  def SetFiles(self, path, fname = '', j = -1):
     ''' Search and store the files '''
     if fname == '':
       if isinstance(path, list):
@@ -102,7 +102,7 @@ class analysis:
         return
       else: print '[ERROR] Wrong input'
     else:
-      self.files = GetFiles(path, fname, self.verbose >= 2)
+      self.files = GetFiles(path, fname, self.verbose >= 2)# if j == -1 else [GetFiles(path, fname, self.verbose >= 2)[j]]
     if len(self.files) == 0: exit()
     ### Set sample name
     path, sample, n = guessPathAndName(self.files[0])
@@ -205,6 +205,15 @@ class analysis:
     h.Sumw2()
     if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
     else:                     h = TH1F(name, title, nbins, b0, bN)
+    self.AddToOutputs(name,h)
+    return h
+
+  def CreateTH1D(self, name, title, nbins, b0, bN = -999):
+    ''' Constructor for TH1F '''
+    h = TH1D()
+    h.Sumw2()
+    if isinstance(b0, array): h = TH1D(name, title, nbins, b0)
+    else:                     h = TH1D(name, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -372,7 +381,7 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = ''):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1):
     # Default values:
     self.inpath = fname
     self.out = ''
@@ -398,7 +407,7 @@ class analysis:
     self.fileName = fileName
     self.inputs = {}
     self.SetOptions(options)
-    if fileName != '': self.SetFiles(fname, fileName)
+    if fileName != '': self.SetFiles(fname, fileName, chooseFile)
     else:              self.SetFiles(fname)
     self.SetXsec(xsec)
     self.SetOutDir(outpath)

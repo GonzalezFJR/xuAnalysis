@@ -4,17 +4,19 @@ sys.path.append(basepath)
 from ttanalysis import *
 from framework.fileReader import getDicFiles, GetAllInfoFromFile
 
-defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/'
+defaultPath = '/pool/cienciasrw/userstorage/juanr/top/5TeV/nov27/'
+#defaultPath = '/pool/ciencias/trees2017/nanoAOD5Tev/'
 
 xsecdic = {
  'HighEGJet':1,
+ 'HighEGJets':1,
  'SingleMuon':1,
  'DoubleMuon':1,
  'DYJetsToLL_MLL50' : 2055,
  'DYJetsToLL_M_10to50' : 1506,
  'WJetsToLNu' : 21159,
- 'ZZTo2L2Nu' : 1,
- 'ZZTo4L' : 1,
+# 'ZZTo2L2Nu' : 1,
+# 'ZZTo4L' : 1,
  'WZTo3LNU' : 0.1258,
  'WWTo2L2Nu' : 0.1858,
  'tW_noFullHad' : 1.629072,
@@ -22,17 +24,17 @@ xsecdic = {
  'tbarW_noFullHad' : 1.629072,
  'TT' : 68.9,
  'TTsemilep' : 68.9,
-# 'TT_TuneCP5up' : 68.9,
-# 'TT_TuneCP5down' : 68.9
-# 'TT_hdampUP' : 68.9,
-# 'TT_hdampDOWN' : 68.9,
- 'TT_mtop166p5' : 68.9,
- 'TT_mtop178p5' : 68.9
+ 'TT_TuneCP5up' : 68.9,
+ 'TT_TuneCP5down' : 68.9,
+ 'TT_hdampUP' : 68.9,
+ 'TT_hdampDOWN' : 68.9
+# 'TT_mtop166p5' : 68.9,
+# 'TT_mtop178p5' : 68.9
 }
 
 nSlots = 8
 doAll = False; doSendJobs = False;
-def runSample(sample, dosend,options, path = ''):
+def runSample(sample, dosend,options, path = '', nEv = -1):
   if path == '': path = defaultPath
   if not sample in dic:
     print ' << Process \''+sample+'\' not found!'
@@ -46,7 +48,9 @@ def runSample(sample, dosend,options, path = ''):
   a.SetNSlots(nSlots)
   a.SetOutDir('temp')
   if dosend: a.sendJobs()
-  else: a.run()
+  else: 
+    if nEv == -1: a.run()
+    else: a.run(0, nEv)
 
 # Get files
 arg = sys.argv[1:]
@@ -57,7 +61,8 @@ if len(arg) == 0:
   print ' >> Options: --all, --sendJobs, --options'
   exit()
 
-path = ''
+path = defaultPath
+nEvents = -1
 samp = arg[0]
 if samp == '--all' or samp == 'all': doAll = True
 i = 1; options = ''
@@ -70,8 +75,9 @@ if len(arg) >= 3:
     if a[2:] == 'sendJobs': doSendJobs = True
     if a[2:] == 'options': options = arg[i+1]
     if a[2:] == 'path': path = arg[i+1]
+    if a[2:] == 'nEvents': nEvents = int(arg[i+1])
 dic = getDicFiles(path)
 if doAll: 
-  for s in xsecdic.keys(): runSample(s,doSendJobs,options,path)
-else: runSample(samp,doSendJobs,options,path)
+  for s in xsecdic.keys(): runSample(s,doSendJobs,options,path,nEvents)
+else: runSample(samp,doSendJobs,options,path,nEvents)
 

@@ -37,6 +37,10 @@ class CrossSection:
       self.AddModUnc(name, var)
 
   ### Setting methods
+  def SetTextFormat(self, textformat):
+    ''' Set the format of the output tables (txt, tex) '''
+    self.textformat = textformat
+
   def SetChan(self, ch):
     ''' Set the channel '''
     self.chan = ch
@@ -217,7 +221,9 @@ class CrossSection:
  
   def GetXsecLumiUnc(self):
     ''' Returns the xsec lumi uncertainty on cross section '''
-    return self.GetXsec()*(1/self.GetLumi() - 1/(self.GetLumi() * (1+self.GetLumiUnc()) ))
+    #return self.GetXsec()*(1/self.GetLumi() - 1/(self.GetLumi() * (1+self.GetLumiUnc()) ))
+    r = self.GetLumiUnc()
+    return (abs(r/(1-r)) + abs(r/(1+r)))/2
 
   def GetXsecStatUnc(self):
     ''' Returns the stat unc on cross section '''
@@ -235,55 +241,57 @@ class CrossSection:
 
   ### Several printing methods!
   def PrintYields(self, name = 'yields', doStat = True, doSyst = True):
-    t = OutText(self.outpath, name)
+    t = OutText(self.outpath, name, "new", textformat = self.textformat)
+    t.SetTexAlign("l c")
     nsem = 16+3+8 + (5+8 if doStat else 0) + (5+8 if doSyst else 0)
     t.SetSeparatorLength(nsem)
-    t.line('Yields for channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
+    t.line('%'+'Yields for channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
     t.bar()
     for pr in self.bkg:
       name = t.fix(" %s"%pr.GetName(), 16, 'l',0)
       y    = t.fix("%1.2f"%pr.GetYield(),   8,0)
       stat = t.fix("%1.2f"%pr.GetStatUnc(), 8,0)
       syst = t.fix("%1.2f"%pr.GetSystAbsUnc(), 8,0)
-      t.line(name + ' | ' + y + ((" +\- " + stat) if doStat else '') + ((" +\- " + syst) if doSyst else ''))
+      t.line(name + t.vsep() + y + ((t.pm() + stat) if doStat else '') + ((t.pm() + syst) if doSyst else ''))
     t.sep()
     totbkg     = t.fix("%1.2f"%self.GetTotBkg(), 8,0)
     totbkgstat = t.fix("%1.2f"%self.GetTotBkgStatUnc(), 8,0)
     totbkgsyst = t.fix("%1.2f"%self.GetTotBkgSystUnc(), 8,0)
-    t.line(t.fix(" Total bkg", 16, 'l',0) + ' | ' + totbkg + ((" +\- " + totbkgstat) if doStat else '') + ((" +\- " + totbkgsyst) if doSyst else ''))
+    t.line(t.fix(" Total bkg", 16, 'l',0) + t.vsep() + totbkg + ((t.pm() + totbkgstat) if doStat else '') + ((t.pm() + totbkgsyst) if doSyst else ''))
     t.sep()
     y = self.GetSignalYield()
     signal = t.fix(" %s"%(self.GetSignal().GetName()), 16, 'l',0)
     ysig   = t.fix("%1.2f"%y,8,0)
     sigunc = t.fix("%1.2f"%(self.GetXsecSystUnc()*y),8,0)
     sigsta = t.fix("%1.2f"%self.GetSignal().GetStatUnc(),8,0)
-    t.line(signal + ' | ' + ysig + ((" +\- " + sigsta) if doStat else '') + ((" +\- " + sigunc) if doSyst else ''))
+    t.line(signal + t.vsep() + ysig + ((t.pm() + sigsta) if doStat else '') + ((t.pm() + sigunc) if doSyst else ''))
     t.sep()
-    t.line(t.fix(" Data", 16,'l',0) + ' | ' + t.fix("%i"%self.GetData(),8,0))
+    t.line(t.fix(" Data", 16,'l',0) + t.vsep() + t.fix("%i"%self.GetData(),8,0))
     t.bar()
     t.write()
 
   def PrintXsec(self, name = 'xsec'):
-    t = OutText(self.outpath, name)
+    t = OutText(self.outpath, name, "new", textformat = self.textformat)
+    t.SetTexAlign("l c")
     t.SetSeparatorLength(26 + 3 + 20 + 5)
     t.SetDefaultFixOption(False)
-    t.line('tt cross section for channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
+    t.line('%'+'tt cross section for channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
     acc = self.GetAcc()
     eff = self.GetEff()
     t.bar()
-    t.line(t.fix(' Acceptance', 16, 'r') + ' | ' + t.fix("%1.4f"%acc, 6) + " +\- " + t.fix("%1.3f"%(acc*self.GetAccUnc()),8))
-    t.line(t.fix(' Efficiency', 16, 'r') + ' | ' + t.fix("%1.4f"%eff, 6) + " +\- " + t.fix("%1.3f"%(eff*self.GetEffUnc()),8))
+    t.line(t.fix(' Acceptance', 16, 'r') + t.vsep() + t.fix("%1.4f"%acc, 6) + t.pm() + t.fix("%1.3f"%(acc*self.GetAccUnc()),8))
+    t.line(t.fix(' Efficiency', 16, 'r') + t.vsep() + t.fix("%1.4f"%eff, 6) + t.pm() + t.fix("%1.3f"%(eff*self.GetEffUnc()),8))
     t.sep()
-    t.line(t.fix(' Branching ratio', 16, 'r') + ' | ' + t.fix("%1.4f"%self.GetBR(), 6))
-    t.line(t.fix(' Gen events', 16, 'r') + ' | ' + t.fix("%d"%self.GetGenEvents(), 9))
-    t.line(t.fix(' Fiducial events', 16, 'r') + ' | ' + t.fix("%d"%self.GetFiduEvents(), 9))
+    t.line(t.fix(' Branching ratio', 16, 'r') + t.vsep() + t.fix("%1.4f"%self.GetBR(), 6))
+    t.line(t.fix(' Gen events', 16, 'r') + t.vsep() + t.fix("%d"%self.GetGenEvents(), 9))
+    t.line(t.fix(' Fiducial events', 16, 'r') + t.vsep() + t.fix("%d"%self.GetFiduEvents(), 9))
     if self.doFiducial:
       t.sep()
       xsec = self.GetFiduXsec()
       stat = self.GetXsecStatUnc()
       syst = self.GetEffUnc()
       lumi = self.GetXsecLumiUnc()
-      t.line(t.fix(' Fiducial cross section', 26, 'r') + ' | ' + t.fix("%1.2f"%xsec,6))
+      t.line(t.fix(' Fiducial cross section', 26, 'r') + t.vsep() + t.fix("%1.2f"%xsec,6))
       t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
       t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
       t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
@@ -292,7 +300,7 @@ class CrossSection:
     stat = self.GetXsecStatUnc()
     syst = self.GetXsecSystUnc()
     lumi = self.GetXsecLumiUnc()
-    t.line(t.fix(' Inclusive cross section', 26, 'r') + ' | ' + t.fix("%1.2f"%xsec,6))
+    t.line(t.fix(' Inclusive cross section', 26, 'r') + t.vsep() + t.fix("%1.2f"%xsec,6))
     t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
     t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
     t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
@@ -300,10 +308,11 @@ class CrossSection:
     t.write()
 
   def PrintSystTable(self, name = 'uncertainties'):
-    t = OutText(self.outpath, name)
+    t = OutText(self.outpath, name, "new", textformat = self.textformat)
+    t.SetTexAlign("l c")
     t.SetSeparatorLength(30)
     t.SetDefaultFixOption(False)
-    t.line('Uncertainties on tt inclusive cross section \nfor channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
+    t.line('%Uncertainties on tt inclusive cross section \n% '+'for channel \'%s\' and level \'%s\''%(self.GetChan(), self.GetLevel()))
     exp = self.GetExpUnc()
     mod = self.GetModUnc()
     stat = self.GetXsecStatUnc()
@@ -311,19 +320,19 @@ class CrossSection:
     syst = self.GetXsecSystUnc()
     xsec = self.GetXsec()
     t.bar()
-    t.line(t.fix(' Source', 18, 'l') + ' | ' + fix("value (%)", 6))
+    t.line(t.fix(' Source', 18, 'l') + t.vsep() + fix("value (%)", 6))
     t.sep()
-    for b in [x.GetName() for x in self.bkg]: t.line(fix(' '+b,18,'r') + ' | ' + fix('%1.2f'%(self.GetXsecBkgRelUnc(b)*100), 6))
+    for b in [x.GetName() for x in self.bkg]: t.line(fix(' '+b,18,'r') + t.vsep() + fix('%1.2f'%(self.GetXsecBkgRelUnc(b)*100), 6))
     t.sep()
-    for e in exp.keys(): t.line(fix(' '+e,18,'l') + ' | ' + fix('%1.2f'%(exp[e]*100), 6))
+    for e in exp.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.2f'%(exp[e]*100), 6))
     t.sep()
-    for e in mod.keys(): t.line(fix(' '+e,18,'l') + ' | ' + fix('%1.2f'%(mod[e]*100), 6))
+    for e in mod.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.2f'%(mod[e]*100), 6))
     t.sep()
-    t.line(fix(' Total systematic',18,'l')+' | '+fix('%1.2f'%(syst*100), 6))
+    t.line(fix(' Total systematic',18,'l')+t.vsep()+fix('%1.2f'%(syst*100), 6))
     t.sep()
-    t.line(fix(' Statistics',18,'l')+' | '+fix('%1.2f'%(stat*100), 6))
+    t.line(fix(' Statistics',18,'l')+t.vsep()+fix('%1.2f'%(stat*100), 6))
     t.sep()
-    t.line(fix(' Luminosity',18,'l')+' | '+fix('%1.2f'%(lum*100), 6))
+    t.line(fix(' Luminosity',18,'l')+t.vsep()+fix('%1.2f'%(lum*100), 6))
     t.bar()
     t.write()
 
@@ -348,7 +357,6 @@ class CrossSection:
     fiduEvents = self.t.GetFiduEvents(signalSample,level)
     nGenEvents = self.t.GetNGenEvents(signalSample)
     self.SetLumiUnc(lumiunc)
-    self.SetLumi(lumi)
     self.SetFiduEvents(fiduEvents)
     self.SetGenEvents(nGenEvents)
     for l in bkg:
@@ -370,10 +378,11 @@ class CrossSection:
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())
 
-  def __init__(self, outpath = './temp/', lev = '', chan = '', genEvents = 1, fiduEvents = 1):
+  def __init__(self, outpath = './temp/', lev = '', chan = '', genEvents = 1, fiduEvents = 1, textformat = "txt"):
+    self.SetTextFormat(textformat)
     self.SetThXsec(68.9)
-    self.SetLumi(308.54)
-    self.SetLumiUnc(0.025) # Relative
+    self.SetLumi(296.1)
+    self.SetLumiUnc(0.035) # Relative
     self.SetChan(chan); self.SetLevel(lev)
     self.SetGenEvents(genEvents)   
     self.SetFiduEvents(fiduEvents) 

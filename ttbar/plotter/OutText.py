@@ -11,6 +11,9 @@ class OutText:
   def SetOutPath(self,p):
     if not p[-1] == '/': p+='/'
     self.path = p
+
+  def SetTexAlign(self, texalign):
+    self.texalign = texalign
  
   def SetOutName(self,o):
     self.outname = o
@@ -33,23 +36,28 @@ class OutText:
 
   def line(self, t=''):
     ''' Add line '''
-    self.text(t+'\n')
+    if self.outformat == "tex": self.text(t+' \\\\ \n')
+    else: self.text(t+'\n')
 
   def sep(self):
     ''' Draws a separating line '''
-    self.line(self.separator)
+    if self.outformat == "tex": self.text("\hline\n")
+    else: self.line(self.separator)
 
   def bar(self):
     ''' Draws a separating double line '''
-    self.line(self.sepbar)
+    if self.outformat == "tex": self.text("\hline\n")
+    else: self.line(self.sepbar)
   
   def vsep(self):
     ''' Draws a vertical separator '''
-    return ' | '
+    if self.outformat == "tex": return ' & '
+    else: return ' | '
 
   def pm(self):
     ''' Inserts a plus/minus sign '''
-    return ' +/- '
+    if self.outformat == "tex": return ' {$\pm$} '
+    else: return ' +/- '
 
   def write(self):
     ''' Opens the file '''
@@ -61,7 +69,18 @@ class OutText:
     if self.mode == 'r' or self.mode == 'w':
       self.f = open(filename, self.mode)
     self.line()
-    self.f.write(self.t)
+    text  = ''
+    if self.outformat == 'tex':
+      text += '\\documentclass{article}\n'
+      text += '\\begin{document}\n'
+      text += '\\begin{tabular}{ ' + self.texalign + '}\n'
+      text += self.t + '\n'
+      text += '\\end{tabular}\n'
+      text += '% \\caption{}\n'
+      text += '% \\label{tab:}\n'
+      text += '\\end{document}\n'
+    else: text = self.t
+    self.f.write(text)
     self.f.close()
 
   def GetText(self):

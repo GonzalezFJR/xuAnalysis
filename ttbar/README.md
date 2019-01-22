@@ -1,8 +1,8 @@
 ### Process all the files
 
-Look for the path to point to the n-tuples. In lxplus, you can take the n-tuples (skimmed nanoAOD) from:
+Look for the path to point to the n-tuples. In Pisa, you can take the n-tuples (skimmed nanoAOD) from:
  
-    /afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/ 
+    /gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/
 
 Run the analysis over all the samples. You can do it automatically by executing:
 

@@ -29,7 +29,7 @@ You can run the analysis by executing the file executeTest.sh:
 
 Or just executing the command:
 
-    python -c 'from testAnalysis import testAnalysis; testAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "DYJetsToLL_MLL50", eventRange = [0, 100000], xsec = 10, run = True, nSlots = 4)'
+    python -c 'from testAnalysis import testAnalysis; testAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "DYJetsToLL_MLL50", eventRange = [0, 100000], xsec = 10, run = True, nSlots = 4)'
 
 If you are not running on lxplus or you wish to run on another sample, just modify the path and sample name.
 By default, divides the sample in 4 pieces. The output is saved in a folder called temp. You can merge the output rootfiles:
@@ -40,17 +40,17 @@ By default, divides the sample in 4 pieces. The output is saved in a folder call
 
 Example of how to run the analysis on a sample (WWTo2L2Nu):
 
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "WWTo2L2Nu", xsec = 10, run = True)'
+    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, run = True)'
 
 Example of how to run the analysis on a sample (WWTo2L2Nu) using :
 
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "WWTo2L2Nu", xsec = 10, nSlots = 5, run = True)'
+    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, nSlots = 5, run = True)'
 
 ### Send jobs to the lxplus batch system
 
 Example of how to send 3 jobs to the lxplus batch system to analyze a sample:
 
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l/", "WWTo2L2Nu", xsec = 10, nSlots = 3, sendJobs = True)'
+    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, nSlots = 3, sendJobs = True)'
 
 ## Merge the rootfiles
 

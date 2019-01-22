@@ -63,7 +63,7 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = True):
   bkg.append(['VV',            process['VV'],   0.30])
   signal   = ['tt',            process['tt']]
   data     = process['data']
-  expunc = "MuonEff, ElecEff, PU, JES, JER"
+  expunc = "MuonEff, ElecEff, PU, JES" # JER
   modunc = "pdf, scale"
 
   x.ReadHistos(path, chan, lev, bkg = bkg, signal = signal, data = data, expUnc = expunc, modUnc = modunc)
@@ -96,6 +96,7 @@ def DrawWeightSystematics(chan = 'ElMu', lev = '2jets'):
 ######################################################################################
 ## Drell-Yan estimate with Rout/in 
 def DrawDYDD(lev = '2jets', doSF = False):
+  if not doSF and lev == 'MET': return 
   d = DYDD(path,outpath,'ElMu',lev) 
   lab = 'SF' if doSF else 'OF'
   d.PrintDYestimate(doSF,  'DYDD_'+lev+'_'+lab)
@@ -121,6 +122,7 @@ def DrawSS(lev = '2jets'):
 levels   = ['dilepton', 'MET','2jets']
 channels = ['ElMu','ElEl', 'MuMu']
 # Plots
+'''
 for ch in channels:
   if   ch == 'MuMu': lepstr = '#mu#mu'
   elif ch == 'ElMu': lepstr = 'e#mu'
@@ -149,6 +151,7 @@ for ch in channels:
       [GetName('Jet1Pt',ch,lev),  'Subleading Jet p_{T} (GeV)','Evetns / 25 GeV',5],
       [GetName('Jet0Eta',ch,lev),  'Leading Jet #eta','',5],
       [GetName('Jet1Eta',ch,lev),  'Subleading Jet #eta','',5])
+'''
     
 # Cross section
 for ch in channels:

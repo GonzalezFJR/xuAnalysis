@@ -4,8 +4,7 @@ sys.path.append(basepath)
 from ttanalysis import *
 from framework.fileReader import getDicFiles, GetAllInfoFromFile
 
-defaultPath = '/pool/cienciasrw/userstorage/juanr/top/5TeV/nov27/'
-#defaultPath = '/pool/ciencias/trees2017/nanoAOD5Tev/'
+defaultPath = '/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/'
 
 xsecdic = {
  'HighEGJet':1,

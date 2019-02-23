@@ -1,7 +1,7 @@
 import os, sys, argparse
 from ROOT import TFile, TTree, TH1F
 
-defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l'
+defaultPath = '/pool/ciencias/trees2017/looseSkim06Sep'
 
 def isdigit(a):
   ''' Redefinition of str.isdigit() that takes into account negative numbers '''

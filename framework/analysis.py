@@ -261,6 +261,7 @@ class analysis:
     verbose    = 10 # why not
     eventRange = [n0, nF]
     t = 'cd ' + localPath + '\n'
+    t += 'source /cms/cmsset_default.sh\n'
     if 'CMSSW' in localPath: t += 'eval `scramv1 runtime -sh` \n'
     pycom =  'python -c \''
     pycom += 'from ' + modulname + ' import *; '
@@ -269,7 +270,7 @@ class analysis:
     pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ')\''
     return t + pycom
 
-  def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):
+  def sendJobs(self, nJobs = -1, folder = '', queue = 'batch', pretend = False, autorm = False):
     ''' Send jobs '''
     if nJobs != -1: self.SetNSlots(nJobs)
     if folder != '': self.jobFolder = folder

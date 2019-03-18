@@ -1,7 +1,10 @@
 import os,sys
-from ROOT import *
+#import ROOT
+from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis
+from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
+from ROOT import gPad, gROOT
 from ROOT.TMath import Sqrt as sqrt
-from numpy import average
+average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/')
 
@@ -9,6 +12,11 @@ from ttbar.ttanalysis import ch, chan, lev, level, dataset, datasets, systematic
 
 class TopHistoReader:
  ''' Reads histograms created with the ttanalysis '''
+ def SetFileNamePrefix(self, p):
+   self.fileprefix = p
+ 
+ def SetHistoNamePrefix(self,p):
+   self.histoprefix = p
 
  def SetPath(self, path):
    if not path[-1] == '/': path += '/'
@@ -70,7 +78,7 @@ class TopHistoReader:
    if syst != '':
      if self.IsHisto(pr, name + '_' + syst) or self.IsHisto(pr, name + '_' + syst+'Up') or self.IsHisto(pr, name + '_' + syst+'Down'): return True
      return False
-   filename = self.path + pr + '.root'
+   filename = self.path + 'Tree_' + pr + '.root'
    f = TFile.Open(filename)
    if not hasattr(f, name): return False
    else: return True
@@ -98,7 +106,7 @@ class TopHistoReader:
        h.Add(self.GetNamedHisto(n, pr, rebin))
      return h
 
-   filename = self.path + pr + '.root'
+   filename = self.path + 'Tree_' + pr + '.root'
    if self.verbose: print ' >> Opening file: ' + filename
    f = TFile.Open(filename)
    if self.verbose: print ' >> Looking for histo: ' + name
@@ -106,17 +114,21 @@ class TopHistoReader:
      if name == self.GetHistoName() and self.syst != '':
        hnosyst = self.var + '_' + self.chan + '_' + self.level
        if hasattr(f, hnosyst):
-         print 'WARNING: no systematic %s for histo %s in process %s!! Returning nominal...'%(self.syst, hnosyst, pr)
+         #print 'WARNING: no systematic %s for histo %s in process %s!! Returning nominal...'%(self.syst, hnosyst, pr)
          return 
      else:
        print 'ERROR: not found histogram ' + name + ' in file: ' + filename
-       return
+       return False
+   if self.syst != '':
+     hsyst = name + '_' + self.syst
+     if hasattr(f, hsyst): name = hsyst
+     #else: print 'WARNING: not found systematic %s for histogram %s in sample %s'%(self.syst, name, filename)
    h = f.Get(name)
 
    h.Rebin(self.rebin)
    nb = h.GetNbinsX()
    if self.doStackOverflow:
-     h.SetBinContent(nb, h.GetBinContent(nb) + h.GetBinContent(n+2))
+     h.SetBinContent(nb, h.GetBinContent(nb) + h.GetBinContent(nb+2))
      h.SetBinContent(nb+2, 0)
    if not self.IsData: h.Scale(self.lumi)
    h.SetLineColor(1); h.SetFillStyle(0)
@@ -133,6 +145,7 @@ class TopHistoReader:
    for i in range(1,nbins+1):
      bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
      h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
+   if self.doNormalize: h.Scale(1./(integral if integral != 0 else 1))
    return h
 
  def GetBinNumberForLevel(self, ilev = ''):
@@ -231,6 +244,7 @@ class TopHistoReader:
 
  def __init__(self, path = './', process = '', var = '', chan = '', ilevel = '', syst = ''):
     self.doStackOverflow = False
+    self.doNormalize = False
     self.IsData  = False
     self.verbose = False
     self.fname = ''
@@ -282,7 +296,8 @@ class Process:
     self.h = h
     self.h.SetLineColor(self.color)
     self.h.SetFillColor(self.color)
-    self.h.SetFillStyle(1)
+    self.h.SetFillStyle(1001)
+    #self.h.SetFillColorAlpha(self.color, 1)
     if self.IsSignal:
       self.h.SetFillStyle(0)
       self.h.SetLineStyle(1)
@@ -389,7 +404,7 @@ class Process:
     self.SetIsData(isData)
     self.SetIsSignal(isSignal)
     self.SetFiles(samples)
-    ds = "psameE1X0" if isData else "hist,same"
+    ds = "psameE1X0" if isData else "f,hist,same"
     self.SetDrawStyle(ds)
     self.syst = {}
     self.SetYield(Yield)
@@ -404,7 +419,7 @@ class Process:
 ###############################################################################################
 ###############################################################################################
 
-class StackPlot:
+class XuanPlot:
 
   #############################################################################################
   ### Pads
@@ -414,7 +429,6 @@ class StackPlot:
 
   def SetLumi(self, lumi):
     self.lumi = lumi
-    self.t.SetLumi(self.lumi)
 
   def GetOutPath(self):
     return self.outpath
@@ -505,17 +519,25 @@ class StackPlot:
     self.texchY = y
     self.texchS = s
 
-  def DrawTextChan(self):
-    pass
+  def AddTex(self, t = '', x = 0.15, y = 0.87, s = 0.04):
+    tl = TLatex(-20, 50, t)
+    tl.SetNDC();
+    tl.SetTextAlign(12);
+    tl.SetX(x);
+    tl.SetY(y);
+    tl.SetTextFont(42);
+    tl.SetTextSize(s);
+    self.Tex.append(tl)
 
-  def SetTextLumi(self, texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05):
+  def SetTextLumi(self, texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05, doinvfb = False):
     self.texlumi  = texlumi
     self.texlumiX = texlumiX
     self.texlumiY = texlumiY
     self.texlumiS = texlumiS
+    self.doinvfb  = doinvfb
 
   def DrawTextLumi(self):
-    t = self.texlumi if not '%' in self.texlumi else self.texlumi%self.lumi
+    t = self.texlumi if not '%' in self.texlumi else (self.texlumi%self.lumi if not self.doinvfb else self.texlumi%(self.lumi/1000.))
     tlum = TLatex(-20., 50., t)
     tlum.SetNDC()
     tlum.SetTextAlign(12)
@@ -583,294 +605,86 @@ class StackPlot:
   #############################################################################################
   # Select histograms
 
-  def SetHistoName(self, histoName = ''):
+  def SetOutName(self, histoName = ''):
     self.histoName = histoName
 
-  def CraftHistoName(self):
-    name = self.var + '_' + self.chan + '_' + self.level
-    if self.syst != '': name += '_' + self.syst
-    return name
-
-  def SetChan(self, ch):
-    self.chan = ch
-
-  def SetLevel(self, ilev):
-    self.level = ilev
-
-  def SetSyst(self, syst):
-    self.syst = syst
-
-  def SetVar(self, var):
-    self.var = var
-
-  def SetVarChanLev(self, var, ch, ilev):
-    self.SetVar(var)
-    self.SetChan(ch)
-    self.SetLevel(ilev)
-
-  #############################################################################################
-  ### Add process
-  
-  def AddProcess(self, processName, samples, color):
-    self.pr.append(Process(processName, color, samples))
-    #self.t.GetNamedHisto(self.histoName)
-    #self.t.SetProcess(samples)
- 
-  def GetProcess(self, name):
-    for pr in self.pr:
-      if pr.GetName() == name: return pr
-    print 'WARNING: not found process \''+name+'\''
-    return False
-
-  def GetSystematicHisto(self, name, syst):
-    for s in self.systSamples:
-      if pr.GetName() == name and pr.GetSystName() == syst: return pr
-    print 'WARNING: not found systematic \''+syst+'\' for process \''+name+'\''
-    return False
-
-  def AddSystematic(self, processName, samples, systname):
-    self.systSamples.append(Process(processName, 1, samples, systName = systname))
-
-  def AddData(self, datasamples):
-    self.data = Process('Data', 1, datasamples, isData = True)
-
-  def SetHisto(self, histoName=''):
-    if   histoName != '': 
-      self.histoName = histoName
-      bits = histoName.split('_')
-      if len(bits) >= 3:
-        self.SetVar(bits[0])
-        self.SetChan(bits[1])
-        self.SetLevel(bits[2])
-        if len(bits) >= 4: self.SetSyst(bits[3])
-    else:                 
-      self.SetSyst('')
-      self.SetHistoName(self.CraftHistoName())
-    self.t.SetProcess(self.pr[0].GetSamples())
-    htemp = self.t.GetNamedHisto(self.histoName)
-    self.nbins = htemp.GetNbinsX()
-    self.ResetSyst()
-    self.t.SetIsData(False)
-    # Nominal
-    for pr in self.pr:
-      self.t.SetProcess(pr.GetSamples())
-      pr.SetHisto(self.t.GetNamedHisto(self.histoName))
-    # Systematic samples
-    for pr in self.systSamples:
-      pr.SetHisto(self.t.GetNamedHisto(self.histoName))
-    if hasattr(self,'data'):
-      self.t.SetIsData(True)
-      self.t.SetProcess(self.data.GetSamples())
-      self.data.SetHisto(self.t.GetNamedHisto(self.histoName))
-      self.t.SetIsData(False)
-
-  #############################################################################################
-  ### Histograms and systematics
-  
-  def GetAllBkg(self, syst = ''):
-    processes = [x.GetSamples() for x in self.pr]
-    self.SetSyst(syst)
-    histoName = self.CraftHistoName() if self.histoName == '' else self.histoName
-    return self.t.GetNamedHisto(histoName, processes)
-
-  def AddToSyst(self, syst):
-    self.expSyst = syst
-
-  def GetExpSyst(self):
-    return self.expSyst
-
-  def SumExpSyst(self, syst = ''):
-    if syst == '': syst = self.GetExpSyst()
-    if self.verbose >= 2: print 'Including systematics: ', syst
-    if ',' in syst: 
-      self.SumExpSyst(syst.replace(' ', '').split(','))
-      return
-    if isinstance(syst, list):
-      for s in syst: self.SumExpSyst(s)
-      return
-    self.SetSyst(syst)
-    hnom = self.GetAllBkg()
-    hvar = self.GetAllBkg(syst)
-    nbins = hnom.GetNbinsX()
-    if not hasattr(self, 'sysup'):
-      self.sysup = [0]*nbins
-      self.sysdo = [0]*nbins
-    d = [hvar.GetBinContent(i) - hnom.GetBinContent(i) for i in range(1, nbins+1)]
-    if average(d) >= 0: self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, d)]
-    else:               self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, d)]
-
-  def ResetSyst(self):
-    nbins = self.nbins
-    self.sysup = [0]*self.nbins
-    self.sysdo = [0]*self.nbins
-    
-  def AddSystFromHistos(self):
-    if not hasattr(self, 'sysup'): self.ResetSyst()
-    for pr in self.systSamples:
-      name = pr.GetName()
-      hvar = pr.histo()
-      hnom = self.GetProcess(name).histo()
-      nbins = hnom.GetNbinsX()
-      d = [hvar.GetBinContent(i) - hnom.GetBinContent(i) for i in range(1, nbins+1)]
-      if average(d) > 0: self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, d)]
-      else:              self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, d)]
-
-  def AddStatUnc(self):
-    if self.verbose >= 2: print 'Setting MC stat uncertainties...'
-    if self.IncludedStatUnc: return
-    self.IncludedStatUnc = True
-    hnom = self.GetAllBkg()
-    nbins = hnom.GetNbinsX()
-    if not hasattr(self, 'sysup'): self.ResetSyst()
-    du = [hnom.GetBinError(i) for i in range(1, nbins+1)]
-    dd = [-hnom.GetBinError(i) for i in range(1, nbins+1)]
-    self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, du)]
-    self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, dd)]
-      
-  #############################################################################################
-  ### Draw stack
-
-  def DrawStack(self, histo = '', xtit = '', ytit = '', rebin = 1):
-    ''' Draws a stack plot '''
-    # Set the canvas and pads
-    self.t.SetRebin(rebin)
-    if histo != '': self.SetHisto(histo)
-    if xtit  != '': self.axisXtit = xtit
-    if ytit  != '': self.axisYtit = ytit
-
-    c = TCanvas('c', 'c', 10, 10, 800, 600)
-    c.Divide(1,2)
-    plot  = c.GetPad(1)
-    ratio = c.GetPad(2)
+  def SetCanvas(self):
+    self.canvas  = None; self.plot    = None; self.ratio = None
+    c = TCanvas('c', 'c', 10, 10, 1600, 1200)
+    if self.doRatio: 
+      c.Divide(1,2)
+      plot  = c.GetPad(1)
+      ratio = c.GetPad(2)
+    else: plot = c.GetPad(0)
     plot.SetPad( self.hpadx0, self.hpady0, self.hpadx1, self.hpady1)
     plot.SetMargin(self.hpadMleft, self.hpadMright, self.hpadMbottom, self.hpadMtop)
-    ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
-    ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
+    
+    if self.doRatio:
+      ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
+      ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
 
     # Draw the text
     texcms = self.DrawTextCMS()
     texmod = self.DrawTextCMSmode()
     texlum = self.DrawTextLumi()
-    #self.DrawTextChan()
-    texcms.Draw()
-    texmod.Draw()
-    texlum.Draw()
+    self.Tex.append(texcms)
+    self.Tex.append(texmod)
+    self.Tex.append(texlum)
+    for r in self.Tex: r.Draw()
 
-    # Stack processes and draw stack and data
-    plot.cd()
-    hStack = THStack('stack', '')
-    for pr in self.pr: hStack.Add(pr.histo())
-    hStack.Draw('hist')
-
-    datamax = -999
-    if hasattr(self, 'data'):
-      data = self.data.histo()
-      data.Draw(self.data.GetDrawStyle())
-      datamax = data.GetMaximum()
-    
-    bkg = hStack.GetStack().Last().Clone('AllBkg')
-
-    dmax = max(datamax, bkg.GetMaximum())
-    if isinstance(self.PlotMaximum, float): hStack.SetMaximum(self.PlotMaximum)
-    else: hStack.SetMaximum(dmax*self.PlotMaxScale)
-    if isinstance(self.PlotMinimum, float): hStack.SetMinimum(self.PlotMinimum)
-
-    hRatio = data.Clone() if hasattr(self, 'data') else bkg.Clone()
-    nbins = hRatio.GetNbinsX()
-    for i in range(nbins+1):
-      b = bkg. GetBinContent(i)
-      d = data.GetBinContent(i) if hasattr(self, 'data') else b
-      if b == 0: b = 1
-      e = 0 if d == 0 else d/b*(sqrt(d)/d)
-      hRatio.SetBinContent(i, d/b)
-      hRatio.SetBinError(i, e)
-  
-    # Set titles...
     TGaxis.SetMaxDigits(3)
-    hStack.GetYaxis().SetTitle(self.axisYtit)
-    hStack.GetYaxis().SetTitleSize(self.axisYsize)
-    hStack.GetYaxis().SetTitleOffset(self.axisYoffset)
-    hStack.GetYaxis().SetLabelSize(self.axisYlabSize)
-    hStack.GetYaxis().SetNdivisions(self.axisYnDiv)
-    hStack.GetYaxis().CenterTitle()
+    gPad.SetTickx();
+    gPad.SetTicky();
+    if self.doSetLogY: plot.SetLogy()
 
-    hStack.GetXaxis().SetTitle("")
-    hStack.GetXaxis().SetLabelSize(0)
-
-    hRatio.GetXaxis().SetTitle(self.axisXtit)
-    hRatio.GetXaxis().SetTitleSize(self.axisXsize)
-    hRatio.GetXaxis().SetTitleOffset(self.axisXoffset)
-    hRatio.GetXaxis().SetLabelSize(self.axisXlabSize)
-    hRatio.GetXaxis().SetNdivisions(self.axisXnDiv)
-
-    hRatio.GetYaxis().SetTitle(self.axisRtit)
-    hRatio.GetYaxis().SetTitleSize(self.axisRsize)
-    hRatio.GetYaxis().SetTitleOffset(self.axisRoffset)
-    hRatio.GetYaxis().SetLabelSize(self.axisRlabSize)
-    hRatio.GetYaxis().SetNdivisions(self.axisRnDiv)
-    hRatio.GetYaxis().CenterTitle()
-
-    if len(self.binLabels) > 0: 
-      for i in range(len(self.binLabels)):
-        hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
-
-    # Set syst histo
-    self.AddStatUnc()
-    self.SumExpSyst()
-    bkg.SetFillStyle(3444); 
-    bkg.SetFillColor(kGray+2);
-    nbins = bkg.GetNbinsX()
-    for i in range(1, self.nbins+1):
-      err = (abs(self.sysup[i-1]) + abs(self.sysdo[i-1]))/2
-      #if not err == err: err = 0
-      bkg.SetBinError(i, err)
-    bkg.Draw("same,e2")
-    
     # Legend
-    legend = self.SetLegend()
-    for pr in self.pr: legend.AddEntry(pr.histo(), pr.GetName(), 'f')
-    if hasattr(self, 'data'): legend.AddEntry(self.data.histo(), 'Data', 'pe')
-    legend.Draw()
+    self.legend = self.SetLegend()
 
-    # Ratio
-    ratio.cd()
-    hRatio.SetMaximum(self.PlotRatioMax)
-    hRatio.SetMinimum(self.PlotRatioMin)
-    if hasattr(self, 'data'): hRatio.Draw(self.data.GetDrawStyle())
-    else:                     hRatio.Draw('lsame')
-    hRatioErr = bkg.Clone("hratioerr")
-    for i in range(1, self.nbins+2):
-      hRatioErr.SetBinContent(i, 1)   
-      val = bkg.GetBinContent(i)
-      err = bkg.GetBinError(i)
-      hRatioErr.SetBinError(i, err/val if val != 0 else 0)
-    hRatioErr.Draw("same,e2")
+    self.canvas = c
+    self.plot = plot
+    if self.doRatio: self.ratio = ratio
 
+  def SetAxisPlot(self, h):
+    h.GetYaxis().SetTitle(self.axisYtit)
+    h.GetYaxis().SetTitleSize(self.axisYsize)
+    h.GetYaxis().SetTitleOffset(self.axisYoffset)
+    h.GetYaxis().SetLabelSize(self.axisYlabSize)
+    h.GetYaxis().SetNdivisions(self.axisYnDiv)
+    h.GetYaxis().CenterTitle()
+    if self.doRatio:
+      h.GetXaxis().SetTitle("")
+      h.GetXaxis().SetLabelSize(0)
+    else:
+      h.GetXaxis().SetTitle(self.axisXtit)
+      h.GetXaxis().SetTitleSize(self.axisXsize)
+      h.GetXaxis().SetTitleOffset(self.axisXoffset)
+      h.GetXaxis().SetLabelSize(self.axisXlabSize)
+      h.GetXaxis().SetNdivisions(self.axisXnDiv)
+
+  def SetAxisRatio(self, h):
+    h.GetXaxis().SetTitle(self.axisXtit)
+    h.GetXaxis().SetTitleSize(self.axisXsize)
+    h.GetXaxis().SetTitleOffset(self.axisXoffset)
+    h.GetXaxis().SetLabelSize(self.axisXlabSize)
+    h.GetXaxis().SetNdivisions(self.axisXnDiv)
+    h.GetYaxis().SetTitle(self.axisRtit)
+    h.GetYaxis().SetTitleSize(self.axisRsize)
+    h.GetYaxis().SetTitleOffset(self.axisRoffset)
+    h.GetYaxis().SetLabelSize(self.axisRlabSize)
+    h.GetYaxis().SetNdivisions(self.axisRnDiv)
+    h.GetYaxis().CenterTitle()
+
+  def Save(self):
     # Save
     if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
-    c.Print(self.GetOutName()+'.png', 'png')
-    c.Print(self.GetOutName()+'.pdf', 'pdf')
+    self.canvas.Print(self.GetOutName()+'.pdf', 'pdf')
+    self.canvas.Print(self.GetOutName()+'.png', 'png')
 
-  #############################################################################################
-  #############################################################################################
-  # Init
-
-  def __init__(self, path = '', histoName = '', outPath = './'):
-    self.SetOutPath(outPath)
-    self.t = TopHistoReader(path)
-    self.SetHistoName(histoName)
-    self.SetChan('')
-    self.SetLevel('')
-    self.SetVar('')
-    self.SetSyst('')
+  def Initialize(self, outpath = './', doRatio = True):
+    self.SetOutPath(outpath)
     self.verbose = 1
-    self.pr = []    # Simulated processes
-    self.systSamples = []  # Samples for systematics 
-    self.allpr   = ''
-    self.allprUp = ''
-    self.allprDo = ''
-    self.IncludedStatUnc = False
-    self.expSyst = ''
+    self.Tex = []
+    self.doRatio = doRatio
  
     ### Pads
     self.SetHistoPad()
@@ -904,6 +718,88 @@ class StackPlot:
     self.SetPlotMaxScale()
     self.SetRatioMin()
     self.SetRatioMax()
+    if not self.doRatio:
+      self.SetHistoPad(0.0, 0., 1, 1)
+      self.SetHistoPadMargins(0.08, 0.20, 0.02, 0.10)
+ 
+  #############################################################################################
+  #############################################################################################
+  # Init
+
+  def __init__(self, outPath = './', doRatio = True):
+    self.Initialize(outpath, doRatio)
+
+
+###############################################################################################
+### Comparison plot
+class CompPlot(XuanPlot):
+  ''' Example:
+      cp = CompPlot('./temp/', doRatio = True, doNorm = True)
+      cp.AddHisto(hdata, 'pe', 'e2', 'Data')
+      cp.AddHisto(hMC,   'hist', '', 'MC')
+      cp.autoRatio = True
+      cp.Draw()
+  '''
+
+  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0):
+    if doNorm: h.Scale(1/h.Integral())
+    self.histos.append([h, drawOpt, drawErr, addToLeng])
+
+  def AddRatioHisto(self, h, drawOpt = 'hist', drawErr = 0):
+    self.ratioh.append([h, drawOpt, drawErr])
+
+  def Draw(self, doSetLogy = False):
+    self.SetCanvas()
+    self.plot.cd()
+
+    dmax = []; dmin = []
+    for h in self.histos: 
+      dmax.append(h[0].GetMaximum())
+      dmin.append(h[0].GetMinimum())
+      h[0].Draw('same,'+h[1])
+      # Draw errors
+      if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
+      # Legend
+      if h[3] != 0 and h[3] != '': self.legend.AddEntry(h[0], h[3], h[1])
+    self.SetAxisPlot(self.histos[0][0])
+    dmax = max(dmax)
+    dmin = min(dmin)
+    self.legend.Draw()
+
+    # Set maximum and minimum
+    if isinstance(self.PlotMaximum, float): self.histos[0][0].SetMaximum(self.PlotMaximum)
+    else: self.histos[0][0].SetMaximum(dmax*self.PlotMaxScale)
+    if isinstance(self.PlotMinimum, float): self.histos[0][0].SetMinimum(self.PlotMinimum)
+    self.plot.SetLogy(doSetLogY)
+
+    if self.doRatio: 
+      if self.autoRatio:
+        hRatio = self.histos[0][0].Clone('hratio')
+        self.SetAxisRatio(hRatio)
+        if len(self.binLabels) > 0: 
+          for i in range(len(self.binLabels)):
+            hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        nbins = hratio.GetNbinsX()
+        for h in self.histos[1:]: 
+          htemp    = h[0].Clone(h[0].GetName()+'ratio')
+          htempRat = hRatioClone(h[0].GetName()+'hratio')
+          self.AddRatioHisto(htempRat.Divide(htemp), h[1], h[2])
+      self.ratio.cd()
+      self.ratioh[0].SetMaximum(self.PlotRatioMax)
+      self.ratioh[0].SetMinimum(self.PlotRatioMin)
+      for h in self.ratioh: 
+        h[0].Draw(h[1] + ',same')
+        if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
+        
+    # Save
+    self.Save()
+
+  def __init__(self, outpath = './', doRatio = True, doNorm = False, autoRatio = True):
+    self.Initialize(outpath, doRatio)
+    self.doNorm = doNorm
+    self.autoRatio = autoRatio
+    self.histos = []
+    
 
 ##############################################################################
 ### Magane weights for PDF and Scale uncertainties
@@ -1108,6 +1004,349 @@ class WeightReader:
    self.SetNgenEvents(nGenEvents)
    self.loadHistos()
 
+
+
+
+class StackPlot(XuanPlot):
+
+  #############################################################################################
+  ### Pads
+  def SetLumi(self, lumi):
+    self.lumi = lumi
+    self.t.SetLumi(self.lumi)
+
+  def GetOutName(self):
+    return self.GetOutPath()+self.histoName
+
+  def SetStackOverflow(self, t = True):
+    self.t.doStackOverflow = t
+
+  #############################################################################################
+  #############################################################################################
+  # Select histograms
+
+  def SetHistoName(self, histoName = ''):
+    self.SetOutName(histoName)
+
+  def CraftHistoName(self):
+    name = self.var + '_' + self.chan + '_' + self.level
+    if self.syst != '': name += '_' + self.syst
+    return name
+
+  def SetChan(self, ch):
+    self.chan = ch
+
+  def SetLevel(self, ilev):
+    self.level = ilev
+
+  def SetSyst(self, syst):
+    self.syst = syst
+
+  def SetVar(self, var):
+    self.var = var
+
+  def SetVarChanLev(self, var, ch, ilev):
+    self.SetVar(var)
+    self.SetChan(ch)
+    self.SetLevel(ilev)
+
+  #############################################################################################
+  ### Add process
+  
+  def AddProcess(self, processName, samples, color):
+    self.pr.append(Process(processName, color, samples))
+    #self.t.GetNamedHisto(self.histoName)
+    #self.t.SetProcess(samples)
+ 
+  def GetProcess(self, name):
+    for pr in self.pr:
+      if pr.GetName() == name: return pr
+    print 'WARNING: not found process \''+name+'\''
+    return False
+
+  def GetSystematicHisto(self, name, syst):
+    for s in self.systSamples:
+      if pr.GetName() == name and pr.GetSystName() == syst: return pr
+    print 'WARNING: not found systematic \''+syst+'\' for process \''+name+'\''
+    return False
+
+  def AddSystematic(self, processName, samples, systname):
+    print 'Adding Process %s, systematic %s and sample %s'%(processName,systname,samples)
+    self.systSamples.append(Process(processName, 1, samples, systName = systname))
+
+  def AddData(self, datasamples):
+    self.data = Process('Data', 1, datasamples, isData = True)
+
+  def SetHisto(self, histoName=''):
+    if   histoName != '': 
+      self.histoName = histoName
+      bits = histoName.split('_')
+      if len(bits) >= 3:
+        self.SetVar(bits[0])
+        self.SetChan(bits[1])
+        self.SetLevel(bits[2])
+        if len(bits) >= 4: self.SetSyst(bits[3])
+    else:                 
+      self.SetSyst('')
+      self.SetHistoName(self.CraftHistoName())
+    self.t.SetProcess(self.pr[0].GetSamples())
+    htemp = self.t.GetNamedHisto(self.histoName)
+    self.nbins = htemp.GetNbinsX()
+    self.ResetSyst()
+    self.t.SetIsData(False)
+    # Nominal
+    for pr in self.pr:
+      self.t.SetProcess(pr.GetSamples())
+      pr.SetHisto(self.t.GetNamedHisto(self.histoName))
+    # Systematic samples
+    for pr in self.systSamples:
+      self.t.SetProcess(pr.GetSamples())
+      pr.SetHisto(self.t.GetNamedHisto(self.histoName))
+    if hasattr(self,'data'):
+      self.t.SetIsData(True)
+      self.t.SetProcess(self.data.GetSamples())
+      self.data.SetHisto(self.t.GetNamedHisto(self.histoName))
+      self.t.SetIsData(False)
+
+  #############################################################################################
+  ### Histograms and systematics
+  
+  def GetAllBkg(self, syst = ''):
+    processes = [x.GetSamples() for x in self.pr]
+    self.SetSyst(syst)
+    histoName = self.CraftHistoName() if self.histoName == '' else self.histoName# + ('' if syst == '' else '_'+syst)
+    self.t.SetSystematic(syst)
+    return self.t.GetNamedHisto(histoName, processes)
+
+  def AddToSyst(self, syst):
+    self.expSyst = syst
+
+  def GetExpSyst(self):
+    return self.expSyst
+
+  def SumExpSyst(self, syst = ''):
+    if syst == '': syst = self.GetExpSyst()
+    if self.verbose >= 2: print 'Including systematics: ', syst
+    if ',' in syst: 
+      self.SumExpSyst(syst.replace(' ', '').split(','))
+      return
+    if isinstance(syst, list):
+      for s in syst: self.SumExpSyst(s)
+      return
+    print 'Adding exp systematic %s...'%syst
+    hnom = self.GetAllBkg()
+    self.SetSyst(syst)
+    hvar = self.GetAllBkg(syst)
+    nbins = hnom.GetNbinsX()
+    if not hasattr(self, 'sysup'):
+      self.sysup = [0]*nbins
+      self.sysdo = [0]*nbins
+    d = [hvar.GetBinContent(i) - hnom.GetBinContent(i) for i in range(1, nbins+1)]
+    if average(d) >= 0: self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, d)]
+    else:               self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, d)]
+
+  def ResetSyst(self):
+    nbins = self.nbins
+    self.sysup = [0]*self.nbins
+    self.sysdo = [0]*self.nbins
+    
+  def AddSystFromHistos(self):
+    if not hasattr(self, 'sysup'): self.ResetSyst()
+    for pr in self.systSamples:
+      name = pr.GetName()
+      hvar = pr.histo()
+      print 'Adding to systematics histo %s, with bins %i'%(name, hvar.GetNbinsX())
+      hnom = self.GetProcess(name).histo()
+      nbins = hnom.GetNbinsX()
+      d = [hvar.GetBinContent(i) - hnom.GetBinContent(i) for i in range(1, nbins+1)]
+      if average(d) > 0: self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, d)]
+      else:              self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, d)]
+
+  def AddStatUnc(self):
+    if self.verbose >= 2: print 'Setting MC stat uncertainties...'
+    if self.IncludedStatUnc: return
+    self.IncludedStatUnc = True
+    hnom = self.GetAllBkg()
+    nbins = hnom.GetNbinsX()
+    if not hasattr(self, 'sysup'): self.ResetSyst()
+    du = [hnom.GetBinError(i) for i in range(1, nbins+1)]
+    dd = [-hnom.GetBinError(i) for i in range(1, nbins+1)]
+    self.sysup = [sqrt(a*a+b*b) for a,b in zip(self.sysup, du)]
+    self.sysdo = [sqrt(a*a+b*b) for a,b in zip(self.sysdo, dd)]
+      
+  #############################################################################################
+  ### Draw stack
+
+  def DrawStack(self, histo = '', xtit = '', ytit = '', rebin = 1):
+    ''' Draws a stack plot '''
+    # Set the canvas and pads
+    self.t.SetRebin(rebin)
+    if histo != '': self.SetHisto(histo)
+    if xtit  != '': self.axisXtit = xtit
+    if ytit  != '': self.axisYtit = ytit
+    self.SetCanvas()
+
+    #c = TCanvas('c', 'c', 10, 10, 800, 600)
+    #c.Divide(1,2)
+    #plot  = c.GetPad(1)
+    #ratio = c.GetPad(2)
+    #plot.SetPad( self.hpadx0, self.hpady0, self.hpadx1, self.hpady1)
+    #plot.SetMargin(self.hpadMleft, self.hpadMright, self.hpadMbottom, self.hpadMtop)
+    #ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
+    #ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
+
+    # Draw the text
+    #texcms = self.DrawTextCMS()
+    #texmod = self.DrawTextCMSmode()
+    #texlum = self.DrawTextLumi()
+    #self.DrawTextChan()
+    #for r in self.Tex: r.Draw()
+    #texcms.Draw()
+    #texmod.Draw()
+    #texlum.Draw()
+
+    # Stack processes and draw stack and data
+    self.plot.cd()
+    hStack = THStack('stack', '')
+    for pr in self.pr: 
+      hStack.Add(pr.histo())
+    hStack.Draw('hist')
+
+    datamax = -999
+    if hasattr(self, 'data'):
+      data = self.data.histo()
+      data.Draw(self.data.GetDrawStyle())
+      datamax = data.GetMaximum()
+    
+    bkg = hStack.GetStack().Last().Clone('AllBkg')
+
+    dmax = max(datamax, bkg.GetMaximum())
+    if isinstance(self.PlotMaximum, float): hStack.SetMaximum(self.PlotMaximum)
+    else: hStack.SetMaximum(dmax*self.PlotMaxScale)
+    if isinstance(self.PlotMinimum, float): hStack.SetMinimum(self.PlotMinimum)
+
+    hRatio = data.Clone() if hasattr(self, 'data') else bkg.Clone()
+    nbins = hRatio.GetNbinsX()
+    for i in range(nbins+1):
+      b = bkg. GetBinContent(i)
+      d = data.GetBinContent(i) if hasattr(self, 'data') else b
+      if b == 0: b = 1
+      e = 0 if d == 0 else d/b*(sqrt(d)/d)
+      hRatio.SetBinContent(i, d/b)
+      hRatio.SetBinError(i, e)
+  
+    # Set titles...
+    TGaxis.SetMaxDigits(3)
+    self.SetAxisPlot(hStack)
+    #hStack.GetYaxis().SetTitle(self.axisYtit)
+    #hStack.GetYaxis().SetTitleSize(self.axisYsize)
+    #hStack.GetYaxis().SetTitleOffset(self.axisYoffset)
+    #hStack.GetYaxis().SetLabelSize(self.axisYlabSize)
+    #hStack.GetYaxis().SetNdivisions(self.axisYnDiv)
+    #hStack.GetYaxis().CenterTitle()
+    #hStack.GetXaxis().SetTitle("")
+    #hStack.GetXaxis().SetLabelSize(0)
+
+    self.SetAxisRatio(hRatio)
+    #hRatio.GetXaxis().SetTitle(self.axisXtit)
+    #hRatio.GetXaxis().SetTitleSize(self.axisXsize)
+    #hRatio.GetXaxis().SetTitleOffset(self.axisXoffset)
+    #hRatio.GetXaxis().SetLabelSize(self.axisXlabSize)
+    #hRatio.GetXaxis().SetNdivisions(self.axisXnDiv)
+    #hRatio.GetYaxis().SetTitle(self.axisRtit)
+    #hRatio.GetYaxis().SetTitleSize(self.axisRsize)
+    #hRatio.GetYaxis().SetTitleOffset(self.axisRoffset)
+    #hRatio.GetYaxis().SetLabelSize(self.axisRlabSize)
+    #hRatio.GetYaxis().SetNdivisions(self.axisRnDiv)
+    #hRatio.GetYaxis().CenterTitle()
+
+    if len(self.binLabels) > 0: 
+      for i in range(len(self.binLabels)):
+        hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+
+    # Set syst histo
+    self.AddStatUnc()
+    self.AddSystFromHistos()
+    self.SumExpSyst()
+    bkg.SetFillStyle(3444); 
+    bkg.SetFillColor(kGray+2);
+    #bkg.SetFillColorAlpha(kGray+2, 1);
+    nbins = bkg.GetNbinsX()
+    for i in range(1, self.nbins+1):
+      err = (abs(self.sysup[i-1]) + abs(self.sysdo[i-1]))/2
+      #if not err == err: err = 0
+      bkg.SetBinError(i, err)
+    bkg.SetLineColor(0)
+    bkg.Draw("same,e2")
+    
+    # Legend
+    if hasattr(self, 'data'): self.legend.AddEntry(self.data.histo(), 'Data', 'pe')
+    for pr in reversed(self.pr): self.legend.AddEntry(pr.histo(), pr.GetName(), 'f')
+    if self.doSystInLeg: self.legend.AddEntry(bkg, 'Stat #oplus Syst', 'f')
+    self.legend.Draw()
+
+    # Ratio
+    self.ratio.cd()
+    hRatio.SetMaximum(self.PlotRatioMax)
+    hRatio.SetMinimum(self.PlotRatioMin)
+    if hasattr(self, 'data'): hRatio.Draw(self.data.GetDrawStyle())
+    else:                     hRatio.Draw('lsame')
+    hRatioErr = bkg.Clone("hratioerr")
+    for i in range(1, self.nbins+2):
+      hRatioErr.SetBinContent(i, 1)   
+      val = bkg.GetBinContent(i)
+      err = bkg.GetBinError(i)
+      hRatioErr.SetBinError(i, err/val if val != 0 else 0)
+    hRatioErr.Draw("same,e2")
+
+    self.Save()
+    # Save
+    #if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
+    #c.Print(self.GetOutName()+'.pdf', 'pdf')
+    #c.Print(self.GetOutName()+'.png', 'png')
+
+  #############################################################################################
+  #############################################################################################
+  # Init
+
+  def __init__(self, path = '', histoName = '', outPath = './'):
+    self.Initialize(outPath, True)
+    self.t = TopHistoReader(path)
+    self.SetHistoName(histoName)
+    self.SetChan('')
+    self.SetLevel('')
+    self.SetVar('')
+    self.SetSyst('')
+    self.verbose = 1
+    self.pr = []    # Simulated processes
+    self.systSamples = []  # Samples for systematics 
+    self.allpr   = ''
+    self.allprUp = ''
+    self.allprDo = ''
+    self.IncludedStatUnc = False
+    self.expSyst = ''
+    self.doSystInLeg = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #################################################################################################
 ### Histo saver
 #################################################################################################
@@ -1228,3 +1467,5 @@ class HistoSaver:
   self.syst = []
   self.dpr = {}
   self.AddData()
+
+

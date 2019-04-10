@@ -80,12 +80,13 @@ class jobManager:
   
   def GetSubmitCommand(self, index):
     ''' Crafts the submit command '''
-    command  = 'bsub '
-    command += '-J ' + self.jobname + '_%i '%index
+    command  = 'bsub ' if not self.IsCiencias else 'qsub '
+    command += ('-J ' if not self.IsCiencias else '-N ') + self.jobname + '_%i '%index
     command += '-o ' + self.GetOutName(index) + ' '
     command += '-e ' + self.GetErrName(index) + ' '
-    command += '-q ' + self.queue + ' '
+    if not self.IsCiencias: command += '-q ' + self.queue + ' '
     command += '< '  + self.GetJobName(index)
+
     return command
 
   def CreateJobs(self):
@@ -122,7 +123,7 @@ class jobManager:
     self.SubmitJobs()
     if self.autorm: self.RemoveJobsFiles()
 
-  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False):
+  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False, isCiencias = True):
     self.joblist = []
     self.SetOutFolder(outFolder)
     self.SetName(name)
@@ -132,3 +133,4 @@ class jobManager:
     self.pretend = pretend
     self.verbose = verbose
     self.autorm = autorm
+    self.IsCiencias = isCiencias

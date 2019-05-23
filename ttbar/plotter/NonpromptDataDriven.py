@@ -1,6 +1,6 @@
 from TopHistoReader import TopHistoReader
 from OutText import OutText
-from numpy import sqrt
+from ROOT.TMath import Sqrt as sqrt
 square  = lambda x : x*x
 SumSquare = lambda x : sqrt(sum([square(i) for i in x]))
 

@@ -13,6 +13,13 @@ def isdigit(a):
 def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verbose = False, FullPaths = False):
   ''' Find rootfiles in path with a given name '''
   files = []
+  if ',' in sampleName:
+    sl = sampleName.replace(' ', '').split(',')
+    return findValidRootfiles(path, sl, getOnlyNumberedFiles, verbose, FullPaths)
+  elif isinstance(sampleName, list):
+    for s in sampleName:
+      files += findValidRootfiles(path, s, getOnlyNumberedFiles, verbose, FullPaths)
+    return files
   if not path[-1] == '/': path += '/'
   if verbose: print ' >> Looking for files in path: ' + path
   for f in os.listdir(path):

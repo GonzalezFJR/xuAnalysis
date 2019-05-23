@@ -142,9 +142,10 @@ class TopHistoReader:
    nbins = h.GetNbinsX()
    integral = h.Integral() if h.Integral() > 0 else 0
    entries  = h.GetEntries()
-   for i in range(1,nbins+1):
-     bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
-     h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
+   if self.ReComputeStatUnc:
+     for i in range(1,nbins+1):
+       bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
+       h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
    if self.doNormalize: h.Scale(1./(integral if integral != 0 else 1))
    return h
 
@@ -250,6 +251,7 @@ class TopHistoReader:
     self.fname = ''
     self.rebin = 1
     self.lumi = 1
+    self.ReComputeStatUnc = False
 
     self.SetPath(path)
     self.SetProcess(process)
@@ -307,7 +309,7 @@ class Process:
       self.h.SetLineStyle(0)
       self.h.SetLineColor(kBlack)
       self.h.SetMarkerStyle(20)
-      self.h.SetMarkerSize(1.1)
+      self.h.SetMarkerSize(2.5)
 
     self.SetValues()
 
@@ -611,17 +613,20 @@ class XuanPlot:
   def SetCanvas(self):
     self.canvas  = None; self.plot    = None; self.ratio = None
     c = TCanvas('c', 'c', 10, 10, 1600, 1200)
-    if self.doRatio: 
-      c.Divide(1,2)
-      plot  = c.GetPad(1)
-      ratio = c.GetPad(2)
-    else: plot = c.GetPad(0)
+    c.Divide(1,2)
+    plot  = c.GetPad(1)
+    ratio = c.GetPad(2)
+    #if self.doRatio: 
     plot.SetPad( self.hpadx0, self.hpady0, self.hpadx1, self.hpady1)
     plot.SetMargin(self.hpadMleft, self.hpadMright, self.hpadMbottom, self.hpadMtop)
+    #else: plot = c.GetPad(0)
     
     if self.doRatio:
       ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
       ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
+    else:
+      ratio.SetPad(0,0,0,0)
+      plot.SetPad(0,0,1,1)
 
     # Draw the text
     texcms = self.DrawTextCMS()
@@ -633,8 +638,6 @@ class XuanPlot:
     for r in self.Tex: r.Draw()
 
     TGaxis.SetMaxDigits(3)
-    gPad.SetTickx();
-    gPad.SetTicky();
     if self.doSetLogY: plot.SetLogy()
 
     # Legend
@@ -676,12 +679,12 @@ class XuanPlot:
 
   def Save(self):
     # Save
-    if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     self.canvas.Print(self.GetOutName()+'.pdf', 'pdf')
     self.canvas.Print(self.GetOutName()+'.png', 'png')
 
-  def Initialize(self, outpath = './', doRatio = True):
+  def Initialize(self, outpath = './', outname = 'temp', doRatio = True):
     self.SetOutPath(outpath)
+    self.SetOutName(outname)
     self.verbose = 1
     self.Tex = []
     self.doRatio = doRatio
@@ -718,16 +721,13 @@ class XuanPlot:
     self.SetPlotMaxScale()
     self.SetRatioMin()
     self.SetRatioMax()
-    if not self.doRatio:
-      self.SetHistoPad(0.0, 0., 1, 1)
-      self.SetHistoPadMargins(0.08, 0.20, 0.02, 0.10)
  
   #############################################################################################
   #############################################################################################
   # Init
 
-  def __init__(self, outPath = './', doRatio = True):
-    self.Initialize(outpath, doRatio)
+  def __init__(self, outPath = './', outname = 'temp', doRatio = True):
+    self.Initialize(outpath, outname, doRatio)
 
 
 ###############################################################################################
@@ -742,7 +742,7 @@ class CompPlot(XuanPlot):
   '''
 
   def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0):
-    if doNorm: h.Scale(1/h.Integral())
+    if self.doNorm: h.Scale(1/h.Integral())
     self.histos.append([h, drawOpt, drawErr, addToLeng])
 
   def AddRatioHisto(self, h, drawOpt = 'hist', drawErr = 0):
@@ -751,6 +751,9 @@ class CompPlot(XuanPlot):
   def Draw(self, doSetLogy = False):
     self.SetCanvas()
     self.plot.cd()
+    gPad.SetTickx();
+    gPad.SetTicky();
+    if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
 
     dmax = []; dmin = []
     for h in self.histos: 
@@ -760,7 +763,7 @@ class CompPlot(XuanPlot):
       # Draw errors
       if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
       # Legend
-      if h[3] != 0 and h[3] != '': self.legend.AddEntry(h[0], h[3], h[1])
+      if h[3] != 0 and h[3] != '': self.legend.AddEntry(h[0], h[3], 'l' if 'hist' in h[1] else h[1])
     self.SetAxisPlot(self.histos[0][0])
     dmax = max(dmax)
     dmin = min(dmin)
@@ -770,7 +773,7 @@ class CompPlot(XuanPlot):
     if isinstance(self.PlotMaximum, float): self.histos[0][0].SetMaximum(self.PlotMaximum)
     else: self.histos[0][0].SetMaximum(dmax*self.PlotMaxScale)
     if isinstance(self.PlotMinimum, float): self.histos[0][0].SetMinimum(self.PlotMinimum)
-    self.plot.SetLogy(doSetLogY)
+    self.plot.SetLogy(doSetLogy)
 
     if self.doRatio: 
       if self.autoRatio:
@@ -779,26 +782,31 @@ class CompPlot(XuanPlot):
         if len(self.binLabels) > 0: 
           for i in range(len(self.binLabels)):
             hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
-        nbins = hratio.GetNbinsX()
+        nbins = hRatio.GetNbinsX()
         for h in self.histos[1:]: 
           htemp    = h[0].Clone(h[0].GetName()+'ratio')
-          htempRat = hRatioClone(h[0].GetName()+'hratio')
-          self.AddRatioHisto(htempRat.Divide(htemp), h[1], h[2])
+          htempRat = hRatio.Clone(h[0].GetName()+'hratio')
+          htempRat.Divide(htemp)
+          self.AddRatioHisto(htempRat, h[1], h[2])
       self.ratio.cd()
-      self.ratioh[0].SetMaximum(self.PlotRatioMax)
-      self.ratioh[0].SetMinimum(self.PlotRatioMin)
-      for h in self.ratioh: 
-        h[0].Draw(h[1] + ',same')
-        if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
+      if len(self.ratioh) >= 1:
+        self.ratioh[0][0].SetMaximum(self.PlotRatioMax)
+        self.ratioh[0][0].SetMinimum(self.PlotRatioMin)
+        for h in self.ratioh: 
+          h[0].Draw(h[1] + ',same')
+          if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
         
     # Save
+    gPad.SetTickx();
+    gPad.SetTicky();
     self.Save()
 
-  def __init__(self, outpath = './', doRatio = True, doNorm = False, autoRatio = True):
-    self.Initialize(outpath, doRatio)
+  def __init__(self, outpath = './', outname = 'temp', doRatio = True, doNorm = False, autoRatio = True):
+    self.Initialize(outpath, outname, doRatio)
     self.doNorm = doNorm
     self.autoRatio = autoRatio
     self.histos = []
+    self.ratioh = []
     
 
 ##############################################################################
@@ -1186,27 +1194,11 @@ class StackPlot(XuanPlot):
     if ytit  != '': self.axisYtit = ytit
     self.SetCanvas()
 
-    #c = TCanvas('c', 'c', 10, 10, 800, 600)
-    #c.Divide(1,2)
-    #plot  = c.GetPad(1)
-    #ratio = c.GetPad(2)
-    #plot.SetPad( self.hpadx0, self.hpady0, self.hpadx1, self.hpady1)
-    #plot.SetMargin(self.hpadMleft, self.hpadMright, self.hpadMbottom, self.hpadMtop)
-    #ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
-    #ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
-
-    # Draw the text
-    #texcms = self.DrawTextCMS()
-    #texmod = self.DrawTextCMSmode()
-    #texlum = self.DrawTextLumi()
-    #self.DrawTextChan()
-    #for r in self.Tex: r.Draw()
-    #texcms.Draw()
-    #texmod.Draw()
-    #texlum.Draw()
-
     # Stack processes and draw stack and data
     self.plot.cd()
+    gPad.SetTickx();
+    gPad.SetTicky();
+    if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     hStack = THStack('stack', '')
     for pr in self.pr: 
       hStack.Add(pr.histo())
@@ -1215,8 +1207,11 @@ class StackPlot(XuanPlot):
     datamax = -999
     if hasattr(self, 'data'):
       data = self.data.histo()
-      data.Draw(self.data.GetDrawStyle())
+      data.SetBinErrorOption(TH1.kPoisson)
+      data.Sumw2(False);
+      data.Draw('psameE0X0')#self.data.GetDrawStyle())
       datamax = data.GetMaximum()
+      #if self.doPoissonErrors:
     
     bkg = hStack.GetStack().Last().Clone('AllBkg')
 
@@ -1238,31 +1233,16 @@ class StackPlot(XuanPlot):
     # Set titles...
     TGaxis.SetMaxDigits(3)
     self.SetAxisPlot(hStack)
-    #hStack.GetYaxis().SetTitle(self.axisYtit)
-    #hStack.GetYaxis().SetTitleSize(self.axisYsize)
-    #hStack.GetYaxis().SetTitleOffset(self.axisYoffset)
-    #hStack.GetYaxis().SetLabelSize(self.axisYlabSize)
-    #hStack.GetYaxis().SetNdivisions(self.axisYnDiv)
-    #hStack.GetYaxis().CenterTitle()
-    #hStack.GetXaxis().SetTitle("")
-    #hStack.GetXaxis().SetLabelSize(0)
 
     self.SetAxisRatio(hRatio)
-    #hRatio.GetXaxis().SetTitle(self.axisXtit)
-    #hRatio.GetXaxis().SetTitleSize(self.axisXsize)
-    #hRatio.GetXaxis().SetTitleOffset(self.axisXoffset)
-    #hRatio.GetXaxis().SetLabelSize(self.axisXlabSize)
-    #hRatio.GetXaxis().SetNdivisions(self.axisXnDiv)
-    #hRatio.GetYaxis().SetTitle(self.axisRtit)
-    #hRatio.GetYaxis().SetTitleSize(self.axisRsize)
-    #hRatio.GetYaxis().SetTitleOffset(self.axisRoffset)
-    #hRatio.GetYaxis().SetLabelSize(self.axisRlabSize)
-    #hRatio.GetYaxis().SetNdivisions(self.axisRnDiv)
-    #hRatio.GetYaxis().CenterTitle()
 
     if len(self.binLabels) > 0: 
       for i in range(len(self.binLabels)):
-        hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        if self.doRatio:
+          hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        else:
+          hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+
 
     # Set syst histo
     self.AddStatUnc()
@@ -1286,18 +1266,19 @@ class StackPlot(XuanPlot):
     self.legend.Draw()
 
     # Ratio
-    self.ratio.cd()
-    hRatio.SetMaximum(self.PlotRatioMax)
-    hRatio.SetMinimum(self.PlotRatioMin)
-    if hasattr(self, 'data'): hRatio.Draw(self.data.GetDrawStyle())
-    else:                     hRatio.Draw('lsame')
-    hRatioErr = bkg.Clone("hratioerr")
-    for i in range(1, self.nbins+2):
-      hRatioErr.SetBinContent(i, 1)   
-      val = bkg.GetBinContent(i)
-      err = bkg.GetBinError(i)
-      hRatioErr.SetBinError(i, err/val if val != 0 else 0)
-    hRatioErr.Draw("same,e2")
+    if self.doRatio:
+      self.ratio.cd()
+      hRatio.SetMaximum(self.PlotRatioMax)
+      hRatio.SetMinimum(self.PlotRatioMin)
+      if hasattr(self, 'data'): hRatio.Draw(self.data.GetDrawStyle())
+      else:                     hRatio.Draw('lsame')
+      hRatioErr = bkg.Clone("hratioerr")
+      for i in range(1, self.nbins+2):
+        hRatioErr.SetBinContent(i, 1)   
+        val = bkg.GetBinContent(i)
+        err = bkg.GetBinError(i)
+        hRatioErr.SetBinError(i, err/val if val != 0 else 0)
+      hRatioErr.Draw("same,e2")
 
     self.Save()
     # Save
@@ -1310,7 +1291,7 @@ class StackPlot(XuanPlot):
   # Init
 
   def __init__(self, path = '', histoName = '', outPath = './'):
-    self.Initialize(outPath, True)
+    self.Initialize(outPath, histoName, True)
     self.t = TopHistoReader(path)
     self.SetHistoName(histoName)
     self.SetChan('')

@@ -90,7 +90,7 @@ class object:
     return self.p.DeltaR(obj.p)
 
   def DeltaPhi(self, obj):
-    t = obj if isinstance(obj, TLorentzVector) else obj.p
+    t = obj if isinstance(obj, TLorentzVector) else TLorentzVector(obj.p)
     return self.p.DeltaPhi(t)
 
   def MatchToParticle(self, listOfParticles, dRval = 0.4):
@@ -205,9 +205,14 @@ def SortByPt(vec):
 ########################################################################################
 ### Kinematics
 
-def InvMass(obj1, obj2):
+def InvMass(obj1, obj2 = 0, obj3 = 0):
   ''' Invariant mass of two objects '''
-  return (obj1.p+obj2.p).M()
+  if isinstance(obj1, list):
+    ob = TLorentzVector(obj1[0].p)
+    for o in obj1[1:]: ob+=o.p
+    return ob.M()
+  elif obj3 == 0: return (obj1.p+obj2.p).M()
+  else:           return (obj1.p+obj2.p+obj3.p).M()
 
 def DiPt(obj1, obj2):
   ''' Di-object pT '''
@@ -220,6 +225,12 @@ def DeltaPhi(obj1, obj2):
 def MT(obj1, obj2):
   ''' Transverse mass of the diobject system '''
   return obj1.Pt()*obj2.Pt()*(1-TMath.Cos(obj1.DeltaPhi(obj2)))
+
+def CheckZpair(lep1, lep2):
+  ''' Returns: mZ if OSSF, 0 otherwise '''
+  if not abs(lep1.GetPDGid()) == abs(lep2.GetPDGid()): return 0
+  if not lep1.charge*lep2.charge < 0: return 0
+  return InvMass(lep1,lep2)
 
 def GetNBtags(listOfJets):
   ''' Returns the number of btag jets in the list of jets '''

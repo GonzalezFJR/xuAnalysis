@@ -219,13 +219,19 @@ class analysis:
 
   def CreateTH2F(self, name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY):
     ''' Constructor for TH2F '''
-    h = TH1F(name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY)
+    h = TH2F(name, title, nbinsX, b0X, bNX, nbinsY, b0Y, bNY)
     self.AddToOutputs(name,h)
     return h
 
   def CreateTH2F(self, name, title, nbinsX, binsX, nbinsY, binsY):
     ''' Constructor for TH2F '''
-    h = TH1F(name, title, nbinsX, binsX, nbinsY, binsY)
+    abinsX = binsX
+    abinsY = binsY
+    if isinstance(binsX, list):
+      abinsX = array('f', binsX)
+    if isinstance(binsY, list):
+      abinsY = array('f', binsY)
+    h = TH2F(name, title, nbinsX, abinsX, nbinsY, abinsY)
     self.AddToOutputs(name,h)
     return h
 

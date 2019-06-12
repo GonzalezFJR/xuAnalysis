@@ -155,6 +155,7 @@ class TopHistoReader:
  def GetBinNumberForLevel(self, ilev = ''):
    ''' Returns the bin number for a given level for the yields histogram '''
    if ilev == '': ilev = self.level
+   if isinstance(ilev,int): return ilev
    for lv in level.keys(): 
      if ilev == level[lv]: return lv+1
    return -1

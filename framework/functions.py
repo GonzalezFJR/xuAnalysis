@@ -224,7 +224,7 @@ def DeltaPhi(obj1, obj2):
 
 def MT(obj1, obj2):
   ''' Transverse mass of the diobject system '''
-  return obj1.Pt()*obj2.Pt()*(1-TMath.Cos(obj1.DeltaPhi(obj2)))
+  return TMath.Sqrt(2*obj1.Pt()*obj2.Pt()*(1-TMath.Cos(obj1.DeltaPhi(obj2))))
 
 def CheckZpair(lep1, lep2):
   ''' Returns: mZ if OSSF, 0 otherwise '''

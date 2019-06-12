@@ -1,8 +1,11 @@
 from MCbtagEff import MCbtagEff
 
-path = '/pool/ciencias/userstorage/juanr/nanoAODv4/2018/'
+year = '2017'
+
+path = '/pool/cienciasrw/userstorage/juanr/nanoAODv4/%s/'%year
 sample = 'Tree_TTTo2L2Nu'
-nslots = 1
+nslots = 80
  
-a = MCbtagEff(path, sample, eventRange = [0, 1000], run = True, nSlots = nslots)
+a = MCbtagEff(path, sample, run = True, nSlots = nslots, options = year)
+#a = MCbtagEff(path, sample, run = True, nSlots = 1, options = year, eventRange = [0,1000])
 

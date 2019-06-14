@@ -199,6 +199,16 @@ def GetProcessInfo(path, process=''):
     print ' Sum of gen weights: ' + str(nSumOfWeights)
   print '##################################################################\n'
 
+def IsVarInTree(fname, var, treeName = 'Events'):
+  ''' Check if a given file and tree contains a branch '''
+  if not os.path.isfile(fname):
+    print 'ERROR: %s does not exists!'
+    return False
+  f = TFile.Open(fname)
+  t = f.Get(treeName)
+  return hasattr(t, var)
+
+
 ##################################
 # Extra functions to work check .root files from terminal
 

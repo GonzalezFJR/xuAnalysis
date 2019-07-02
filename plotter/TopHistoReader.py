@@ -8,7 +8,8 @@ average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/')
 
-from ttbar.ttanalysis import ch, chan, lev, level, dataset, datasets, systematic, systlabel  
+#from ttbar.ttanalysis import ch, chan, lev, level, dataset, datasets, systematic, systlabel  
+level = {0:'dilepton', 1:'ZVeto', 2:'MET', 3:'2jets', 4:'1btag'}
 
 class TopHistoReader:
  ''' Reads histograms created with the ttanalysis '''
@@ -166,6 +167,7 @@ class TopHistoReader:
    if ch != '': self.SetChan(ch)
    self.SetSystematic(syst)
    prename = 'Yields_' if not SS else 'YieldsSS_'
+   if self.histoprefix != '': prename = self.histoprefix + '_' + prename
    name = prename + self.chan
    if self.syst != '': name += '_' + self.syst
    return self.GetNamedHisto(name)

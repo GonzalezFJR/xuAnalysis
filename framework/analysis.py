@@ -2,19 +2,32 @@ from ROOT import *
 from ROOT.TMath import Sqrt as sqrt
 from fileReader import *
 from jobManager import *
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 from array import array
 from copy import deepcopy
 from functions import *
 
 def loopAnal(listOfInputs): 
   ''' External function to run de loop... needed for the multiprocessing ''' 
-  anal, i0, iN, k = listOfInputs
+  anal, i0, iN, k, outdic = listOfInputs
   analcopy = deepcopy(anal) 
   analcopy.SetIndex(k)
   analcopy.SetVerbose(0)
   analcopy.SetNSlots(1)
   analcopy.loop(i0, iN)
+  outdic[k] = analcopy
+
+def MergeObjectsDic(dic):
+  k = dic.keys().sort()
+  firstKey = k[0]
+  otherKeys = k[1:]
+  objs = dic[firstKey]
+  names = objs.keys().sort()
+  for name in names:
+    if isinstance(objs[name],'TH1F'):
+      for k in otherKeys: objs[name].Add(dic[k][name])
+  return objs
+
 
 class analysis:
 
@@ -303,9 +316,12 @@ class analysis:
     print '[INFO] Cross section: ', self.xsec
     if self.options != '': print '[INFO] Options = ', self.options
     if self.verbose >= 1: GetProcessInfo(self.files)
-    if self.nSlots == 1: self.loop(first, last)
-    else:                self.multiloop(first, last)
+    if self.nSlots == 1: 
+      objs = self.loop(first, last)
+    else:                
+      objs = self.multiloop(first, last)
     self.log()
+    return objs
 
   def loop(self, ev0 = -1, evN = -1):
     ''' Loop over the events and fill the histograms '''
@@ -338,20 +354,24 @@ class analysis:
       self.insideLoop(self.tchain)
 
     self.saveOutput()
-    return
+    return self.obj
 
   def multiloop(self, first = -1, last = -1):
     ''' Executes the loop with several cores '''
     pass
     inputs = self.getInputs(first, last)
     pool = Pool(self.nSlots)
+    manager = Manager()
+    outdic = manager.dict()
     for i in range(len(inputs)):
       inputs[i].insert(0, self)
       inputs[i].append(i)
+    inputs.append(ourdic)
     pool.map(loopAnal, inputs)
     pool.close()
     pool.join()
-    return
+    print outdic
+    return outdic
 
   def saveOutput(self):
     ''' Creates the out file and save the histos '''

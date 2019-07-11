@@ -119,6 +119,9 @@ class NewAnalysis:
     f2.write(cfg)
     f2.close()
     print 'Created cfg file \'%s\' in %s'%(self.cfgname, mypath+analysisName)
+    f3 = open(mypath + analysisName + '/__init__.py', 'w')
+    f3.write(' ')
+    f3.close()
 
   def __init__(self, analysisName, cfgname = 'testcfg', path = '', outpath = '', nSlots = 1, nEvents = 0, year = 0, verbose = 1, options = ''):
     self.analysisName = analysisName
@@ -150,15 +153,17 @@ def main():
 
   na = NewAnalysis(analname, cfgname,  path)
 
-  selection  = ''
-  selection += '    # As an example: select medium ID muons and fill an histogram with the invariant mass\n'
-  selection += '    selMuon = []; \n'
-  selection += '    for imu in range(t.nMuon):\n'
-  selection += '    if t.Muon_mediumId[imu]:\n'
-  selection += '        v = TLorentzVector()\n'
-  selection += '        v.SetPtEtaPhiM(t.Muon_pt[imu], t.Muon_eta[imu], t.Muon_phi[imu], t.Muon_mass[imu])\n'
-  selection += '        selMuon.append(fun.lepton(v, t.Muon_charge[imu], 13))\n\n'
-  selection += '    # Invariant mass, using a predefined function \n    invmass = fun.InvMass(selMuon[0], selMuon[1])\n'
+  selection  = '''
+    # As an example: select medium ID muons and fill an histogram with the invariant mass
+    selMuon = [];
+    for imu in range(t.nMuon):
+      if t.Muon_mediumId[imu]:
+        v = TLorentzVector()
+        v.SetPtEtaPhiM(t.Muon_pt[imu], t.Muon_eta[imu], t.Muon_phi[imu], t.Muon_mass[imu])
+        selMuon.append(fun.lepton(v, t.Muon_charge[imu], 13))\n
+      # Invariant mass, using a predefined function 
+      invmass = fun.InvMass(selMuon[0], selMuon[1]) if len(selMuon) >= 2 else 0
+  '''
 
   na.AddSelection(selection)
   na.AddCut('len(selMuon) >= 2')

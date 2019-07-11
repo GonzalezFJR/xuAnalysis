@@ -18,14 +18,17 @@ def loopAnal(listOfInputs):
   outdic[k] = analcopy
 
 def MergeObjectsDic(dic):
-  k = dic.keys().sort()
-  firstKey = k[0]
-  otherKeys = k[1:]
-  objs = dic[firstKey]
-  names = objs.keys().sort()
+  k = dic.keys(); k.sort()
+  print 'Merging objects (%i)...'%len(k)
+  firstKey = k[-1]
+  otherKeys = k[:-1]
+  objs = dic[firstKey].obj
+  names = objs.keys(); names.sort()
   for name in names:
-    if isinstance(objs[name],'TH1F'):
-      for k in otherKeys: objs[name].Add(dic[k][name])
+    if isinstance(objs[name],TH1F):
+      for k in otherKeys: 
+        kobjs = dic[k].obj
+        objs[name].Add(kobjs[name])
   return objs
 
 
@@ -205,7 +208,7 @@ class analysis:
       inputs.append([i0+int(eventsPerChunk*(k)), i0+int(eventsPerChunk*(k+1))])
     if self.verbose >= 2:
       print ' >> Intervals: '
-      for i in inputs: print '    ' + i
+      for i in inputs: print '    ',i
     return inputs
 
   def GetOptions(self):
@@ -366,12 +369,11 @@ class analysis:
     for i in range(len(inputs)):
       inputs[i].insert(0, self)
       inputs[i].append(i)
-    inputs.append(ourdic)
+      inputs[i].append(outdic)
     pool.map(loopAnal, inputs)
     pool.close()
     pool.join()
-    print outdic
-    return outdic
+    return MergeObjectsDic(outdic)
 
   def saveOutput(self):
     ''' Creates the out file and save the histos '''

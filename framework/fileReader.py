@@ -19,6 +19,8 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
   elif isinstance(sampleName, list):
     for s in sampleName:
       files += findValidRootfiles(path, s, getOnlyNumberedFiles, verbose, FullPaths)
+      #if len(files) == 0:
+      #  files += findValidRootfiles(path, 'Tree_'+s, getOnlyNumberedFiles, verbose, FullPaths)
     return files
   if not path[-1] == '/': path += '/'
   if verbose: print ' >> Looking for files in path: ' + path
@@ -36,7 +38,10 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
     if verbose: print ' >> Adding file: ', f
     files.append(f)
   if FullPaths: files = [path + x for x in files]
-  if len(files) == 0: print '[ERROR]: Not files "' + sampleName + '" found in: ' + path
+  if len(files) == 0: 
+    files = findValidRootfiles(path, 'Tree_' + sampleName, getOnlyNumberedFiles, verbose, FullPaths)
+  if len(files) == 0: 
+    print '[ERROR]: Not files "' + sampleName + '" found in: ' + path
   return files
 
 def GetFiles(path, name, verbose = False):

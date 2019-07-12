@@ -140,7 +140,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   return out
 
 
-def main(): 
+def main(ocfgfile = ''): 
   ################################################################################
   ### Execute
   ################################################################################
@@ -150,7 +150,7 @@ def main():
   parser.add_argument('--pretend','-p'    , action='store_true'  , help = 'Create the files but not send the jobs')
   parser.add_argument('--test','-t'       , action='store_true'  , help = 'Sends only one or two jobs, as a test')
   parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
-  parser.add_argument('selection'                                , help = 'Name of the selector')
+  parser.add_argument('selection'         , default=''           , help = 'Name of the selector')
   parser.add_argument('--path'            , default=''           , help = 'Path to look for nanoAOD')
   parser.add_argument('--sample','-s'     , default=''           , help = 'Sample(s) to process')
   parser.add_argument('--xsec','-x'       , default='xsec'       , help = 'Cross section')
@@ -168,6 +168,8 @@ def main():
   args = parser.parse_args()
   aarg = sys.argv
   selection   = args.selection
+  if selection == '': selection = ocfgfile
+  if selection == '': return
   verbose     = args.verbose
   pretend     = args.pretend
   dotest      = args.test
@@ -292,3 +294,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+

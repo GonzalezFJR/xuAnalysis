@@ -8,12 +8,13 @@ class NewAnalysis:
     lines = selection.split('\n')
     for l in lines:
       ltemp = "%s"%l
+      lorig = "%s"%l
       ltemp = ltemp.replace(' ', '')
       if ltemp != '': break
     nspaces = 0
-    while len(ltemp) >0 and ltemp[0] == ' ':
+    while len(lorig) >0 and lorig[0] == ' ':
       nspaces += 1
-      ltemp = ltemp[1:]
+      lorig = lorig[1:]
     addNSpaces = 4-nspaces
     self.selection =  ''
     for l in lines:

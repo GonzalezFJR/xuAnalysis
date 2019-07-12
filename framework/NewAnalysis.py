@@ -4,7 +4,20 @@ sys.path.append(mypath)
 
 class NewAnalysis:
   def AddSelection(self, selection):
-    self.selection = selection
+    selection = selection.replace('\t', '  ')
+    lines = selection.split('\n')
+    for l in lines:
+      ltemp = "%s"%l
+      ltemp = ltemp.replace(' ', '')
+      if ltemp != '': break
+    nspaces = 0
+    while len(ltemp) >0 and ltemp[0] == ' ':
+      nspaces += 1
+      ltemp = ltemp[1:]
+    addNSpaces = 4-nspaces
+    self.selection =  ''
+    for l in lines:
+      self.selection += '%s%s\n'%(' '*addNSpaces, l)
 
   def AddCut(self, cut):
     cut = self.CraftCut(cut)

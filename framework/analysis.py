@@ -324,6 +324,9 @@ class analysis:
     else:                
       objs = self.multiloop(first, last)
     self.log()
+    if 'merge' in self.options or 'Merge' in self.options: 
+      self.index = -1
+      self.saveOutput(objs)
     return objs
 
   def loop(self, ev0 = -1, evN = -1):
@@ -356,7 +359,7 @@ class analysis:
       ### Start the analysis here!
       self.insideLoop(self.tchain)
 
-    self.saveOutput()
+    if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.saveOutput()
     return self.obj
 
   def multiloop(self, first = -1, last = -1):
@@ -375,14 +378,15 @@ class analysis:
     pool.join()
     return MergeObjectsDic(outdic)
 
-  def saveOutput(self):
+  def saveOutput(self, objlist = None):
     ''' Creates the out file and save the histos '''
     out = self.outpath + self.outname + '.root'
     if self.index >= 0: out = self.outpath + self.outname + '_' + str(self.index) + '.root'
-    if self.verbose >= 1: print ' >> Saving output in: ' + out
-    self.out = out
+    if self.verbose >= 0: print ' >> Saving output in: ' + out
+    self.outNormal = out
     fout = TFile.Open(out, "recreate")
-    for element in self.obj: self.obj[element].Write()
+    if objlist == None: objlist = self.obj
+    for element in objlist: objlist[element].Write()
     fout.Close()
     return
 

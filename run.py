@@ -141,16 +141,18 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
 
 
 def main(ocfgfile = ''): 
+  selection = ocfgfile
   ################################################################################
   ### Execute
   ################################################################################
   import argparse
   parser = argparse.ArgumentParser(description='Run xuAnalysis')
+  if ocfgfile == '':
+    parser.add_argument('selection'         , default=''           , help = 'Name of the selector')
   parser.add_argument('--verbose','-v'    , action='store_true'  , help = 'Activate the verbosing')
   parser.add_argument('--pretend','-p'    , action='store_true'  , help = 'Create the files but not send the jobs')
   parser.add_argument('--test','-t'       , action='store_true'  , help = 'Sends only one or two jobs, as a test')
   parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
-  parser.add_argument('selection'         , default=''           , help = 'Name of the selector')
   parser.add_argument('--path'            , default=''           , help = 'Path to look for nanoAOD')
   parser.add_argument('--sample','-s'     , default=''           , help = 'Sample(s) to process')
   parser.add_argument('--xsec','-x'       , default='xsec'       , help = 'Cross section')
@@ -164,11 +166,9 @@ def main(ocfgfile = ''):
   parser.add_argument('--firstEvent'      , default=0            , help = 'First event')
   parser.add_argument('--nEvents'         , default=0            , help = 'Number of events')
   parser.add_argument('--nSlots','-n'     , default=-1           , help = 'Number of slots')
-  
+
   args = parser.parse_args()
-  aarg = sys.argv
-  selection   = args.selection
-  if selection == '': selection = ocfgfile
+  if hasattr(args, 'selection'): selection   = args.selection
   if selection == '': return
   verbose     = args.verbose
   pretend     = args.pretend
@@ -186,6 +186,8 @@ def main(ocfgfile = ''):
   FirstEvent  = int(args.firstEvent)
   sendJobs    = int(args.sendJobs)
   queue       = args.queue
+
+  aarg = sys.argv
   ncores = nSlots
   
   # Check if a cfg file is given as first argument
@@ -195,6 +197,7 @@ def main(ocfgfile = ''):
     if len(l) != 0: 
       l = l[0]
       fname = l[0] + '.' + l[1]
+  print '>> fname = ', fname
   if os.path.isfile(fname):
     if verbose: print ' >> Using config file \'%s\'...'%fname
     selection = ''

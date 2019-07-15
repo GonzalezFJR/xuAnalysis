@@ -47,6 +47,9 @@ class AnalysisCreator:
   def SetPath(self, path):
     self.path = path
 
+  def SetBasePath(self, basepath):
+    self.basepath = basepath
+
   def SetOutpath(self, outpath):
     self.outpath = outpath
 
@@ -95,7 +98,7 @@ class AnalysisCreator:
       for h in hnames:
         var = self.vars[h]
         cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
-        body += '   %s self.obj[\'%s\'].Fill(%s,%s)\n'%(cut, h, var, self.weights[h])
+        body += '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, h, var, (','+self.weights[h]) if self.weights[h] != '' else '')
     return body
 
   def GetConfigFileTemplate(self):
@@ -123,29 +126,31 @@ class AnalysisCreator:
 
   def CreateAnalysis(self):
     analysisName = self.analysisName
-    if os.path.isdir(mypath+analysisName):
+    mpath = mypath if self.basepath == '' else mypath + self.basepath + '/'
+    if not os.path.isdir(mpath): os.mkdir(mpath)
+    if os.path.isdir(mpath+analysisName):
       print 'ERROR: analysis %s already exists!!!'%analysisName
       return
-    os.mkdir(mypath + analysisName)
+    os.mkdir(mpath + analysisName)
 
     # Analysis code
-    f = open(mypath + analysisName + '/' + analysisName + '.py', 'w')
+    f = open('%s%s/%s.py'%(mpath,analysisName,analysisName), 'w')
     body = self.GetAnalysisTemplate()
     f.write(body)
     f.close()
-    print 'Created analysis code in %s'%(mypath + analysisName)
+    print 'Created analysis code in %s%s'%(mpath,analysisName)
 
     # cfg file
-    f2 = open(mypath + analysisName + '/' + self.cfgname, 'w')
+    f2 = open('%s%s/%s'%(mpath,analysisName,self.cfgname), 'w')
     cfg = self.GetConfigFileTemplate()
     f2.write(cfg)
     f2.close()
-    print 'Created cfg file \'%s\' in %s'%(self.cfgname, mypath+analysisName)
-    f3 = open(mypath + analysisName + '/__init__.py', 'w')
+    print 'Created cfg file \'%s\' in %s%s'%(self.cfgname, mpath, analysisName)
+    f3 = open(mpath + analysisName + '/__init__.py', 'w')
     f3.write(' ')
     f3.close()
 
-  def __init__(self, analysisName, cfgname = 'testcfg', path = '', weight = '', outpath = '', nSlots = 1, nEvents = 0, year = 0, verbose = 1, options = ''):
+  def __init__(self, analysisName, cfgname = 'testcfg', path = '', weight = '', outpath = '', nSlots = 1, nEvents = 0, year = 0, verbose = 1, options = '', basepath = ''):
     self.analysisName = analysisName
     self.SetCfgname(cfgname)
     self.SetPath(path)
@@ -156,6 +161,7 @@ class AnalysisCreator:
     self.SetOptions(options)
     self.SetNSlots(nSlots)
     self.SetWeight(weight)
+    self.SetBasePath(basepath)
     self.selection = ''
     self.cuts = []
     self.histos = []

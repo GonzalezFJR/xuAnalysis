@@ -1210,8 +1210,11 @@ class StackPlot(XuanPlot):
     gPad.SetTicky();
     if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     hStack = THStack('stack', '')
+    nbins = self.pr[0].histo().GetNbinsX()
+    hclon = self.pr[0].histo().Clone('sdvsdv')
     for pr in self.pr: 
       hStack.Add(pr.histo())
+    for pr in self.pr[1:]: hclon.Add(pr.histo())
     hStack.Draw('hist')
 
     datamax = -999
@@ -1224,6 +1227,9 @@ class StackPlot(XuanPlot):
       #if self.doPoissonErrors:
     
     bkg = hStack.GetStack().Last().Clone('AllBkg')
+    for i in range(1, nbins+1):
+    #  print '%i: %i'%(i, hclon.GetBinError(i))# 
+      print '%i: %i'%(i,   bkg.GetBinError(i), )# 
 
     dmax = max(datamax, bkg.GetMaximum())
     if isinstance(self.PlotMaximum, float): hStack.SetMaximum(self.PlotMaximum)

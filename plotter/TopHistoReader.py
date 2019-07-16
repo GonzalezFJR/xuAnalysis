@@ -249,6 +249,51 @@ class TopHistoReader:
     n.SetBinContent(i, var-nom)
    return n
 
+ ### Histodic
+
+ def AddProcessDic(self, process):
+   if process in self.histodic.keys(): return
+   else:
+    d = {}
+    self.histodic[process] = d
+
+ def AddToHistoDic(self, h, process, hname, syst = ''):
+   hist = TH1F()
+   hist = h.Clone()
+   if syst != '': hname = hname+'_'+syst
+   self.AddProcessDic(process)
+   self.histodic[process][hname] = hist
+
+ def GetSystHistoNames(self, process, hname, syst):
+   hnames = []
+   name = '%s_%s'%(hname, syst)
+   if self.IsHisto(process, name): hnames.append(name)
+   name = '%s_%s%s'%(hname, syst, 'Up')
+   if self.IsHisto(process, name): hnames.append(name)
+   name = '%s_%s%s'%(hname, syst, 'Do')
+   if self.IsHisto(process, name): hnames.append(name)
+   name = '%s_%s%s'%(hname, syst, 'Down')
+   if self.IsHisto(process, name): hnames.append(name)
+   return hnames
+   
+ def GetHistoDic(self, processDic, hname, systlist):
+   if isinstance(hname, list): 
+     for histoname in hname:
+       self.GetHistoDic(processDic, histoname, systlist)
+     return self.histodic
+   processes = processDic.keys()
+   for pr in processes:
+     h = TH1F()
+     h = self.GetNamedHisto(hname)
+     self.AddToHistoDic(h, pr, hname)
+     for syst in systlist:
+       hnames = self.GetSystHistoNames(pr, hname, syst)
+       for hsyst in hnames:
+         h = TH1F()
+         h = self.GetNamedHisto(hsyst)
+         self.AddToHistoDic(h, pr, hsyst)
+  return self.histodic
+
  def __init__(self, path = './', process = '', var = '', chan = '', ilevel = '', syst = '', fileprefix = ''):
     self.doStackOverflow = False
     self.doNormalize = False
@@ -259,6 +304,7 @@ class TopHistoReader:
     self.lumi = 1
     self.ReComputeStatUnc = False
     self.SetFileNamePrefix(fileprefix)
+    self.histodic = {}
 
     self.SetPath(path)
     self.SetProcess(process)

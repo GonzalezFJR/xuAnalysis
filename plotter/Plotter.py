@@ -135,7 +135,7 @@ class Plot:
     tl.SetTextSize(s);
     self.Tex.append(tl)
 
-  def SetTextLumi(self, texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05, doinvfb = False):
+  def SetTextLumi(self, texlumi = '%2.1f fb^{-1} (13 TeV)', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05, doinvfb = False):
     self.texlumi  = texlumi
     self.texlumiX = texlumiX
     self.texlumiY = texlumiY
@@ -323,7 +323,7 @@ class Plot:
  
     ### Other
     self.SetErrorStyle()
-    self.SetLogY()
+    self.SetLogY(False)
     self.SetPlotMinimum()
     self.SetPlotMaximum()
     self.SetPlotMaxScale()
@@ -488,7 +488,10 @@ class Stack(Plot):
     # Set titles...
     TGaxis.SetMaxDigits(3)
     self.SetAxisPlot(self.hStack)
-    if self.doRatio: self.SetAxisRatio(self.hRatio)
+    if self.doRatio: 
+      self.SetAxisRatio(self.hRatio)
+      self.SetAxisRatio(self.hRatioUnc)
+      self.SetAxisRatio(self.hRatioStatUnc)
 
     if len(self.binLabels) > 0: 
       for i in range(len(self.binLabels)):
@@ -504,11 +507,18 @@ class Stack(Plot):
     # Ratio
     if self.doRatio:
       self.ratio.cd()
-      self.hRatio.SetMaximum(self.PlotRatioMax)
-      self.hRatio.SetMinimum(self.PlotRatioMin)
-      if hasattr(self, 'hRatioStatUnc'): self.hRatioStatUnc.Draw('e2same')
-      if hasattr(self, 'hRatioUnc'    ): self.hRatioUnc    .Draw('e2same')
-      if hasattr(self, 'hRatio'):        self.hRatio       .Draw('pE0X0')
+      if hasattr(self, 'hRatioStatUnc'): 
+        self.hRatioStatUnc.Draw('e2same')
+        self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
+        self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
+      if hasattr(self, 'hRatioUnc'    ): 
+        self.hRatioUnc.Draw('e2same')
+        self.hRatioUnc.SetMinimum(self.PlotRatioMin)
+        self.hRatioUnc.SetMaximum(self.PlotRatioMax)
+      if hasattr(self, 'hRatio'):
+        self.hRatio.Draw('pE0X0,same')
+        self.hRatio.SetMaximum(self.PlotRatioMax)
+        self.hRatio.SetMinimum(self.PlotRatioMin)
 
     self.Save()
 
@@ -528,11 +538,11 @@ class Stack(Plot):
       self.SetUncStyle()
       self.SetStatUncStyle()
 
-  def SetRatioUncStyle(self, color = kAzure+2, alpha = 0.5, fill = 1000):
+  def SetRatioUncStyle(self, color = kAzure+2, alpha = 0.2, fill = 1000):
     self.hRatioUnc.SetFillColorAlpha(color, alpha)
     self.hRatioUnc.SetFillStyle(fill)
 
-  def SetRatioStatUncStyle(self, color = kOrange+1, alpha = 0.7, fill = 1000):
+  def SetRatioStatUncStyle(self, color = kOrange+1, alpha = 0.8, fill = 1000):
     self.hRatioStatUnc.SetFillColorAlpha(color, alpha)
     self.hRatioStatUnc.SetFillStyle(fill)
 
@@ -540,7 +550,7 @@ class Stack(Plot):
     self.MCunc.SetFillColorAlpha(color, alpha)
     self.MCunc.SetFillStyle(fill)
 
-  def SetStatUncStyle(self, color = 1, alpha = 0.9, fill = 3444):
+  def SetStatUncStyle(self, color = kAzure+7, alpha = 0.9, fill = 3444):
     self.MCstatUnc.SetFillColorAlpha(color, alpha)
     self.MCstatUnc.SetFillStyle(fill)
 

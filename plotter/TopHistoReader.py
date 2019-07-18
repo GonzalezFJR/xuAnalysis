@@ -149,6 +149,13 @@ class TopHistoReader:
      for i in range(1,nbins+1):
        bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
        h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
+   else:
+     for i in range(1,nbins+1):
+       bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
+       be = h.GetBinError(i)
+       if bc == 0: h.SetBinContent(i, bc)
+       if be > bc: h.SetBinError(i, bc)
+       #h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
    if self.doNormalize: h.Scale(1./(integral if integral != 0 else 1))
    return h
 
@@ -927,13 +934,14 @@ class HistoManager:
     statunc = [hnom.GetBinError(i) for i in range(0, nb+2)]
     return statunc
 
-  def GetSum2Unc(self, lsyst = '', includeStat = False):
+  def GetSum2Unc(self, lsyst = '', includeStat = True):
     ''' From a list of uncertainties, get a list of per-bin unc w.r.t. nominal histo 
         lsyst is a list of uncertainty names, not labels
     '''
-    if   lsyst == '': lsyst = self.systname
+    if   lsyst == '': lsyst = self.systname[:]
     elif isinstance(lsyst, str) and ',' in lsyst: lsyst = lsyst.replace(' ', '').split(',')
     elif not isinstance(lsyst, list): lsyst = [syst]
+    if includeStat and not 'stat' in lsyst: lsyst.append('stat') #sum2.append(self.GetStatUnc())
     unc = []
     systExist = lambda x : x in self.systlabels
     for s in lsyst:
@@ -947,7 +955,6 @@ class HistoManager:
         listOfHistos = [self.sumdic[s] for s in listOfGoodSyst]
       unc.append(self.GetDifUnc(self.sumdic[''], listOfHistos))
     sum2 = []
-    if includeStat: sum2.append(self.GetStatUnc())
     # print 'unc:\n', unc
     nlen = len(unc[0])
     for i in range(nlen):

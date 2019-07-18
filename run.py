@@ -4,7 +4,6 @@
   python run.py 2017.cfg
 '''
 
-runC = True
 doSendPath = True
 
 # Check if ROOT and PAF is loaded...
@@ -108,7 +107,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
     nEvents  = 1000
     nSlots   = 1
     sendJobs = False
-
+  if isinstance(sample, str) and ',' in sample: sample = sample.replace(' ','').split(',')
   sap = sample if not isinstance(sample, list) else sample[0]
   gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root'])
   if len(gs) == 0: print 'ERROR: file %s not found in %s'%(sap, path)
@@ -146,6 +145,7 @@ def main(ocfgfile = ''):
   ### Execute
   ################################################################################
   import argparse
+  out = {}
   parser = argparse.ArgumentParser(description='Run xuAnalysis')
   if ocfgfile == '':
     parser.add_argument('selection'         , default=''           , help = 'Name of the selector')
@@ -289,10 +289,10 @@ def main(ocfgfile = ''):
       outname = sname
       sample  = samplefiles[sname]
       ncores  = nslots[sname]
-      out = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue)
+      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue)
   
   else: # no config file...
-    out = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue)
+    out[outname] = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue)
   return out
 
 if __name__ == '__main__':

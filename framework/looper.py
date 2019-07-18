@@ -7,7 +7,7 @@
     out = l.Run()
     out['TTTo2L2Nu']['invmass']
 '''
-import os,sys
+import os,sys,time
 mypath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(mypath)
 
@@ -24,7 +24,7 @@ class looper(AnalysisCreator):
     #cfgpath = '%s/%s.cfg'%(self.outpath, self.cfgname)
     cfgpath = self.cfgname
     print 'Executing analysis \'%s\' using cfg file \'%s\' in \'%s/%s/\'...'%(self.analysisName, cfgpath, self.outpath, self.analysisName)
-    run('%s/%s/%s'%(self.outpath,self.analysisName,cfgpath))
+    return run('%s/%s/%s'%(self.outpath,self.analysisName,cfgpath))
 
   def AutoRemove(self):
     command = 'rm -r %s/%s'%(self.outpath, self.analysisName)
@@ -34,7 +34,7 @@ class looper(AnalysisCreator):
     self.out[sampleName] = histodic
 
   def GetAnalysisName(self):
-    return 'blanalysis'
+    return 'analysis_%i'%(int(time.time()*1e6)%1e12)
 
   def __init__(self, path = '', nSlots = 1, cut = '', weight = '', nEvents = 0, year = 0, verbose = 1, options = ''):
     self.analysisName = self.GetAnalysisName()
@@ -55,6 +55,7 @@ class looper(AnalysisCreator):
     self.samples = {}
     self.vars = {}
     self.out = {}
+    self.fillLine = {}
     self.weights = {}
     self.histocuts = {}
     if cut != '': self.AddCut(cut)

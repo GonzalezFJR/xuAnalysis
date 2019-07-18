@@ -24,7 +24,7 @@ class AnalysisCreator:
     cut = self.CraftCut(cut)
     self.cuts.append(cut)
 
-  def AddHisto(self, var, hname, nbins, b0 = 0, bN = 0, bins = [], weight = '', sys = '', cut = '', tit = ''):
+  def AddHisto(self, var, hname, nbins, b0 = 0, bN = 0, bins = [], weight = '', sys = '', cut = '', tit = '', write = True):
     if sys != '': hname += '_' + sys
     if weight == '': weight = self.weight
     self.weights[hname] = weight
@@ -32,7 +32,13 @@ class AnalysisCreator:
     self.histocuts[hname] = cut
     if tit == '': tit = hname
     hline = 'self.CreateTH1F("%s", "%s", %i, %1.2f, %1.2f)\n'%(hname, tit, nbins, b0, bN)
+    var = self.vars[hname]
+    cut = ' ' if self.histocuts[hname] == '' else ' if %s:'%self.histocuts[hname]
+    fillLine = '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, var, (','+self.weights[hname]) if self.weights[hname] != '' else '')
     self.histos.append(hline)
+    if write: self.fillLine.append(fillLine)
+    else    : return fillLine
+           
 
   def CraftCut(self, cut):
     return cut
@@ -95,10 +101,11 @@ class AnalysisCreator:
     hnames = self.vars.keys()
     if len(hnames) > 0:
       body += '\n    # Filling the histograms\n'
-      for h in hnames:
-        var = self.vars[h]
-        cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
-        body += '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, h, var, (','+self.weights[h]) if self.weights[h] != '' else '')
+    #  for h in hnames:
+    #    var = self.vars[h]
+    #    cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
+    #    body += '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, h, var, (','+self.weights[h]) if self.weights[h] != '' else '')
+    for line in self.fillLine: body += '%s\n'%line
     return body
 
   def GetConfigFileTemplate(self):
@@ -165,6 +172,7 @@ class AnalysisCreator:
     self.selection = ''
     self.cuts = []
     self.histos = []
+    self.fillLine = []
     self.samples = {}
     self.vars = {}
     self.weights = {}

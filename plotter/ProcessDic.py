@@ -7,7 +7,7 @@
  hsyst = h.GetUncHist()
 '''
 
-class HistoMerger:
+class HistoManager:
   def SetProcessList(self, listOfProcesses):
     if isinstance(listOfProcesses, str): listOfProcesses = listOfProcesses.split(',')
     self.processList = listOfProcesses

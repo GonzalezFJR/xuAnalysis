@@ -4,6 +4,7 @@ from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGax
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
 from ROOT import gPad, gROOT
 from ROOT.TMath import Sqrt as sqrt
+from copy import deepcopy
 average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/')
@@ -844,6 +845,7 @@ class HistoManager:
   def SetTopReader(self, path):
     self.path = path
     self.thr = TopHistoReader(path)
+    self.thr.SetLumi(1)
 
   def SetStackOverflow(self, t = True):
     self.thr.doStackOverflow = t
@@ -886,12 +888,12 @@ class HistoManager:
         pr0 = self.processList[0]
         hs = "%s_%s"%(hname, s)
         if not hs in self.indic[pr0].keys(): hs = hname
-        h = self.indic[pr0][hs].Clone("sum0")
+        h = self.indic[pr0][hs].Clone("sum_%s"%s)
         if len(self.processList) > 1:
           for pr in self.processList[1:]:
             hs = "%s_%s"%(hname, s)
             if not hs in self.indic[pr].keys(): hs = hname
-            h.Add(self.indic[pr][hname])
+            h.Add(self.indic[pr][hs])
         self.sumdic[s] = h
 
   def GetDifUnc(self, hnom, hsyst):
@@ -901,17 +903,18 @@ class HistoManager:
     nb = hnom.GetNbinsX()
     n = [hnom.GetBinContent(i) for i in range(0, nb+2)]
     if not isinstance(hsyst, list): hsyst = [hsyst]
-    var  = [ [abs(h.GetBinContent(i)-n[i]) for i in range(0, nb+2)] for h in hsyst]
+    var  = [ [(h.GetBinContent(i)-n[i]) for i in range(0, nb+2)] for h in hsyst]
     nsyst = len(var)
     meansyst = []
     if nsyst == 0:
       print 'ERROR: no systematics set...'
       return meansyst
     for i in range(0, nb+2):
-      l = 0.
+      up = 0; do = 0
       for j in range(nsyst):
-        l += var[j][i]
-      l = l/nsyst
+        up += abs(var[j][i]) if var[j][i] > 0 else 0
+        do += abs(var[j][i]) if var[j][i] < 0 else 0
+      l = (up+do)/2
       meansyst.append(l)
     return meansyst
 
@@ -955,7 +958,6 @@ class HistoManager:
         listOfHistos = [self.sumdic[s] for s in listOfGoodSyst]
       unc.append(self.GetDifUnc(self.sumdic[''], listOfHistos))
     sum2 = []
-    # print 'unc:\n', unc
     nlen = len(unc[0])
     for i in range(nlen):
       v = 0
@@ -970,14 +972,14 @@ class HistoManager:
         self.indic[pr][h].SetStats(0)
         self.indic[pr][h].Scale(self.lumi)
 
-  def GetUncHist(self, syst = ''):
+  def GetUncHist(self, syst = '', includeStat = True):
     ''' syst is a name, not a label... returns nominal histo with nice uncertainties '''
     if   syst == '': syst = self.systname
     elif isinstance(syst, str) and ',' in syst: syst = syst.replace(' ', '').split(',')
     elif not isinstance(syst, list): syst = [syst]
     sumdic = self.sumdic.copy() # To keep the original
     hnom = sumdic[''].Clone('hnom')
-    unc = self.GetSum2Unc(syst)
+    unc = self.GetSum2Unc(syst, includeStat)
     nbins = hnom.GetNbinsX()
     for i in range(0,nbins+2): hnom.SetBinError(i, unc[i])
     hnom.SetDirectory(0)
@@ -1009,10 +1011,10 @@ class HistoManager:
     #  b = hbkg. GetBinContent(i)
     return h
      
-  def GetRatioHistoUnc(self, syst = ''): # syst = stat for stat unc
+  def GetRatioHistoUnc(self, syst = '', includeStat = True): # syst = stat for stat unc
     hRatio = self.GetRatioHisto()
     hdata  = self.GetDataHisto()
-    hUnc   = self.GetUncHist(syst)
+    hUnc   = self.GetUncHist(syst, includeStat)
     nb     = hUnc.GetNbinsX()
     for i in range(0, nb+2):
       b    = hUnc.GetBinContent(i)
@@ -1053,6 +1055,21 @@ class HistoManager:
     self.lumi = lumi
     if indic == {} and path != '' and hname != '' and processDic != {}: 
       self.SetHisto(hname, rebin)
+
+  def Add(self, HM):
+    if isinstance(HM, list):
+      for hm in HM: self.Add(hm)
+      return self
+    if not self.histoname == HM.histoname or not self.rebin == HM.rebin:
+      HM.SetHisto(self.histoname, self.rebin)
+    self.sumdic = {}
+    #self.lumi = 1
+    for pr in self.indic.keys():
+      for hname in self.indic[pr].keys():
+        self.indic[pr][hname].Add(HM.indic[pr][hname])
+    self.LookForSystLabels()
+    self.SumHistos()
+    return self
 
   def SetHisto(self, hname, rebin = 1):
     self.indic = {}

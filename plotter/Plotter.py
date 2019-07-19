@@ -52,7 +52,7 @@ class Plot:
 
   #############################################################################################
   ### Legend
-  def SetLegendPos(self, x0 = 0.70, y0 = 0.65, x1 = 0.93, y1 = 0.91, size = 0.065, ncol = 2):
+  def SetLegendPos(self, x0 = 0.50, y0 = 0.65, x1 = 0.93, y1 = 0.91, size = 0.065, ncol = 2):
     self.legx0 = x0
     self.legx1 = x1
     self.legy0 = y0
@@ -119,7 +119,7 @@ class Plot:
     texpre.SetTextSizePixels(22)
     return texpre
 
-  def SetTextChan(self, texch = '', x = 0.15, y = 0.87, s = 0.04):
+  def SetTextChan(self, texch = '', x = 0.20, y = 0.96, s = 0.04):
     self.texch  = texch
     self.texchX = x
     self.texchY = y
@@ -243,6 +243,15 @@ class Plot:
     self.Tex.append(texcms)
     self.Tex.append(texmod)
     self.Tex.append(texlum)
+    if hasattr(self, 'texch') and self.texch != '':
+      tch = TLatex(-20, 50, self.texch)
+      tch.SetNDC();
+      tch.SetTextAlign(12);
+      tch.SetX(self.texchX);
+      tch.SetY(self.texchY);
+      tch.SetTextFont(42);
+      tch.SetTextSize(self.texchS);
+      self.Tex.append(tch)
     for r in self.Tex: r.Draw()
 
     TGaxis.SetMaxDigits(3)
@@ -287,6 +296,9 @@ class Plot:
 
   def Save(self):
     # Save
+    if not os.path.isdir(self.GetOutPath()): 
+      print 'Creating directory: ', self.GetOutPath()
+      os.mkdir(self.GetOutPath())
     self.canvas.Print(self.GetOutName()+'.pdf', 'pdf')
     self.canvas.Print(self.GetOutName()+'.png', 'png')
 
@@ -436,6 +448,11 @@ class Stack(Plot):
   def SetRatio(self, h):
     self.hRatio = h
 
+  def SetProcesses(self, p):
+    if   isinstance(p, str) and ',' in p: p = p.replace(' ', '').split(',')
+    elif isinstance(p, str): p = [p]
+    self.processes = p
+
   def SetRatioStatUnc(self, h):
     self.hRatioStatUnc = h
 
@@ -501,8 +518,15 @@ class Stack(Plot):
           self.hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
     
     # Legend
-    #if hasattr(self, 'leg'): self.
-    #self.legend.Draw()
+    if hasattr(self, 'processes'):
+      self.hleg = []
+      leg = self.SetLegend()
+      for pr in self.processes:
+        h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
+        self.hleg.append(h)
+        leg.AddEntry(self.hleg[-1], pr, 'f')
+      if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
+      leg.Draw()
 
     # Ratio
     if self.doRatio:
@@ -531,7 +555,7 @@ class Stack(Plot):
     self.SetStack(HM.GetStack(colors=self.colors))
     self.SetRatio(HM.GetRatioHisto())
     self.SetRatioStatUnc(HM.GetRatioHistoUnc('stat'))
-    self.SetRatioUnc(HM.GetRatioHistoUnc())
+    self.SetRatioUnc(HM.GetRatioHistoUnc('', False))
     if defaultStyle:
       self.SetRatioUncStyle()
       self.SetRatioStatUncStyle()
@@ -557,4 +581,5 @@ class Stack(Plot):
   def __init__(self, outpath = './', outname = 'temp', doRatio = True, HM='', colors=''):
     self.Initialize(outpath, outname, doRatio)
     self.colors = colors
+    self.HM = HM
     if HM!= '': self.SetHistosFromMH(HM)

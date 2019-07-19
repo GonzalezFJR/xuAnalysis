@@ -18,46 +18,33 @@ The MC histograms are normalized to 1 pb-1 for a given input cross section. The 
 
 Anyway, this is fully customizable.
 
-### Run the test
+### Create an analysis
 
-    cd test/
+    python framework/AnalysisCreator.py myAnalysis
 
-This is an easy analysis that selects events with two leptons and save two histograms for the lepton pT and invariant mass.
-You can run the analysis by executing the file executeTest.sh:
+Edit the cfg file "myAnalysis/testcfg.cfg". Introduce the path to the trees and the sample. 
 
     source executeTest.sh
 
-Or just executing the command:
+### Run the analysis
 
-    python -c 'from testAnalysis import testAnalysis; testAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "DYJetsToLL_MLL50", eventRange = [0, 100000], xsec = 10, run = True, nSlots = 4)'
+    python run.py myAnalysis/testcfg.cfg
 
-If you are not running on lxplus or you wish to run on another sample, just modify the path and sample name.
-By default, divides the sample in 4 pieces. The output is saved in a folder called temp. You can merge the output rootfiles:
+Or just introduce all the parameters in the run command. You can get the usage by executing run.py with no arguments.
+Example:
 
-    python ../framework/merger.py -frv temp/
+    python run.py myAnalysis/testcfg.cfg -n 20 -s sample
 
-### Secuential or multicore processing
+Other interesting argumens:
+   - -j : Send jobs
+   - -t : Make a test with 1000 events
 
-Example of how to run the analysis on a sample (WWTo2L2Nu):
 
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, run = True)'
+### Run on mini trees
 
-Example of how to run the analysis on a sample (WWTo2L2Nu) using :
+## Merge rootfiles
 
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, nSlots = 5, run = True)'
-
-### Send jobs to the lxplus batch system
-
-Example of how to send 3 jobs to the lxplus batch system to analyze a sample:
-
-    python -c 'from myAnalysis import myAnalysis; myAnalysis("/gpfs/ddn/cms/user/cmsdas/2019/ttbar/dilepton_skim/", "WWTo2L2Nu", xsec = 10, nSlots = 3, sendJobs = True)'
-
-## Merge the rootfiles
-
-You can automatically merge any number of rootfies with a name SAMPLE\_[number].root into a SAMPLE.root file.
-Use the command:
-
-    python framework/merge.py [folder]
+    python framework/merge.py output_folder/ -frv
 
 ## Explore the trees
 

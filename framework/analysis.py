@@ -19,7 +19,7 @@ def loopAnal(listOfInputs):
 
 def MergeObjectsDic(dic):
   k = dic.keys(); k.sort()
-  print 'Merging objects (%i)...'%len(k)
+  print ' >> Merging objects (%i)...'%len(k)
   firstKey = k[-1]
   otherKeys = k[:-1]
   objs = dic[firstKey].obj
@@ -324,7 +324,7 @@ class analysis:
     else:                
       objs = self.multiloop(first, last)
     self.log()
-    if 'merge' in self.options or 'Merge' in self.options and (not 'nosave' in self.options and not 'noSave' in self.options): 
+    if ('merge' in self.options or 'Merge' in self.options) and (not 'nosave' in self.options and not 'noSave' in self.options): 
       self.index = -1
       self.saveOutput(objs)
     return objs

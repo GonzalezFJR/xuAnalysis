@@ -131,7 +131,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
       return
     out = an.sendJobs(queue=queue, pretend=pretend)
   else:
-    print '>> Running...'
+    print ' >> Running sample %s...'%sample
     if pretend:
       print 'Pretending...'
       return

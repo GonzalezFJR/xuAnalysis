@@ -991,7 +991,7 @@ class HistoManager:
 
   def GetDataHisto(self):
     if not 'data' in self.indic.keys():
-      print 'WARNING: data histogram not found...'
+      #print 'WARNING: data histogram not found...'
       return None
     self.indic['data'][self.histoname].SetMarkerSize(1.2)
     self.indic['data'][self.histoname].SetMarkerStyle(20)

@@ -36,7 +36,7 @@ class looper(AnalysisCreator):
   def GetAnalysisName(self):
     return 'analysis_%i'%(int(time.time()*1e6)%1e12)
 
-  def __init__(self, path = '', nSlots = 1, cut = '', weight = '', nEvents = 0, year = 0, verbose = 0, options = 'merge', treeName = 'Events'):
+  def __init__(self, path = '', nSlots = 1, cut = '', weight = '', nEvents = 0, year = 0, verbose = 0, options = 'merge', treeName = 'Events', processdic = {}):
     self.analysisName = self.GetAnalysisName()
     self.SetTreeName(treeName)
     self.SetCfgname('testcfg')
@@ -60,6 +60,9 @@ class looper(AnalysisCreator):
     self.weights = {}
     self.histocuts = {}
     if cut != '': self.AddCut(cut)
+    if processdic != {}:
+      for pr in processdic:
+        self.AddSample(pr, processdic[pr])
 
 
 

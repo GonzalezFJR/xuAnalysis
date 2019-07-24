@@ -69,6 +69,9 @@ class AnalysisCreator:
     if year not in [2016, 2017, 2018]: year = 0
     self.year = year
 
+  def SetTreeName(self, treeName = ''):
+    self.treeName = treeName
+
   def SetVerbose(self, verbose = 1):
     self.verbose = verbose
 
@@ -121,7 +124,8 @@ class AnalysisCreator:
     cfg += '#year : 2016\n' if not self.year in [2016,2017,2018] else 'year : %i\n'%self.year
     cfg += 'verbose : %i\n'%self.verbose
     cfg += 'nSlots : %i\n'%self.nSlots
-    cfg += 'selection : %s\n\n'%self.analysisName
+    cfg += 'selection : %s\n'%self.analysisName
+    cfg += 'treeName : %s\n\n'%self.treeName if self.treeName != '' else '#treeName : \n\n'
     cfg += '# Introduce your samples here following the example of the form:\n'
     cfg += '# SampleName : Filename1, Filename2, Filename2_ext\n'
     samples = self.samples.keys()
@@ -157,13 +161,14 @@ class AnalysisCreator:
     f3.write(' ')
     f3.close()
 
-  def __init__(self, analysisName, cfgname = 'testcfg', path = '', weight = '', outpath = '', nSlots = 1, nEvents = 0, year = 0, verbose = 1, options = '', basepath = ''):
+  def __init__(self, analysisName, cfgname = 'testcfg', path = '', weight = '', outpath = '', nSlots = 1, nEvents = 0, year = 0, verbose = 1, options = '', basepath = '', treeName = 'Events'):
     self.analysisName = analysisName
     self.SetCfgname(cfgname)
     self.SetPath(path)
     self.SetOutpath(outpath)
     self.SetNEvents(nEvents)
     self.SetYear(year)
+    self.SetTreeName(treeName)
     self.SetVerbose(verbose)
     self.SetOptions(options)
     self.SetNSlots(nSlots)

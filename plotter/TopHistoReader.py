@@ -852,6 +852,7 @@ class HistoManager:
  
   def SetRebin(self, rebin):
     self.thr.SetRebin(rebin)
+    self.rebin = rebin
 
   def SetInputDicFromReader(self):
     self.indic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname)
@@ -970,6 +971,7 @@ class HistoManager:
     for pr in self.processList:
       for h in self.indic[pr]: 
         self.indic[pr][h].SetStats(0)
+        self.indic[pr][h].SetTitle('')
         self.indic[pr][h].Scale(self.lumi)
 
   def GetUncHist(self, syst = '', includeStat = True):
@@ -989,7 +991,7 @@ class HistoManager:
 
   def GetDataHisto(self):
     if not 'data' in self.indic.keys():
-      print 'WARNING: not data histogram found...'
+      print 'WARNING: data histogram not found...'
       return None
     self.indic['data'][self.histoname].SetMarkerSize(1.2)
     self.indic['data'][self.histoname].SetMarkerStyle(20)
@@ -1001,7 +1003,7 @@ class HistoManager:
   def GetRatioHisto(self):
     # Data / All bkg
     hbkg  = self.GetSumBkg()
-    h     = self.GetDataHisto().Clone("hratio")
+    h     = self.GetDataHisto().Clone("hratio") if 'data' in self.indic.keys() else self.GetSumBkg().Clone("hratio")
     h.SetDirectory(0)
     h.Divide(hbkg)
     #hdata = self.GetDataHisto()
@@ -1053,7 +1055,9 @@ class HistoManager:
     self.SetRebin(rebin)
     self.indic = indic
     self.lumi = lumi
-    if indic == {} and path != '' and hname != '' and processDic != {}: 
+    self.readFromTrees = False
+    if(indic == {} and path != '' and processDic != {}): self.readFromTrees = True
+    if self.readFromTrees:
       self.SetHisto(hname, rebin)
 
   def Add(self, HM):
@@ -1072,10 +1076,13 @@ class HistoManager:
     return self
 
   def SetHisto(self, hname, rebin = 1):
-    self.indic = {}
     self.SetHistoName(hname)
     self.SetRebin(rebin)
-    self.SetInputDicFromReader()
+    if self.readFromTrees:
+      self.SetInputDicFromReader()
     self.LookForSystLabels()
     self.ScaleByLumi()
     self.SumHistos()
+
+  def Clear(self):
+    self.indic = {}

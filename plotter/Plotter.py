@@ -2,7 +2,7 @@ import os,sys
 #import ROOT
 from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
-from ROOT import gPad, gROOT
+from ROOT import gPad, gROOT, gSystem
 from ROOT.TMath import Sqrt as sqrt
 average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
@@ -296,9 +296,9 @@ class Plot:
 
   def Save(self):
     # Save
-    if not os.path.isdir(self.GetOutPath()): 
-      print 'Creating directory: ', self.GetOutPath()
-      os.mkdir(self.GetOutPath())
+    #if not os.path.isdir(self.GetOutPath()): 
+    #  print 'Creating directory: ', self.GetOutPath()
+    gSystem.mkdir(self.GetOutPath(), True)
     self.canvas.Print(self.GetOutName()+'.pdf', 'pdf')
     self.canvas.Print(self.GetOutName()+'.png', 'png')
 
@@ -431,7 +431,7 @@ class HistoComp(Plot):
 class Stack(Plot):
 
   def SetDataHisto(self, h):
-    self.hData = h
+    if h != None: self.hData = h
 
   def SetStack(self, h):
     self.hStack = h

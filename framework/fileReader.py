@@ -87,15 +87,15 @@ def GetHistoFromSetOfFiles(fname, histoname):
     return h
   else: print '[ERROR] [GetHistoFromSetOfFiles]: wrong input' 
 
-def GetEntries(fname):
+def GetEntries(fname, treeName = 'Events'):
   ''' Returns number of events from the tree 'Events' in a file '''
   if isinstance(fname, list):
     c = 0
-    for f in fname: c+=GetEntries(f)
+    for f in fname: c+=GetEntries(f, treeName)
     return c
   elif isinstance(fname, str):
     f = TFile.Open(fname)
-    t = f.Get('Events')
+    t = f.Get(treeName)
     return t.GetEntries()
   else: print '[ERROR] [GetEntries]: wrong input' 
 
@@ -159,7 +159,7 @@ def getDicFiles(inFolder):
   groupFilesInDic(listOfFiles,files)
   return listOfFiles
   
-def GetAllInfoFromFile(fname):
+def GetAllInfoFromFile(fname, treeName = 'Events'):
   ''' Returns a list with all the info of a file ''' 
   if isinstance(fname, list):
     nEvents = 0
@@ -167,14 +167,14 @@ def GetAllInfoFromFile(fname):
     nSumOfWeights = 0
     isData = False
     for f in fname: 
-      iE, iG, iS, isData = GetAllInfoFromFile(f)
+      iE, iG, iS, isData = GetAllInfoFromFile(f, treeName)
       nEvents += iE
       nGenEvents += iG
       nSumOfWeights += iS
     return [nEvents, nGenEvents, nSumOfWeights, isData]
   elif isinstance(fname, str):
     f = TFile.Open(fname)
-    t = f.Get('Events')
+    t = f.Get(treeName)
     hs = f.Get('SumWeights')
     hc = f.Get('Count')
     nEvents = t.GetEntries()
@@ -184,13 +184,13 @@ def GetAllInfoFromFile(fname):
     return [nEvents, nGenEvents, nSumOfWeights, isData]
   else: print '[ERROR] [GetAllInfoFromFile]: wrong input' 
 
-def GetProcessInfo(path, process=''):
+def GetProcessInfo(path, process='', treeName = 'Events'):
   ''' Prints all info from a process in path '''
   if isinstance(path, list): 
     files = path
     path, process, k = guessPathAndName(files[0])
   else: files = GetFiles(path, process)
-  nEvents, nGenEvents, nSumOfWeights, isData = GetAllInfoFromFile(files)
+  nEvents, nGenEvents, nSumOfWeights, isData = GetAllInfoFromFile(files, treeName)
   fileType = '(Data)' if isData else ('(MC)')
   print '\n##################################################################'
   print ' path: ' + path
@@ -234,8 +234,10 @@ def main():
  pr.add_argument('path', help='Input folder', type = str, default = defaultPath)
  pr.add_argument('--sample', type = str, default = '')
  pr.add_argument('-p','--inspect', action='store_true', help='Print branches')
+ pr.add_argument('-t','--treeName', default='Events', help='Name of the tree')
  args = pr.parse_args()
  if args.sample:  sample = args.sample
+ treeName = args.treeName
  printb = args.inspect
  path = args.path
  if os.path.isdir(path) and not path[-1] == '/': path += '/'
@@ -252,12 +254,12 @@ def main():
    else:
      totfile = path + sample + '_' + n + '.root' if int(n) >= 0 else path + sample + '.root'
      if os.path.isfile(totfile): 
-       GetProcessInfo([totfile])
+       GetProcessInfo([totfile], treeName = treeName)
        exit()
      else:
-       GetProcessInfo(path, sample)
+       GetProcessInfo(path, sample, treeName)
  else:
-   GetProcessInfo(path, sample)
+   GetProcessInfo(path, sample, treeName)
    exit()
 
 if __name__ == '__main__':

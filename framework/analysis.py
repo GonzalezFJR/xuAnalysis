@@ -166,7 +166,7 @@ class analysis:
   def SetParams(self):
     ''' Once the input files are set, calculate all the needed parameters '''
     if len(self.files) == 0: return
-    _nEvents, _nGenEvents, _nSumOfWeights, _isData = GetAllInfoFromFile(self.files)
+    _nEvents, _nGenEvents, _nSumOfWeights, _isData = GetAllInfoFromFile(self.files, treeName = self.treeName)
     self.nEvents       = _nEvents
     self.nGenEvents    = _nGenEvents
     self.nSumOfWeights = _nSumOfWeights
@@ -314,24 +314,24 @@ class analysis:
   def run(self, first = -1, last = -1, nSlots = -1):
     ''' Run the analysis, taking into account the number of slots '''
     if nSlots != -1: self.SetNSlots(nSlots)
-    if self.nSlots > 1: print '[INFO] Number of slots: ', self.nSlots
-    elif self.index == -1: print '[INFO] Secuential mode!'
-    print '[INFO] Cross section: ', self.xsec
-    if self.options != '': print '[INFO] Options = ', self.options
-    if self.verbose >= 1: GetProcessInfo(self.files)
+    if self.nSlots > 1 and self.verbose > 0: print '[INFO] Number of slots: ', self.nSlots
+    elif self.index == -1 and self.verbose > 0: print '[INFO] Secuential mode!'
+    if self.verbose > 0: print '[INFO] Cross section: ', self.xsec
+    if self.options != '' and self.verbose > 0: print '[INFO] Options = ', self.options
+    if self.verbose >= 1: GetProcessInfo(self.files, treeName = self.treeName)
     if self.nSlots == 1: 
       objs = self.loop(first, last)
     else:                
       objs = self.multiloop(first, last)
     self.log()
-    if 'merge' in self.options or 'Merge' in self.options: 
+    if 'merge' in self.options or 'Merge' in self.options and (not 'nosave' in self.options and not 'noSave' in self.options): 
       self.index = -1
       self.saveOutput(objs)
     return objs
 
   def loop(self, ev0 = -1, evN = -1):
     ''' Loop over the events and fill the histograms '''
-    self.manageOutput()
+    if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.manageOutput()
     self.tchain = TChain(self.treeName,self.treeName)
     for f in self.files: self.tchain.Add(f)
     self.init()
@@ -350,7 +350,7 @@ class analysis:
       print '[INFO] Loaded %i inputs'%len(self.inputs)
       print '[INFO] Created %i outputs'%len(self.obj)
     for iEv in range(first, last):
-      self.printprocess(iEv)
+      if self.verbose > 0: self.printprocess(iEv)
       self.tchain.GetEntry(iEv)
       self.hRunEvents.Fill(1)
       if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
@@ -415,7 +415,7 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events'):
     # Default values:
     self.inpath = fname
     self.out = ''
@@ -436,7 +436,7 @@ class analysis:
     self.nRunEvents = 0
     self.nEventsPrintOut = 10000
     self.verbose = 1
-    self.treeName = 'Events'
+    self.treeName = treeName
     self.SetVerbose(verbose)
     self.fileName = fileName
     self.inputs = {}

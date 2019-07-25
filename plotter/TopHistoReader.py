@@ -1086,3 +1086,6 @@ class HistoManager:
 
   def Clear(self):
     self.indic = {}
+
+  def GetHisto(self, sname, hname):
+    return self.indic[sname][hname]

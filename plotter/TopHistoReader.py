@@ -284,10 +284,11 @@ class TopHistoReader:
    if self.IsHisto(process, name): hnames.append(name)
    return hnames
    
- def GetHistoDic(self, processDic, hname, systlist):
+ def GetHistoDic(self, processDic, hname, systlist, systdic = {}):
+   if isinstance(hname, str) and ',' in hname: hname = hname.replace(' ', '').split(',') 
    if isinstance(hname, list): 
      for histoname in hname:
-       self.GetHistoDic(processDic, histoname, systlist)
+       self.GetHistoDic(processDic, histoname, systlist, systdic)
      return self.histodic
    processes = processDic.keys()
    for pr in processes:
@@ -300,6 +301,13 @@ class TopHistoReader:
          h = TH1F()
          h = self.GetNamedHisto(hsyst, processDic[pr], rebin=self.rebin)
          self.AddToHistoDic(h, pr, hsyst)
+   for pr in systdic:
+     if not pr in processes: continue
+     for syst in systdic[pr].keys():
+       h = TH1F()
+       h = self.GetNamedHisto(hname, systdic[pr][syst], rebin=self.rebin)
+       hsystname = '%s_%s'%(hname, syst)
+       self.AddToHistoDic(h, pr, hsystname)
    return self.histodic
 
  def __init__(self, path = './', process = '', var = '', chan = '', ilevel = '', syst = '', fileprefix = ''):
@@ -842,6 +850,9 @@ class HistoManager:
   def SetProcessDic(self, pd):
     self.processDic = pd
 
+  def SetSystDic(self, systdic):
+    self.systdic = systdic
+
   def SetTopReader(self, path):
     self.path = path
     self.thr = TopHistoReader(path)
@@ -855,7 +866,10 @@ class HistoManager:
     self.rebin = rebin
 
   def SetInputDicFromReader(self):
-    self.indic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname)
+    self.indic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname, self.systdic)
+
+  def GetHistoName(self):
+    return self.histoname
 
   def GetListOfCandNames(self, syst):
     systCand = ["%s"%syst, "%sUp"%syst, "%sDo"%syst, "%sDown"%syst]
@@ -1044,20 +1058,21 @@ class HistoManager:
       hStack.Add(self.indic[p][self.histoname])
     return hStack
       
-  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, lumi = 1, rebin = 1, indic = {}):
+  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}):
     self.SetProcessList(prlist)
     self.SetHistoName(hname)
     self.SetSystList(syslist)
     self.sumdic = {}
     self.systlabels = []
     self.SetProcessDic(processDic)
+    self.SetSystDic(systdic)
     self.SetTopReader(path)
     self.SetRebin(rebin)
     self.indic = indic
     self.lumi = lumi
     self.readFromTrees = False
     if(indic == {} and path != '' and processDic != {}): self.readFromTrees = True
-    if self.readFromTrees:
+    if self.readFromTrees and hname != '':
       self.SetHisto(hname, rebin)
 
   def Add(self, HM):

@@ -233,7 +233,7 @@ class Plot:
       ratio.SetPad(self.rpadx0, self.rpady0, self.rpadx1, self.rpady1)
       ratio.SetMargin(self.rpadMleft, self.rpadMright, self.rpadMbottom, self.rpadMtop)
     else:
-      ratio.SetPad(0,0,0,0)
+      #ratio.SetPad(0,0,0,0)
       plot.SetPad(0,0,1,1)
 
     # Draw the text
@@ -361,8 +361,11 @@ class HistoComp(Plot):
       cp.Draw()
   '''
 
-  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0):
+  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = ''):
     if self.doNorm: h.Scale(1/h.Integral())
+    if isinstance(color, int):
+      h.SetLineColor(color)
+      h.SetFillColor(color)
     self.histos.append([h, drawOpt, drawErr, addToLeng])
 
   def AddRatioHisto(self, h, drawOpt = 'hist', drawErr = 0):
@@ -379,11 +382,14 @@ class HistoComp(Plot):
     for h in self.histos: 
       dmax.append(h[0].GetMaximum())
       dmin.append(h[0].GetMinimum())
-      h[0].Draw('same,'+h[1])
+      legsymbol = h[1] if h[1] != '' and h[1] != 0 else h[2]
+      if   'hist' in legsymbol: legsymbol = 'l'
+      elif 'e2'   in legsymbol: legsymbol = 'f'
+      if h[1] != 0 and h[1] != '': h[0].Draw('same,'+h[1])
       # Draw errors
       if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
       # Legend
-      if h[3] != 0 and h[3] != '': self.legend.AddEntry(h[0], h[3], 'l' if 'hist' in h[1] else h[1])
+      if h[3] != 0 and h[3] != '': self.legend.AddEntry(h[0], h[3], legsymbol)
     self.SetAxisPlot(self.histos[0][0])
     dmax = max(dmax)
     dmin = min(dmin)
@@ -397,19 +403,20 @@ class HistoComp(Plot):
 
     if self.doRatio: 
       if self.autoRatio:
-        hRatio = self.histos[0][0].Clone('hratio')
-        self.SetAxisRatio(hRatio)
+        hratio = self.histos[0][0].Clone("hratio")
+        self.SetAxisRatio(hratio)
         if len(self.binLabels) > 0: 
           for i in range(len(self.binLabels)):
-            hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
-        nbins = hRatio.GetNbinsX()
+            hratio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        nbins = hratio.GetNbinsX()
         for h in self.histos[1:]: 
           htemp    = h[0].Clone(h[0].GetName()+'ratio')
-          htempRat = hRatio.Clone(h[0].GetName()+'hratio')
+          htempRat = hratio.Clone(h[0].GetName()+'hratio')
           htempRat.Divide(htemp)
           self.AddRatioHisto(htempRat, h[1], h[2])
       self.ratio.cd()
       if len(self.ratioh) >= 1:
+        self.SetAxisRatio(self.ratioh[0][0])
         self.ratioh[0][0].SetMaximum(self.PlotRatioMax)
         self.ratioh[0][0].SetMinimum(self.PlotRatioMin)
         for h in self.ratioh: 
@@ -421,7 +428,7 @@ class HistoComp(Plot):
     gPad.SetTicky();
     self.Save()
 
-  def __init__(self, outpath = './', outname = 'temp', doRatio = True, doNorm = False, autoRatio = True):
+  def __init__(self, outpath = './', outname = 'temp', doRatio = True, doNorm = False, autoRatio = False):
     self.Initialize(outpath, outname, doRatio)
     self.doNorm = doNorm
     self.autoRatio = autoRatio

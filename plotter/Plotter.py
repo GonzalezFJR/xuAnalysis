@@ -52,7 +52,7 @@ class Plot:
 
   #############################################################################################
   ### Legend
-  def SetLegendPos(self, x0 = 0.50, y0 = 0.65, x1 = 0.93, y1 = 0.91, size = 0.065, ncol = 2):
+  def SetLegendPos(self, x0 = 0.50, y0 = 0.65, x1 = 0.93, y1 = 0.91, size = 0.045, ncol = 2):
     self.legx0 = x0
     self.legx1 = x1
     self.legy0 = y0
@@ -77,7 +77,7 @@ class Plot:
     self.legratNcol = ncol
 
   def SetLegendRatio(self):
-    legr = TLegend(self.legratx0, self.legraty0, self.legxrat1, self.legraty1)
+    legr = TLegend(self.legratx0, self.legraty0, self.legratx1, self.legraty1)
     legr.SetTextSize(self.legratTextSize)
     legr.SetBorderSize(0)
     legr.SetFillColor(10)
@@ -259,7 +259,8 @@ class Plot:
 
     # Legend
     self.legend = self.SetLegend()
-
+    self.legendRatio=self.SetLegendRatio()
+    
     self.canvas = c
     self.plot = plot
     if self.doRatio: self.ratio = ratio
@@ -317,7 +318,7 @@ class Plot:
 
     ### Legend
     self.SetLegendPos()
-
+    self.SetLegendRatioPos()
     ### Labels
     self.SetTextCMS()
     self.SetTextCMSmode()
@@ -538,19 +539,24 @@ class Stack(Plot):
     # Ratio
     if self.doRatio:
       self.ratio.cd()
-      if hasattr(self, 'hRatioStatUnc'): 
+      legr=self.SetLegendRatio()
+      if hasattr(self, 'hRatioStatUnc'):
         self.hRatioStatUnc.Draw('e2same')
+        self.hRatioStatUnc.SetLineWidth(0)
         self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
+        legr.AddEntry(self.hRatioStatUnc, 'Stat', 'f')
       if hasattr(self, 'hRatioUnc'    ): 
         self.hRatioUnc.Draw('e2same')
+        self.hRatioUnc.SetLineWidth(0)
         self.hRatioUnc.SetMinimum(self.PlotRatioMin)
         self.hRatioUnc.SetMaximum(self.PlotRatioMax)
+        legr.AddEntry(self.hRatioUnc, 'Stat #oplus Syst', 'f')
       if hasattr(self, 'hRatio'):
         self.hRatio.Draw('pE0X0,same')
         self.hRatio.SetMaximum(self.PlotRatioMax)
         self.hRatio.SetMinimum(self.PlotRatioMin)
-
+      legr.Draw()
     self.Save()
 
   def SetHistosFromMH(self, HM, defaultStyle = True):

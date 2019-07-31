@@ -64,7 +64,7 @@ class TopHistoReader:
 
  def GetHistoName(self):
    ''' Craft histo name from var, chan, level '''
-   name = (self.histoprefix if self.histoprefix != '' else '') + self.var + '_' + self.chan + '_' + self.level
+   name = (self.histoprefix + '_' if self.histoprefix != '' else '') + self.var + '_' + self.chan + '_' + self.level
    if len(self.syst) > 0: name += '_' + self.syst
    return name
 

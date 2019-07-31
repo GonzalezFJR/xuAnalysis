@@ -69,6 +69,12 @@ class WeightReader:
  def SetNgenEvents(self, n):
    self.nGenEvents = n
 
+ def SetYield(self, y):
+   self.yieldnom = y
+
+ def GetYield(self):
+   return self.yieldnom
+
  def GetNgenEvents(self):
    return self.nGenEvents
 
@@ -136,6 +142,7 @@ class WeightReader:
    t.SetChan(self.GetChan())
    t.SetLevel(self.GetLevel())
    #if self.GetNgenEvents() <= 0 : self.SetNgenEvents(t.GetNGenEvents())
+   self.SetYield(t.GetYield())
    self.hpdf      = t.GetHisto(n,self.PDFhistoName)
    self.hscale    = t.GetHisto(n,self.scaleHistoName)
    self.hPS       = t.GetHisto(n,self.PShistoName)
@@ -168,6 +175,11 @@ class WeightReader:
    ''' Return value of bin i for scale weights '''
    return self.hscale.GetBinContent(i)*self.GetLumi()/self.GetScaleNorm(i)#(self.GetNgenEvents())
 
+ def GetPSyield(self, i):
+   ''' Return value of bin i for PS weights '''
+   y = self.hPS.GetBinContent(i)
+   return y*self.GetLumi()
+
  def GetScaleNom(self):
    ''' Nominal scale weights '''
    return self.GetScaleYield(5)
@@ -190,26 +202,64 @@ class WeightReader:
 
  def GetPDFunc(self):
    ''' 
+     For 33 weights
      Eq [20] in:  https://arxiv.org/pdf/1510.03865.pdf
      Weights 2, to 31, using 1 as nominal
+ 
+     For 100 weights:
    '''
+   val = 0
    delta = sum([self.GetRelUncPDF(i)*self.GetRelUncPDF(i) for i in range(2,32)])
-   return sqrt(delta)
+   if self.nPDFweights == 33:
+     val = sqrt(delta)
+   elif self.nPDFweights == 100:
+     rms = sqrt(delta/100)
+     #val = sqrt(rms*rms + ((v110-v111)*0.75/2)*((v110-v111)*0.75/2));
+     val = rms
+   return val
 
  def GetAlphaSunc(self):
    '''
+    if 33 weights:
     Eq [27] in:  https://arxiv.org/pdf/1510.03865.pdf
     Weights 32 and 33
+
+    if 100 weights: no PDF weights...
    '''
-   alphaDo = self.GetPDFyield(32)
-   alphaUp = self.GetPDFyield(33)
-   return abs(alphaUp - alphaDo)/2/self.GetPDFnom()
+   if self.nPDFweights == 33:
+     alphaDo = self.GetPDFyield(32)
+     alphaUp = self.GetPDFyield(33)
+     return abs(alphaUp - alphaDo)/2/self.GetPDFnom()
+   elif self.nPDFweights == 100:
+     print 'WARNING: no LHE weights for alpha_s!!'
+     return 0
 
  def GetPDFandAlphaSunc(self):
    ''' Quadratic sum of both '''
    pdfunc = self.GetPDFunc()
    alphas = self.GetAlphaSunc()
    return sqrt(pdfunc*pdfunc + alphas*alphas)
+
+ def GetPSrelUnc(self, i):
+   var = self.GetPSyield(i)
+   nom = self.GetYield()
+   return (nom-var)/nom
+
+ def PrintPSunc(self, name = 'PSuncertainties'):
+   ''' Prints a table with the ISR and FSR info '''
+   t = OutText(self.outpath, name)
+   #[0] is ISR=0.5 FSR=1; [1] is ISR=1 FSR=0.5; [2] is ISR=2 FSR=1; [3] is ISR=1 FSR=2
+   s = lambda i,isr,fsr,lab: '[%i] ISR=%1.1f, FSR=%1.1f  (%s): %1.4f (%1.3f %s)'%(i, fsr, isr, lab, self.GetPSyield(i), self.GetPSrelUnc(i)*100, '%')
+   l1 = s(1, 0.5, 1.0, 'ISR down')
+   t.SetSeparatorLength(len(l1))
+   t.line(' PS uncertainties')
+   t.bar()
+   t.line(l1)
+   t.line(s(2, 1.0, 0.5, 'FSR down'))
+   t.line(s(3, 2.0, 1.0, 'ISR up  '))
+   t.line(s(4, 1.0, 2.0, 'FSR up  '))
+   t.bar()
+   t.write()
     
  def PrintMEscale(self, name = 'ScaleMEvariations'):
    ''' Prints a table with the info of scale systematics '''
@@ -241,26 +291,34 @@ class WeightReader:
    t.SetSeparatorLength(len(c0))
    t.line('### PDF and alpha_s uncertianties')
    t.line()
-   t.line(' Using PDF4LHC15_nlo_nf4_30_pdfas, 1+30+2 weights, see Table 6 in ')
-   t.line(' > https://arxiv.org/pdf/1510.03865.pdf')
+   if self.nPDFweights == 33:
+     t.line(' Using PDF4LHC15_nlo_nf4_30_pdfas, 1+30+2 weights, see Table 6 in ')
+     t.line(' > https://arxiv.org/pdf/1510.03865.pdf')
+   elif self.nPDFweights == 100:
+     t.line('### NNPDF variations: 100 (2 alpha_s variations missing)')
+     #cout << " >>>> NNPDF systematic uncertainty" << endl;
+     #cout << " Evaluated by taking the RMS under the 100 weights" << endl;
+     #cout << " Alpha_s variations are added in quadrature after rescaling by 0.75" << endl;
+     #cout << " The formula is: sqrt(RMS^2 + ((alphas var 1 - alphas var 2)*0.75/2)^2 )" << endl;
    t.bar()
    t.line(c0)
-   for i in range(2,34): t.line(s(i))
+   for i in range(2,self.nPDFweights+1): t.line(s(i))
    t.sep()
    pdfunc = self.GetPDFunc()
    alphas = self.GetAlphaSunc()
    totunc = self.GetPDFandAlphaSunc()
-   t.line(' See reference: ')
-   t.line(' > https://arxiv.org/pdf/1510.03865.pdf')
-   t.line(' Eq [20] for PDF unc:  %1.2f (%1.2f %s)' %(pdfunc*self.GetPDFnom(), pdfunc*100, '%'))
-   t.line(' Eq [27] for alpha_S:  %1.2f (%1.2f %s)' %(alphas*self.GetPDFnom(), alphas*100, '%'))
-   t.sep()
+   if self.nPDFweights == 33:
+     t.line(' See reference: ')
+     t.line(' > https://arxiv.org/pdf/1510.03865.pdf')
+     t.line(' Eq [20] for PDF unc:  %1.2f (%1.2f %s)' %(pdfunc*self.GetPDFnom(), pdfunc*100, '%'))
+     t.line(' Eq [27] for alpha_S:  %1.2f (%1.2f %s)' %(alphas*self.GetPDFnom(), alphas*100, '%'))
+     t.sep()
    t.line(' Total PDF + alpha_S uncertainty: ')
    t.line('  ## %1.2f (%1.2f %s)' %(totunc*self.GetPDFnom(), totunc*100, '%'))
    t.bar()
    t.write()
 
- def __init__(self, path = '', outpath = './temp/', chan = 'ElMu', level = '2jets', sampleName = 'TT', PDFname = 'PDFweights', ScaleName = 'ScaleWeights', PSname = 'PSweights', PDFsumName= '', ScaleSumName = '', lumi = 308.54, nGenEvents = -1, pathToTrees='', motherfname='', histoprefix='H_'):
+ def __init__(self, path = '', outpath = './temp/', chan = 'ElMu', level = '2jets', sampleName = 'TT', PDFname = 'PDFweights', ScaleName = 'ScaleWeights', PSname = 'PSweights', PDFsumName= '', ScaleSumName = '', lumi = 308.54, nGenEvents = -1, pathToTrees='', motherfname='', histoprefix='H'):
    self.SetPath(path)
    self.SetOutPath(outpath)
    self.SetChan(chan)

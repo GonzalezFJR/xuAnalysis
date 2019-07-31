@@ -64,7 +64,7 @@ class TopHistoReader:
 
  def GetHistoName(self):
    ''' Craft histo name from var, chan, level '''
-   name = self.var + '_' + self.chan + '_' + self.level
+   name = (self.histoprefix if self.histoprefix != '' else '') + self.var + '_' + self.chan + '_' + self.level
    if len(self.syst) > 0: name += '_' + self.syst
    return name
 
@@ -192,10 +192,10 @@ class TopHistoReader:
    h = self.GetNamedHisto("hxsec",pr)
    return h.GetBinContent(1)
 
- def GetNGenEvents(self, pr = ''):
+ def GetNGenEvents(self, pr = '', hname = 'nGenEvents'):
    ''' Returns the number of gen events, stored in histogram hGenEvents '''
    self.SetIsData(True)
-   h = self.GetNamedHisto("nGenEvents",pr)
+   h = self.GetNamedHisto(hname,pr)
    self.SetIsData(False)
    return h.GetBinContent(1)
 

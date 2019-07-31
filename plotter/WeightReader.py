@@ -123,7 +123,7 @@ class WeightReader:
      return 
    self.treesow.GetEntry(1)
    nScaleWeights = self.treesow.nLHEScaleSumw
-   h = TH1F('SumOfWeightsPS', '', nScaleWeights, 0.5, nScaleWeights+0.5)
+   h = TH1F('SumOfWeightsScale', '', nScaleWeights, 0.5, nScaleWeights+0.5)
    print 'GetEntries: ', self.treesow.GetEntries()
    for event in self.treesow:
      for i in range(nScaleWeights):
@@ -142,7 +142,7 @@ class WeightReader:
    t.SetChan(self.GetChan())
    t.SetLevel(self.GetLevel())
    #if self.GetNgenEvents() <= 0 : self.SetNgenEvents(t.GetNGenEvents())
-   self.SetYield(t.GetYield())
+   self.SetYield(t.GetYield()*self.GetLumi())
    self.hpdf      = t.GetHisto(n,self.PDFhistoName)
    self.hscale    = t.GetHisto(n,self.scaleHistoName)
    self.hPS       = t.GetHisto(n,self.PShistoName)
@@ -243,7 +243,7 @@ class WeightReader:
  def GetPSrelUnc(self, i):
    var = self.GetPSyield(i)
    nom = self.GetYield()
-   return (nom-var)/nom
+   return (var-nom)/nom
 
  def PrintPSunc(self, name = 'PSuncertainties'):
    ''' Prints a table with the ISR and FSR info '''
@@ -253,6 +253,7 @@ class WeightReader:
    l1 = s(1, 0.5, 1.0, 'ISR down')
    t.SetSeparatorLength(len(l1))
    t.line(' PS uncertainties')
+   t.line(' Yield: %1.2f'%self.GetYield())
    t.bar()
    t.line(l1)
    t.line(s(2, 1.0, 0.5, 'FSR down'))

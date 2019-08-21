@@ -37,7 +37,6 @@ class analysis:
   #############################################################################################
   #############################################################################################
   ### Getting inputs
-
   def AddInput(self, name, Object):
     ''' Add an input to the dictionaty '''
     self.inputs[name] = Object
@@ -376,7 +375,9 @@ class analysis:
     pool.map(loopAnal, inputs)
     pool.close()
     pool.join()
-    return MergeObjectsDic(outdic)
+    if 'merge' in self.options: 
+      return MergeObjectsDic(outdic)
+    else: return None
 
   def saveOutput(self, objlist = None):
     ''' Creates the out file and save the histos '''

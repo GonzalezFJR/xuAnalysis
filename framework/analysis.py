@@ -103,6 +103,28 @@ class analysis:
     sferr = self.inputs[name].GetBinError(ibin)
     return sf, sferr
 
+  def GetSFfromTGraph(self, name, var):
+    ''' Reads a TGraphAsymmetricErrors and returs value '''
+    g = self.intputs[name]
+    n = g.GetN()
+    x = array('f', g.GetX())
+    y = array('f', g.GetY())
+    # Below minimum
+    if var < x[0]-g.GetErrorXlow(0):
+      return [y[0], (g.GetErrorYlow(0) + g.GetErrorYhigh(0))/2]
+    for i in range(n):
+      xmin = x[i] - g.GetErrorXlow(i)
+      xmax = x[i] + g.GetErrorXhigh(i)
+      SF = y[i]
+      SFerr = (g.GetErrorYlow(i) + g.GetErrorYhigh(i))/2
+      #print '[%1.1f - %1.1f]  %1.2f +/- %1.2f'%(xmin, xmax, SF, SFerr)
+      if var > xmin and var < xmax:
+        return [SF, SFerr]
+    # Above maximum
+    return [y[-1], (g.GetErrorYlow(n-1) + g.GetErrorYhigh(n-1))/2]
+    
+
+
 
 
   #############################################################################################

@@ -7,7 +7,6 @@ from framework.fileReader import GetHistoFromSetOfFiles
 from framework.functions import *
 from ROOT.TMath import Sqrt as sqrt
 from ROOT import *
-from myAnalysis import myAnalysis
 from modules.puWeightProducer import puWeight_2016
 from modules.PrefireCorr import PrefCorr5TeV
 
@@ -53,6 +52,24 @@ class datasets():
   MuonEG     = 4
 dataset = {datasets.SingleElec:'HighEGJet', datasets.SingleMuon:'SingleMuon', datasets.DoubleMuon:'DoubleMuon'}
 
+
+def GetElecPt(pt, eta, isdata = False):
+  fact = 1
+  if abs(eta) < 1.479: #barrel
+    fact = 1.016 if isdata else 1.005
+  else:      # endcap
+    fact = 1.032 if isdata else 0.992
+  return pt*fact
+
+tr = TRandom(500)
+def GetElecPtSmear(pt, eta):
+  mass = 91.1876
+  val = 1.786 if abs(eta) < 1.479 else 3.451
+  sigma = val/mass
+  deltapt = Gaus(1, sigma)
+  return pt+deltapt
+ 
+
 ################ Analysis
 class tt5TeV(analysis):
   def init(self):
@@ -61,6 +78,8 @@ class tt5TeV(analysis):
       self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, abseta
       self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, abseta
       self.LoadHisto('ElecSF',    basepath+'./inputs/ElecTightCBid94X.root',  'EGamma_SF2D') # eta, pt
+      self.PUweight = puWeight_2016(self.tchain)
+      self.PrefCorr = PrefCorr5TeV()
 
     # Uncertainties
     self.doSyst   = False if ('noSyst' in self.options or self.isData) else True
@@ -90,8 +109,6 @@ class tt5TeV(analysis):
       self.pmetJESDo = TLorentzVector()
       self.pmetJERUp = TLorentzVector()
       self.pmetJERDo = TLorentzVector()
-    self.PUweight = puWeight_2016(self.tchain)
-    self.PrefCorr = PrefCorr5TeV()
 
     # Sample name
     name = self.sampleName
@@ -494,7 +511,10 @@ class tt5TeV(analysis):
     ##### Electrons
     for i in range(t.nElectron):
       p = TLorentzVector()
-      p.SetPtEtaPhiM(t.Electron_pt[i], t.Electron_eta[i], t.Electron_phi[i], t.Electron_mass[i])
+      pt  = t.Electron_pt[i]
+      eta = t.Electron_eta[i]
+      ptcorr = GetElecPt(pt, eta, self.isData)
+      p.SetPtEtaPhiM(ptcorr, eta, t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
       etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
@@ -633,14 +653,15 @@ class tt5TeV(analysis):
       self.PUUpSF = t.puWeightUp
       self.PUDoSF = t.puWeightDown
     else:
-      self.PUSF   = self.PUweight.GetWeight(t)
-      self.PUUpSF = self.PUweight.GetWeightUp(t)
-      self.PUDoSF = self.PUweight.GetWeightDown(t)
-      #self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
-
-    self.prefWeight   = self.PrefCorr.GetWeight(t)
-    self.prefWeightUp = self.PrefCorr.GetWeightUp(t)
-    self.prefWeightDo = self.PrefCorr.GetWeightDown(t)
+      #self.PUSF   = self.PUweight.GetWeight(t)
+      #self.PUUpSF = self.PUweight.GetWeightUp(t)
+      #self.PUDoSF = self.PUweight.GetWeightDown(t)
+      self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
+ 
+    if not self.isData:
+      self.prefWeight   = self.PrefCorr.GetWeight(t)
+      self.prefWeightUp = self.PrefCorr.GetWeightUp(t)
+      self.prefWeightDo = self.PrefCorr.GetWeightDown(t)
  
     ### Event selection
     ###########################################

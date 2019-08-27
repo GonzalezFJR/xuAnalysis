@@ -101,7 +101,7 @@ def GetTStringVectorSamples(path, samples):
   v = GetTStringVector(samples)
 
 
-def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = False, pretend = False, dotest = False, sendJobs = False, queu = 'short', treeName = 'Events'):
+def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queu = 'short', treeName = 'Events'):
 
   if dotest:
     nEvents  = 1000
@@ -148,11 +148,11 @@ def main(ocfgfile = ''):
   out = {}
   parser = argparse.ArgumentParser(description='Run xuAnalysis')
   if ocfgfile == '':
-    parser.add_argument('selection'         , default=''           , help = 'Name of the selector')
-  parser.add_argument('--verbose','-v'    , action='store_true'  , help = 'Activate the verbosing')
+    parser.add_argument('selection'         , default=''         , help = 'Name of the selector')
   parser.add_argument('--pretend','-p'    , action='store_true'  , help = 'Create the files but not send the jobs')
   parser.add_argument('--test','-t'       , action='store_true'  , help = 'Sends only one or two jobs, as a test')
   parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
+  parser.add_argument('--verbose','-v'    , default=0            , help = 'Activate the verbosing')
   parser.add_argument('--path'            , default=''           , help = 'Path to look for nanoAOD')
   parser.add_argument('--sample','-s'     , default=''           , help = 'Sample(s) to process')
   parser.add_argument('--xsec','-x'       , default='xsec'       , help = 'Cross section')
@@ -166,7 +166,7 @@ def main(ocfgfile = ''):
   parser.add_argument('--firstEvent'      , default=0            , help = 'First event')
   parser.add_argument('--nEvents'         , default=0            , help = 'Number of events')
   parser.add_argument('--nSlots','-n'     , default=-1           , help = 'Number of slots')
-  parser.add_argument('--treeName'        , default=''           , help = 'Name of the tree')
+  parser.add_argument('--treeName'        , default='Events'     , help = 'Name of the tree')
 
   args = parser.parse_args()
   if hasattr(args, 'selection'): selection   = args.selection
@@ -187,7 +187,7 @@ def main(ocfgfile = ''):
   FirstEvent  = int(args.firstEvent)
   sendJobs    = int(args.sendJobs)
   queue       = args.queue
-  treeNAme    = args.treeName
+  treeName    = args.treeName
 
   aarg = sys.argv
   ncores = nSlots
@@ -216,8 +216,8 @@ def main(ocfgfile = ''):
       if l == '': continue
       if l.endswith(':'): l = l[:-1]
       if not ':' in l: 
-        if   l == 'verbose': verbose = 1
-        elif l == 'pretend': pretend = 1
+        #if   l == 'verbose': verbose = 1
+        if   l == 'pretend': pretend = 1
         elif l == 'test'   : dotest  = 1
         elif l in ['path', 'sample', 'options', 'selection', 'xsec', 'prefix', 'outpath', 'year', 'nSlots', 'nEvents', 'firstEvent', 'queue']: continue
         else:
@@ -251,21 +251,21 @@ def main(ocfgfile = ''):
           nslots[key] = ncor
   
     # Re-assign arguments...
-    if '--verbose' in aarg or '-v' in aarg : verbose     = args.verbose
     if '--pretend' in aarg or '-p' in aarg : pretend     = args.pretend
     if '--test'    in aarg or '-t' in aarg : dotest      = args.test
     if '--sendJobs'in aarg or '-j' in aarg : sendJobs    = args.sendJobs
-    if args.path       != ''     : path        = args.path
-    if args.options    != ''     : options     = args.options
-    if args.xsec       != 'xsec' : xsec        = args.xsec
-    if args.year       != -1     : year        = args.year
-    if args.prefix     != 'Tree' : prefix      = args.prefix
-    if args.outname    != ''     : outname     = args.outname
-    if args.outpath    != ''     : outpath     = args.outpath
-    if args.nEvents    != 0      : nEvents     = int(args.nEvents)
-    if args.firstEvent != 0      : FirstEvent  = int(args.firstEvent)
-    if args.queue      != 0      : queue       = args.queue
-    if args.treeName   != ''     : treeName    = args.treeName
+    if args.path       != ''       : path        = args.path
+    if args.options    != ''       : options     = args.options
+    if args.xsec       != 'xsec'   : xsec        = args.xsec
+    if args.year       != -1       : year        = args.year
+    if args.prefix     != 'Tree'   : prefix      = args.prefix
+    if args.outname    != ''       : outname     = args.outname
+    if args.outpath    != ''       : outpath     = args.outpath
+    if args.nEvents    != 0        : nEvents     = int(args.nEvents)
+    if args.firstEvent != 0        : FirstEvent  = int(args.firstEvent)
+    if args.queue      != 0        : queue       = args.queue
+    if args.treeName   != 'Events' : treeName    = args.treeName
+    if args.verbose    != 0        : verbose     = int(args.verbose)
   
     if args.nSlots     != -1: 
       nSlots      = int(args.nSlots)

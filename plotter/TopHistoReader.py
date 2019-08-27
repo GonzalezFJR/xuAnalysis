@@ -310,7 +310,7 @@ class TopHistoReader:
        self.AddToHistoDic(h, pr, hsystname)
    return self.histodic
 
- def __init__(self, path = './', process = '', var = '', chan = '', ilevel = '', syst = '', fileprefix = ''):
+ def __init__(self, path = './', process = '', var = '', chan = '', ilevel = '', syst = '', fileprefix = '', histoprefix = ''):
     self.doStackOverflow = False
     self.doNormalize = False
     self.IsData  = False
@@ -320,6 +320,7 @@ class TopHistoReader:
     self.lumi = 1
     self.ReComputeStatUnc = False
     self.SetFileNamePrefix(fileprefix)
+    self.SetHistoNamePrefix(histoprefix)
     self.histodic = {}
 
     self.SetPath(path)

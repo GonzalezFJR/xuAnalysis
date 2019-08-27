@@ -15,19 +15,19 @@ def loopAnal(listOfInputs):
   analcopy.SetVerbose(0)
   analcopy.SetNSlots(1)
   analcopy.loop(i0, iN)
-  outdic[k] = analcopy
+  outdic[k] = analcopy.obj
 
 def MergeObjectsDic(dic):
   k = dic.keys(); k.sort()
   print ' >> Merging objects (%i)...'%len(k)
   firstKey = k[-1]
   otherKeys = k[:-1]
-  objs = dic[firstKey].obj
+  objs = dic[firstKey]
   names = objs.keys(); names.sort()
   for name in names:
     if isinstance(objs[name],TH1F):
       for k in otherKeys: 
-        kobjs = dic[k].obj
+        kobjs = dic[k]
         objs[name].Add(kobjs[name])
   return objs
 

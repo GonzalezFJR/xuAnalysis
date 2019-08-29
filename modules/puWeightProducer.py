@@ -33,7 +33,7 @@ class puWeightProducer:
     #if os.path.isfile(pathtolib): 
     ROOT.gSystem.Load(pathtolib)
     #else: #if "/WeightCalculatorFromHistogram_cc.so" not in ROOT.gSystem.GetLibraries():
-    #  ROOT.gROOT.ProcessLine(".L %s/src/WeightCalculatorFromHistogram.cc++" %basepath)
+    # ROOT.gROOT.ProcessLine(".L %s/src/WeightCalculatorFromHistogram.cc++" %basepath)
     dummy = ROOT.WeightCalculatorFromHistogram
     self.beginFile(intree)
 

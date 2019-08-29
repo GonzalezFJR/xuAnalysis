@@ -371,7 +371,8 @@ class analysis:
       print '[INFO] Loaded %i inputs'%len(self.inputs)
       print '[INFO] Created %i outputs'%len(self.obj)
     for iEv in range(first, last):
-      if self.verbose > 0: self.printprocess(iEv)
+      #if self.verbose > 0: 
+      self.printprocess(iEv)
       self.tchain.GetEntry(iEv)
       self.hRunEvents.Fill(1)
       if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights

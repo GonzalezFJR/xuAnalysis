@@ -53,21 +53,23 @@ class datasets():
 dataset = {datasets.SingleElec:'HighEGJet', datasets.SingleMuon:'SingleMuon', datasets.DoubleMuon:'DoubleMuon'}
 
 
-def GetElecPt(pt, eta, isdata = False):
+def GetElecPt(pt, eta, ecorr = 1, isdata = False):
+  # ecorr: correction factor [calibrated energy]/[miniAOD energy]
   fact = 1
   if abs(eta) < 1.479: #barrel
     fact = 1.016 if isdata else 1.005
   else:      # endcap
-    fact = 1.032 if isdata else 0.992
-  return pt*fact
+    fact = 1.052 if isdata else 0.992
+  return pt*fact/ecorr
 
 tr = TRandom(500)
-def GetElecPtSmear(pt, eta):
+def GetElecPtSmear(pt, eta, isdata = False):
+  if(isdata): return pt
   mass = 91.1876
   val = 1.786 if abs(eta) < 1.479 else 3.451
   sigma = val/mass
-  deltapt = Gaus(1, sigma)
-  return pt+deltapt
+  smear = tr.Gaus(1, sigma)
+  return pt*smear
  
 
 ################ Analysis
@@ -513,7 +515,9 @@ class tt5TeV(analysis):
       p = TLorentzVector()
       pt  = t.Electron_pt[i]
       eta = t.Electron_eta[i]
-      ptcorr = GetElecPt(pt, eta, self.isData)
+      ecorr = t.Electron_eCorr[i]
+      ptcorr = GetElecPt(pt, eta, ecorr, self.isData)
+      ptcorr = GetElecPtSmear(ptcorr, eta, self.isData)
       p.SetPtEtaPhiM(ptcorr, eta, t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
       etaSC    = abs(p.Eta());

@@ -90,6 +90,11 @@ pufile_mc2016="%s/inputs/pileup/pileup_profile_Summer16.root" %basepath
 pufile_data2016="%s/inputs/pileup/PileupData_GoldenJSON_Full2016.root" %basepath
 puWeight_2016 = lambda intree : puWeightProducer(intree, pufile_mc2016,pufile_data2016,"pu_mc","pileup",verbose=False, doSysVar=True)
 puAutoWeight_2016 = lambda intree : puWeightProducer(intree, "auto", pufile_data2016,"pu_mc","pileup",verbose=False)
+
+pufile_mc5TeV     = "%s/inputs/pileup/PileupMC_5TeV.root" %basepath
+pufile_data5TeV   = "%s/inputs/pileup/pileup_5TeV.root" %basepath
+puWeight_5TeV     = lambda intree : puWeightProducer(intree, pufile_mc5TeV,pufile_data5TeV,"pu_mc","pileup",verbose=False, doSysVar=True)
+puAutoWeight_5TeV = lambda intree : puWeightProducer(intree, "auto", pufile_data5TeV,"pu_mc","pileup",verbose=False)
 '''
 pufile_data2017="%s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/pileup/puData2017_withVar.root" % os.environ['CMSSW_BASE']
 pufile_mc2017="%s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/pileup/mcPileup2017.root" % os.environ['CMSSW_BASE']

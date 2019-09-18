@@ -49,7 +49,7 @@ class analysis:
       return
     f = TFile.Open(fname)
     h = f.Get(hname)
-    h.SetDirectory(0)
+    if isinstance(h, TH1F) or isinstance(h, TH2F) or isinstance(h, TH1D) or isinstance(h, TH2D): h.SetDirectory(0)
     self.AddInput(name, h)
 
   def GetSF(self, name, var1, var2 = ''):
@@ -105,7 +105,14 @@ class analysis:
 
   def GetSFfromTGraph(self, name, var):
     ''' Reads a TGraphAsymmetricErrors and returs value '''
-    g = self.intputs[name]
+    if ',' in name: return self.GetSFfromTGraph([x.replace(' ', '') for x in name.split(',')], var)
+    if isinstance(name, list):
+      s = 1; e = 0
+      for n in name:
+        sf, err = self.GetSFfromTGraph(n, var)
+        s *= sf; e += err*err
+      return s, sqrt(e)
+    g = self.inputs[name]
     n = g.GetN()
     x = array('f', g.GetX())
     y = array('f', g.GetY())

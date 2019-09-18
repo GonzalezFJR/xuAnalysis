@@ -80,14 +80,19 @@ class jobManager:
   
   def GetSubmitCommand(self, index):
     ''' Crafts the submit command '''
-    command  = 'bsub ' if not self.IsCiencias else 'qsub '
-    command += ('-J ' if not self.IsCiencias else '-N ') + self.jobname + '_%i '%index
-    command += '-o ' + self.GetOutName(index) + ' '
-    command += '-e ' + self.GetErrName(index) + ' '
-    if not self.IsCiencias: command += '-q ' + self.queue + ' '
-    command += '< '  + self.GetJobName(index)
+    queue   = self.queue
+    nSlots  = 1 # by default
+    jname   = "%s_%i"%(self.jobname, index)
+    errname = self.GetErrName(index)
+    outname = self.GetOutName(index)
+    jobfile = self.GetJobName(index) 
+    if isSlurm:
+      runCommand = "sbatch -p %s -c %i -J %s -e %s -o %s %s"%(queue, nSlots, jname, errname, outname, jobfile)
+    else:
+      runCommand = "bsub -J %s -o %s -e %s -q %s %s"%(jname, outFolder, errname, queue, jobfile)
+    #command += '< '  + self.GetJobName(index)
 
-    return command
+    return runCommand
 
   def CreateJobs(self):
     ''' Create the job files '''

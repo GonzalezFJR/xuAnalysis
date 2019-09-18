@@ -152,7 +152,7 @@ class TopHistoReader:
    if self.ReComputeStatUnc:
      for i in range(1,nbins+1):
        bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
-       h.SetBinError(i, sqrt(bc*integral/entries) if entries != 0 else 0)
+       h.SetBinError(i, bc/sqrt(bc/integral*entries) if (entries != 0 and bc!=0 and integral!=0) else 0)
    else:
      for i in range(1,nbins+1):
        bc = h.GetBinContent(i) if h.GetBinContent(i) > 0 else 0
@@ -209,6 +209,7 @@ class TopHistoReader:
    h = self.GetNamedHisto("FiduEvents",pr)
    self.SetIsData(False)
    y = h.GetBinContent(self.GetBinNumberForLevel(self.level))
+   self.SetIsData(False)
    return y
 
  def GetUnc(self, pr = '', ch = '', ilev = '', s = ''):
@@ -321,7 +322,7 @@ class TopHistoReader:
     self.fname = ''
     self.rebin = 1
     self.lumi = 1
-    self.ReComputeStatUnc = False
+    self.ReComputeStatUnc = True 
     self.SetFileNamePrefix(fileprefix)
     self.SetHistoNamePrefix(histoprefix)
     self.histodic = {}

@@ -18,7 +18,7 @@ except ImportError:
 from ROOT import gROOT
 gROOT.SetBatch(1)
 
-from framework.fileReader import getDicFiles, GetAllInfoFromFile, IsVarInTree, GuessIsData
+from framework.fileReader import getDicFiles, GetAllInfoFromFile, IsVarInTree, GuessIsData, GetValOfVarInTree
 
 def ex(command, verbose = False, pretend = False):
   if verbose:
@@ -85,6 +85,7 @@ def GetOptions(path, sample, options = ""):
   if not sample.endswith(".root"): sample += '.root'
   doPUweight  = 'PUweight,' if IsVarInTree(path+sample, 'puWeight') else ''
   doJECunc    = 'JECunc,'   if IsVarInTree(path+sample, 'Jet_pt_jesTotalUp') else ''
+  doIFSR      = 'doIFSR,'   if GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
   useJetPtNom = 'JetPtNom,' if IsVarInTree(path+sample, 'Jet_pt_nom') else ''
   options += doPUweight + doJECunc + useJetPtNom + useLepGood + options
   if options.endswith(','): options = options[:-1]
@@ -119,6 +120,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   modul = getattr(selecModul, selection)
   analysis = getattr(modul, selection)
   evRang = []
+  options = GetOptions(path, sample[0], options)
   if nEvents != 0: evRang = [FirstEvent, nEvents]
   an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName)
   an.SetOutDir(outpath)
@@ -272,7 +274,7 @@ def main(ocfgfile = ''):
       for k in nslots.keys(): nslots[k] = nSlots
     elif nSlots == -1: 
       nSlots = 1
-  
+
     if args.sample     != '': 
       sample = args.sample
       if not sample in samplefiles.keys():

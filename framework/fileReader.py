@@ -213,6 +213,16 @@ def IsVarInTree(fname, var, treeName = 'Events'):
   t = f.Get(treeName)
   return hasattr(t, var)
 
+def GetValOfVarInTree(fname, var, treeName = 'Events'):
+  ''' Check the value of a var in a tree '''
+  if not os.path.isfile(fname):
+    print 'ERROR: %s does not exists!'
+    return False
+  f = TFile.Open(fname)
+  t = f.Get(treeName)
+  t.GetEntry(1)
+  return getattr(t,var)
+
 
 ##################################
 # Extra functions to work check .root files from terminal

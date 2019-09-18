@@ -51,6 +51,9 @@ class object:
   def GetPDGid(self):
     return self.pdgid
 
+  def GetFlav(self):
+    return self.pdgid
+
   def Pt(self):
     return self.p.Pt()
 
@@ -163,6 +166,9 @@ class jet(object):
   def SetDeepCSV(self, csv):
     self.DeepCSV = csv
 
+  def SetDeepJet(self, csv):
+    self.DeepJet = csv
+
   def SetBtag(self, isbtag = True):
     self.isbtag = isbtag
 
@@ -178,6 +184,9 @@ class jet(object):
   def GetDeepCSV(self):
     return self.DeepCSV
 
+  def GetDeepJet(self):
+    return self.DeepJet
+
   def IsBtag(self):
     return self.isbtag
 
@@ -187,10 +196,11 @@ class jet(object):
     self.ptUp = self.Pt(); self.ptDo = self.Pt();
     self.isbtag = False
 
-  def __init__(self, pvec = TLorentzVector(), csv = -1, mcId = -1, jid = 0, deepcsv = -1):
+  def __init__(self, pvec = TLorentzVector(), csv = -1, mcId = -1, jid = 0, deepcsv = -1, deepjet = -1):
     self.SetP(pvec)
     self.SetCSVv2(csv)
     self.SetDeepCSV(deepcsv)
+    self.SetDeepJet(deepjet)
     self.SetFlav(mcId)
     self.SetJetId(jid)
     self.resetValues()
@@ -199,6 +209,12 @@ def SortByPt(vec):
   pt = [v.Pt() for v in vec]
   vec = [j for _,j in sorted(zip(pt,vec))]
   return vec
+
+def SortByIso(vec):
+  iso = [v.iso for v in vec]
+  vec = [j for _,j in sorted(zip(iso,vec))]
+  return vec
+
 
 
 ########################################################################################

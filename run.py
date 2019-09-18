@@ -18,7 +18,7 @@ except ImportError:
 from ROOT import gROOT
 gROOT.SetBatch(1)
 
-from framework.fileReader import getDicFiles, GetAllInfoFromFile, IsVarInTree, GuessIsData, GetValOfVarInTree
+from framework.fileReader import getDicFiles, GetAllInfoFromFile, IsVarInTree, GuessIsData, GetValOfVarInTree, GetFiles
 
 def ex(command, verbose = False, pretend = False):
   if verbose:
@@ -87,7 +87,7 @@ def GetOptions(path, sample, options = ""):
   doJECunc    = 'JECunc,'   if IsVarInTree(path+sample, 'Jet_pt_jesTotalUp') else ''
   doIFSR      = 'doIFSR,'   if GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
   useJetPtNom = 'JetPtNom,' if IsVarInTree(path+sample, 'Jet_pt_nom') else ''
-  options += doPUweight + doJECunc + useJetPtNom + useLepGood + options
+  options += doPUweight + doJECunc + doIFSR + useJetPtNom + options
   if options.endswith(','): options = options[:-1]
   return options
 
@@ -120,7 +120,9 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   modul = getattr(selecModul, selection)
   analysis = getattr(modul, selection)
   evRang = []
-  options = GetOptions(path, sample[0], options)
+  samples = GetFiles(path, sample)
+  sname = samples[0].split('/')[-1]
+  options = GetOptions(path, sname, options)
   if nEvents != 0: evRang = [FirstEvent, nEvents]
   an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName)
   an.SetOutDir(outpath)

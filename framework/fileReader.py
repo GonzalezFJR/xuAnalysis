@@ -207,7 +207,7 @@ def GetProcessInfo(path, process='', treeName = 'Events'):
 def IsVarInTree(fname, var, treeName = 'Events'):
   ''' Check if a given file and tree contains a branch '''
   if not os.path.isfile(fname):
-    print 'ERROR: %s does not exists!'
+    print 'ERROR: %s does not exists!'%fname
     return False
   f = TFile.Open(fname)
   t = f.Get(treeName)
@@ -216,7 +216,7 @@ def IsVarInTree(fname, var, treeName = 'Events'):
 def GetValOfVarInTree(fname, var, treeName = 'Events'):
   ''' Check the value of a var in a tree '''
   if not os.path.isfile(fname):
-    print 'ERROR: %s does not exists!'
+    print 'ERROR: %s does not exists!'%fname
     return False
   f = TFile.Open(fname)
   t = f.Get(treeName)

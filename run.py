@@ -85,7 +85,7 @@ def GetOptions(path, sample, options = ""):
   if not sample.endswith(".root"): sample += '.root'
   doPUweight  = 'PUweight,' if IsVarInTree(path+sample, 'puWeight') else ''
   doJECunc    = 'JECunc,'   if IsVarInTree(path+sample, 'Jet_pt_jesTotalUp') else ''
-  doIFSR      = 'doIFSR,'   if GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
+  doIFSR      = 'doIFSR,'   if IsVarInTree(path+sample, 'nPSWeight') and GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
   useJetPtNom = 'JetPtNom,' if IsVarInTree(path+sample, 'Jet_pt_nom') else ''
   options += doPUweight + doJECunc + doIFSR + useJetPtNom + options
   if options.endswith(','): options = options[:-1]

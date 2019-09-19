@@ -116,19 +116,19 @@ class tt5TeV(analysis):
     self.doSyst   = False if ('noSyst' in self.options or self.isData) else True
     self.doJECunc = True if 'JECunc'   in self.options else False
     self.doPU     = True if 'PUweight' in self.options else False
-    self.doIFSR   = True if 'doIFSR'   in self.options else False
+    self.doIFSR   = True if 'doIFSR'   in self.options and self.outname == 'TT' else False
     self.jetptvar = 'Jet_pt_nom' if 'JetPtNom' in self.options else 'Jet_pt'
     self.metptvar = 'Met_pt_nom' if 'JetPtNom' in self.options else 'Met_pt'
 
     if self.doPU: 
       systlabel[systematic.PUUp]   = 'PUUp'
-      systlabel[systematic.PUDown] = 'PUDown'
+      systlabel[systematic.PUDo]   = 'PUDown'
  
     if self.doJECunc:
       systlabel[systematic.JESUp]   = 'JESUp'
-      systlabel[systematic.JESDown] = 'JESDown'
+      systlabel[systematic.JESDo]   = 'JESDown'
       systlabel[systematic.JERUp]   = 'JERUp'
-      systlabel[systematic.JERDown] = 'JERDown'
+      systlabel[systematic.JERDo]   = 'JERDown'
 
     if self.doIFSR:
       systlabel[systematic.ISRDo]   = 'ISRDown'
@@ -669,15 +669,17 @@ class tt5TeV(analysis):
           if pJESDo.Pt() >= self.JetPtCut: self.selJetsJESDo.append(jJESDo)
           if pJERUp.Pt() >= self.JetPtCut: self.selJetsJERUp.append(jJERUp)
           if pJERDo.Pt() >= self.JetPtCut: self.selJetsJERDo.append(jJERDo)
-      self.selJets = SortByPt(self.selJets)
-      if not self.isData and self.doSyst:
-        self.selJetsJESUp = SortByPt(self.selJetsJESUp)
-        self.selJetsJESDo = SortByPt(self.selJetsJESDo)
-        self.selJetsJERUp = SortByPt(self.selJetsJERUp)
-        self.selJetsJERDo = SortByPt(self.selJetsJERDo)
+    self.selJets = SortByPt(self.selJets)
+    if not self.isData and self.doSyst:
+      self.selJetsJESUp = SortByPt(self.selJetsJESUp)
+      self.selJetsJESDo = SortByPt(self.selJetsJESDo)
+      self.selJetsJERUp = SortByPt(self.selJetsJERUp)
+      self.selJetsJERDo = SortByPt(self.selJetsJERDo)
 
     ##### MET
     self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, 0)
+    #met = getattr(t, self.metptvar)
+    #self.pmet.SetPtEtaPhiM(met, 0, t.MET_phi, 0)
     if not self.isData and self.doSyst and self.doJECunc:
       self.pmetJESUp.SetPtEtaPhiM(t.MET_pt_jesTotalUp,   0, t.MET_phi_jesTotalUp,   0) 
       self.pmetJESDo.SetPtEtaPhiM(t.MET_pt_jesTotalDown, 0, t.MET_phi_jesTotalDown, 0) 
@@ -739,10 +741,10 @@ class tt5TeV(analysis):
     ###########################################
     self.nvtx   = t.PV_npvs
     self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
-    if not self.isData and self.doPU:
-      self.PUSF   = t.puWeight
-      self.PUUpSF = t.puWeightUp
-      self.PUDoSF = t.puWeightDown
+    #if not self.isData and self.doPU:
+    #  self.PUSF   = t.puWeight
+    #  self.PUUpSF = t.puWeightUp
+    #  self.PUDoSF = t.puWeightDown
     '''
     elif not self.isData:
       self.PUSF   = self.PUweight.GetWeight(t)

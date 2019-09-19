@@ -353,6 +353,7 @@ class CrossSection:
     self.t = TopHistoReader(path)
     self.t.SetLumi(lumi)
     self.t.SetChan(chan); self.t.SetLevel(level)
+    self.t.SetHistoNamePrefix('')
     signalName = signal[0]
     signalSample = signal[1]
     fiduEvents = self.t.GetFiduEvents(signalSample,level)
@@ -374,7 +375,7 @@ class CrossSection:
     for e in expUnc: self.AddExpUnc(e, self.t.GetUnc(signal[1], chan, level, e))
     # Modeling uncertainties
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modUnc or 'scale' in modUnc:
-      w = WeightReader(path, '',chan, level)
+      w = WeightReader(path, '',chan, level, histoprefix = '')
       w.SetSampleName(signalName)
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())

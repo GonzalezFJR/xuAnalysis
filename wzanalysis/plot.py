@@ -38,11 +38,11 @@ def Draw(name = 'Lep0Pt_eee_lep', rebin = 1, xtit = '', ytit = 'Events', doStack
   s.DrawStack(xtit, ytit)
 
 #lev = 'met' #lep, met
-for lev in ['met', 'lep']:
+for lev in ['lep', 'met']:
+ Draw(GetAllCh('MET', lev), 1, 'p_{T}^{miss} (GeV)', 'Events / 5 GeV')
  Draw(GetAllCh('m3l', lev), 10, 'm_{3l} (GeV)',      'Events / 10 GeV')
  Draw(GetAllCh('mtw', lev), 6, 'm_{T}^{W} (GeV)',    'Events')
  Draw(GetAllCh('mz', lev), 10, 'm_{Z} (GeV)',        'Events / 10 GeV')
- Draw(GetAllCh('MET', lev), 2, 'p_{T}^{miss} (GeV)', 'Events / 10 GeV')
 
 '''
 Draw(GetAllCh('LepWPt', lev), 4, 'p_{T}(lepW)  (GeV)', 'Events / 40 GeV')

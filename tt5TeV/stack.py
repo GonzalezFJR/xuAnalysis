@@ -10,20 +10,19 @@ gROOT.SetBatch(1)
 hm = HistoManager(processes, systematics, '', path=path, processDic=processDic, lumi = Lumi)
 
 def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit = '', ytit = 'Events', doStackOverflow = False, binlabels = '', setLogY = False, maxscale = 1.6):
-  
   s = Stack(outpath=outpath)
   s.SetColors(colors)
   s.SetProcesses(processes)
   s.SetLumi(Lumi)
   s.SetHistoPadMargins(top = 0.08, bottom = 0.10, right = 0.06, left = 0.10)
   s.SetRatioPadMargins(top = 0.03, bottom = 0.40, right = 0.06, left = 0.10)
-  s.SetTextLumi(texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.64, texlumiY = 0.97, texlumiS = 0.05)
+  s.SetTextLumi(texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.62, texlumiY = 0.97, texlumiS = 0.05)
+  s.SetBinLabels(binlabels)
   hm.SetStackOverflow(doStackOverflow)
   name = GetName(var, ch, lev)
   hm.SetHisto(name, rebin)
   s.SetHistosFromMH(hm)
   s.SetOutName(name)
-  s.SetBinLabels(binlabels)
   s.SetTextChan('')
   s.SetRatioMin(2-maxscale)
   s.SetRatioMax(maxscale)
@@ -38,6 +37,7 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
   s.SetLogY(setLogY)
   s.SetPlotMaxScale(maxscale)
   s.DrawStack(xtit, ytit)
+
 
 lev = 'dilepton'
 ch = 'ElMu'
@@ -61,7 +61,7 @@ Draw('Btags', 'ElMu', lev, 1, 'b tag multiplicity', 'Events', True, maxscale = 1
 Draw('NBtagNJets', 'ElMu', lev, 1, 'nJets,nbtags', 'Events', True,['[0,0]', '[1,0]', '[1,1]', '[2,0]', '[2,1]', '[2,2]', '[#geq 3,#geq 0]'],maxscale = 1.6 )
 Draw('Vtx', 'ElMu', lev, 1, 'Number of vertices', 'Events', False, maxscale = 1.6 )
 for lev in ['dilepton', '2jets']:
-  Draw('InvMass', 'ElMu', lev, 6, 'm_{e#mu} (GeV)', 'Events', False, maxscale = 1.6 )
+  Draw('InvMass', 'ElMu', lev, 20, 'm_{e#mu} (GeV)', 'Events', False, maxscale = 1.6 )
 for lev in ['2jets']:
   Draw('Jet0Pt', 'ElMu', lev, 4, 'Leading jet p_{T} (GeV)', 'Events', False, maxscale = 1.6 )
   Draw('Jet1Pt', 'ElMu', lev, 5, 'Subeading jet p_{T} (GeV)', 'Events', False, maxscale = 1.6 )

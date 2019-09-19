@@ -10,7 +10,7 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 ### Input and output
 #path = '../temp5TeV/sep17/'
 path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep18/'
-outpath = './outputs_sep18/'
+outpath = './tt5TeVplots/'
 
 ### Definition of the processes
 processDic = {

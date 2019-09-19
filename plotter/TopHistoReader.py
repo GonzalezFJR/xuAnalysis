@@ -851,6 +851,7 @@ class HistoManager:
   def LookForSystLabels(self):
     self.systlabels = []
     for s in self.systname:
+      #histoname = self.histoname[0] if isinstance(self.histoname, list) else self.histoname
       self.SearchSystHisto(self.histoname, s)
 
   def SetProcessDic(self, pd):
@@ -892,29 +893,42 @@ class HistoManager:
       if found: self.systlabels.append(syst)
 
   def SumHistos(self, syst = 'ALL'):
-    hname = self.histoname
+    #histoname = self.histoname[0] if isinstance(self.histoname, list) else self.histoname
     if syst == 'ALL':
       self.SumHistos('')
       for s in self.systname: self.SumHistos(s)
       return
     if syst == '':
-      h = self.indic[self.processList[0]][hname].Clone("sum0")
+      if isinstance(self.histoname, list):
+        h = self.indic[self.processList[0]][self.histoname[0]].Clone("sum0")
+        for hname in self.histoname[1:]:
+          h.Add(self.indic[self.processList[0]][hname])
+      else: 
+          h = self.indic[self.processList[0]][self.histoname].Clone("sum0")
       h.SetDirectory(0)
       if len(self.processList) > 1:
-        for pr in self.processList[1:]: h.Add(self.indic[pr][hname])
+        for pr in self.processList[1:]: 
+          if isinstance(self.histoname, list):
+            for hname in self.histoname:
+              h.Add(self.indic[pr][hname])
+          else: h.Add(self.indic[pr][self.histoname])
       self.sumdic[syst] = h
     else:
       for s in self.GetListOfCandNames(syst):
         if not s in self.systlabels: continue
         pr0 = self.processList[0]
-        hs = "%s_%s"%(hname, s)
-        if not hs in self.indic[pr0].keys(): hs = hname
+        hname = self.histoname if not isinstance(self.histoname, list) else self.histoname[0]
+        hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr0].keys() else hname
         h = self.indic[pr0][hs].Clone("sum_%s"%s)
         if len(self.processList) > 1:
           for pr in self.processList[1:]:
-            hs = "%s_%s"%(hname, s)
-            if not hs in self.indic[pr].keys(): hs = hname
+            hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr].keys() else hname
             h.Add(self.indic[pr][hs])
+        if isinstance(self.histoname, list):
+          for hname in self.histoname[1:]:
+            for pr in self.processList:
+              hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr].keys() else hname
+              h.Add(self.indic[pr][hs])
         self.sumdic[s] = h
 
   def GetDifUnc(self, hnom, hsyst):
@@ -1013,9 +1027,14 @@ class HistoManager:
     if not 'data' in self.indic.keys():
       #print 'WARNING: data histogram not found...'
       return None
-    self.indic['data'][self.histoname].SetMarkerSize(1.2)
-    self.indic['data'][self.histoname].SetMarkerStyle(20)
-    return self.indic['data'][self.histoname]
+    hname = self.histoname if not isinstance(self.histoname, list) else self.histoname[0]
+    h = self.indic['data'][hname].Clone("hdata")
+    h.SetMarkerSize(1.2)
+    h.SetMarkerStyle(20)
+    h.SetDirectory(0)
+    if isinstance(self.histoname, list):
+      for hname in self.histoname[1:]: h.Add(self.indic['data'][hname])
+    return h
 
   def GetSumBkg(self):
     return self.GetUncHist('stat')
@@ -1056,12 +1075,21 @@ class HistoManager:
     elif isinstance(colors,str) and ',' in colors: colors = colors.replace(' ', '').split(',')
     hStack = THStack('hStack', '')
     for p, col in zip(pr, colors):
-      self.indic[p][self.histoname].SetFillColor(col)
-      self.indic[p][self.histoname].SetFillStyle(1000)
-      self.indic[p][self.histoname].SetLineColor(0)
-      self.indic[p][self.histoname].SetLineStyle(0)
-      self.indic[p][self.histoname].SetLineWidth(0)
-      hStack.Add(self.indic[p][self.histoname])
+      if isinstance(self.histoname, list):
+        for hname in self.histoname:
+          self.indic[p][hname].SetFillColor(col)
+          self.indic[p][hname].SetFillStyle(1000)
+          self.indic[p][hname].SetLineColor(0)
+          self.indic[p][hname].SetLineStyle(0)
+          self.indic[p][hname].SetLineWidth(0)
+          hStack.Add(self.indic[p][hname])
+      else:
+        self.indic[p][self.histoname].SetFillColor(col)
+        self.indic[p][self.histoname].SetFillStyle(1000)
+        self.indic[p][self.histoname].SetLineColor(0)
+        self.indic[p][self.histoname].SetLineStyle(0)
+        self.indic[p][self.histoname].SetLineWidth(0)
+        hStack.Add(self.indic[p][self.histoname])
     return hStack
       
   def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}):

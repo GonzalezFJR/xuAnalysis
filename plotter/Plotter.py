@@ -24,7 +24,8 @@ class Plot:
     return self.outpath
 
   def GetOutName(self):
-    return self.GetOutPath()+self.histoName
+    hname = self.histoName if not isinstance(self.histoName, list) else self.histoName[0]
+    return self.GetOutPath()+hname
 
   def SetHistoPad(self, x0 = 0.0, y0 = 0.23, x1 = 1, y1 = 1):
     self.hpadx0 = x0
@@ -517,14 +518,7 @@ class Stack(Plot):
       self.SetAxisRatio(self.hRatio)
       self.SetAxisRatio(self.hRatioUnc)
       self.SetAxisRatio(self.hRatioStatUnc)
-
-    if len(self.binLabels) > 0: 
-      for i in range(len(self.binLabels)):
-        if self.doRatio:
-          self.hRatio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
-        else:
-          self.hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
-    
+   
     # Legend
     if hasattr(self, 'processes'):
       self.hleg = []
@@ -557,6 +551,18 @@ class Stack(Plot):
         self.hRatio.SetMaximum(self.PlotRatioMax)
         self.hRatio.SetMinimum(self.PlotRatioMin)
       legr.Draw()
+    else: 
+      for r in self.Tex: r.Draw()
+
+    if len(self.binLabels) > 0: 
+      for i in range(len(self.binLabels)):
+        if self.doRatio:
+          if hasattr(self, 'hRatio'       ): self.hRatio       .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+          if hasattr(self, 'hRatioUnc'    ): self.hRatioUnc    .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+          if hasattr(self, 'hRatioStatUnc'): self.hRatioStatUnc.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        else:
+          self.hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+
     self.Save()
 
   def SetHistosFromMH(self, HM, defaultStyle = True):

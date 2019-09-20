@@ -211,7 +211,7 @@ def main():
 
   na.AddSelection(selection)
   na.AddCut('len(selMuon) >= 2')
-  na.AddHisto('invmass', 'InvMass', 20, 0, 2000, tit = 'm_{#mu#mu} (GeV)', weight = 'EventWeigt', cut = 'nJets > 2')
+  na.AddHisto('invmass', 'InvMass', 20, 0, 2000, tit = 'm_{#mu#mu} (GeV)', weight = 'self.EventWeight', cut = 'self.nJet > 2')
   na.AddSample('TTTo2L2Nu', 'TTTo2L2Nu_TuneCP5_PSweights')
   na.CreateAnalysis()
 

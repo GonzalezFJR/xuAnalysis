@@ -316,10 +316,13 @@ class analysis:
       t += 'source /cms/slc6_amd64_gcc530/external/gcc/5.3.0/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/dependencies-setup.sh; source /cms/slc6_amd64_gcc530/external/cmake/3.5.2/etc/profile.d/init.sh;source /opt/root6/bin/thisroot.sh\n'
     pycom =  'python -c \''
     pycom += 'from ' + modulname + '.' + modulname + ' import *; '
-    if isinstance(filename, list): filename = filename[0]
+    if isinstance(filename, list):
+      fname = filename [0]
+      for f in filename[1:]: fname += ', %s'%f
+      filename = fname
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
     pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
-    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ')\''
+    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '")\''
     return t + pycom
 
   def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):
@@ -447,13 +450,13 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events'):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events',outname = ''):
     # Default values:
     self.inpath = fname
     self.out = ''
     self.outpath = './temp/'
     self.jobFolder = './jobs/'
-    self.outname = ''
+    self.outname = outname
     self.files = []
     self.obj = {}
     self.nEvents = -1

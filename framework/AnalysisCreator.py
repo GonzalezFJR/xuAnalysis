@@ -34,7 +34,7 @@ class AnalysisCreator:
     hline = 'self.CreateTH1F("%s", "%s", %i, %1.2f, %1.2f)\n'%(hname, tit, nbins, b0, bN)
     var = self.vars[hname]
     cut = ' ' if self.histocuts[hname] == '' else ' if %s:'%self.histocuts[hname]
-    fillLine = '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, var, (','+self.weights[hname]) if self.weights[hname] != '' else '')
+    fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, var, (','+self.weights[hname]) if self.weights[hname] != '' else '')
     self.histos.append(hline)
     if write: self.fillLine.append(fillLine)
     else    : return fillLine

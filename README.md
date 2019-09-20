@@ -86,22 +86,19 @@ Create a list to store the selected muons
 
     self.muons = []
 
-Loop over the muons in the tree *t*:
+Loop over the muons in the tree *t*, create the TLorentzVector, apply selection criteria and create the lepton objects:
 
     for i in range(t.nMuon):
-
-Create the TLorentzVector, apply selection criteria and create the lepton objects:
-
-    p = TLorentzVector()
-    p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
-    charge = t.Muon_charge[i]
-    if not t.Muon_tightId[i]: continue # Tight ID
-    if not t.Muon_pfRelIso04_all[i] < 0.15: continue # Tight ISO, RelIso04 < 0.15
-    dxy = abs(t.Muon_dxy[i]) 
-    dz  = abs(t.Muon_dz[i] )
-    if dxy > 0.05 or dz > 0.1: continue # Tight IP
-    if p.Pt() < 20 or abs(p.Eta()) > 2.4: continue # pt and eta cuts
-    self.muons.append(lepton(p, charge, 13)) # 13 for muons
+      p = TLorentzVector()
+      p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
+      charge = t.Muon_charge[i]
+      if not t.Muon_tightId[i]: continue # Tight ID
+      if not t.Muon_pfRelIso04_all[i] < 0.15: continue # Tight ISO, RelIso04 < 0.15
+      dxy = abs(t.Muon_dxy[i]) 
+      dz  = abs(t.Muon_dz[i] )
+      if dxy > 0.05 or dz > 0.1: continue # Tight IP
+      if p.Pt() < 20 or abs(p.Eta()) > 2.4: continue # pt and eta cuts
+      self.muons.append(lepton(p, charge, 13)) # 13 for muons
 
 
 ## Run the analysis

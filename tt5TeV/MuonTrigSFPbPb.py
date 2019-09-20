@@ -154,3 +154,14 @@ def GetMuonTrigSF(pt, eta, pt2 = -99, eta2 = -99):
   toteup = (SF-SFsyu)*(SF-SFsyu) + (SF-SFstu)*(SF-SFstu)
   totedo = (SF-SFsyd)*(SF-SFsyd) + (SF-SFstd)*(SF-SFstd)
   return SF, (sqrt(toteup) + sqrt(totedo))/2
+
+def GetMuonTrigEff(pt, eta, sys = 0):
+  n, d = tnp_weight_trig_pbpb(pt,  eta, 0);
+  if abs(sys) == 1:
+    nu, du = tnp_weight_trig_pbpb(pt,  eta, sys);
+    ns, ds = tnp_weight_trig_pbpb(pt,  eta, 2*sys);
+    dn = sqrt((n-nu)*(n-nu) + (n-ns)*(n-ns))
+    dd = sqrt((d-du)*(d-du) + (d-ds)*(d-ds))
+    n = n + dn if sys > 0 else n - dn
+    d = d + dd if sys > 0 else d - dd
+  return n, d

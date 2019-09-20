@@ -5,7 +5,7 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 class puWeightProducer:
-  def __init__(self,intree, myfile,targetfile,myhist="pileup",targethist="pileup",name="puWeight",norm=True,verbose=False,nvtx_var="Pileup_nTrueInt",doSysVar=True):
+  def __init__(self,intree, myfile,targetfile,myhist="pileup",targethist="pileup",name="puWeight",norm=True,verbose=True,nvtx_var="Pileup_nTrueInt",doSysVar=True):
     self.targeth = self.loadHisto(targetfile,targethist)
     if doSysVar:
         self.targeth_plus = self.loadHisto(targetfile,targethist+"_plus")
@@ -25,9 +25,10 @@ class puWeightProducer:
     self.verbose = verbose
     self.nvtxVar = nvtx_var
     self.doSysVar = doSysVar
-    print 'Computing PU weights from: '
-    print ' >> ' + myfile
-    print ' >> ' + targetfile
+    if verbose:
+      print 'Computing PU weights from: '
+      print ' >> ' + myfile
+      print ' >> ' + targetfile
       
     pathtolib = "%s/src/WeightCalculatorFromHistogram_cc.so"%basepath
     #if os.path.isfile(pathtolib): 
@@ -51,9 +52,9 @@ class puWeightProducer:
     if outputFile : 
       outputFile.cd()
       self.myh.Write()    
-    self._worker = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth,self.norm,self.fixLargeWeights,self.verbose)
-    self._worker_plus = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth_plus,self.norm,self.fixLargeWeights,self.verbose)
-    self._worker_minus = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth_minus,self.norm,self.fixLargeWeights,self.verbose)
+    self._worker = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth,self.norm,self.fixLargeWeights,self.verbose>2)
+    self._worker_plus = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth_plus,self.norm,self.fixLargeWeights,self.verbose>2)
+    self._worker_minus = ROOT.WeightCalculatorFromHistogram(self.myh,self.targeth_minus,self.norm,self.fixLargeWeights,self.verbose>2)
     '''
     self.out = intree
     self.out.Branch(self.name, "F")
@@ -88,13 +89,13 @@ class puWeightProducer:
 
 pufile_mc2016="%s/inputs/pileup/pileup_profile_Summer16.root" %basepath
 pufile_data2016="%s/inputs/pileup/PileupData_GoldenJSON_Full2016.root" %basepath
-puWeight_2016 = lambda intree : puWeightProducer(intree, pufile_mc2016,pufile_data2016,"pu_mc","pileup",verbose=False, doSysVar=True)
-puAutoWeight_2016 = lambda intree : puWeightProducer(intree, "auto", pufile_data2016,"pu_mc","pileup",verbose=False)
+puWeight_2016 = lambda intree, v : puWeightProducer(intree, pufile_mc2016,pufile_data2016,"pu_mc","pileup",verbose=v, doSysVar=True)
+puAutoWeight_2016 = lambda intree, v : puWeightProducer(intree, "auto", pufile_data2016,"pu_mc","pileup",verbose=v)
 
 pufile_mc5TeV     = "%s/inputs/pileup/PileupMC_5TeV.root" %basepath
 pufile_data5TeV   = "%s/inputs/pileup/pileup_5TeV.root" %basepath
-puWeight_5TeV     = lambda intree : puWeightProducer(intree, pufile_mc5TeV,pufile_data5TeV,"pu_mc","pileup",verbose=False, doSysVar=True)
-puAutoWeight_5TeV = lambda intree : puWeightProducer(intree, "auto", pufile_data5TeV,"pu_mc","pileup",verbose=False)
+puWeight_5TeV     = lambda intree, v : puWeightProducer(intree, pufile_mc5TeV,pufile_data5TeV,"pu_mc","pileup",verbose=v, doSysVar=True)
+puAutoWeight_5TeV = lambda intree, v : puWeightProducer(intree, "auto", pufile_data5TeV,"pu_mc","pileup",verbose=v)
 '''
 pufile_data2017="%s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/pileup/puData2017_withVar.root" % os.environ['CMSSW_BASE']
 pufile_mc2017="%s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/pileup/mcPileup2017.root" % os.environ['CMSSW_BASE']

@@ -86,7 +86,7 @@ class jobManager:
     errname = self.GetErrName(index)
     outname = self.GetOutName(index)
     jobfile = self.GetJobName(index) 
-    if isSlurm:
+    if self.isSlurm:
       runCommand = "sbatch -p %s -c %i -J %s -e %s -o %s %s"%(queue, nSlots, jname, errname, outname, jobfile)
     else:
       runCommand = "bsub -J %s -o %s -e %s -q %s %s"%(jname, outFolder, errname, queue, jobfile)
@@ -128,7 +128,7 @@ class jobManager:
     self.SubmitJobs()
     if self.autorm: self.RemoveJobsFiles()
 
-  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False, isCiencias = True):
+  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False):
     self.joblist = []
     self.SetOutFolder(outFolder)
     self.SetName(name)
@@ -138,4 +138,8 @@ class jobManager:
     self.pretend = pretend
     self.verbose = verbose
     self.autorm = autorm
-    self.IsCiencias = isCiencias
+    hostname = os.uname()[1]
+    isSlurm = False
+    if 'cern'   in hostname: isSlurm = False
+    if 'uniovi' in hostname: isSlurm = True
+    self.isSlurm = isSlurm

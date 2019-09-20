@@ -7,7 +7,7 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 class PrefCorr:
     def __init__(self, jetroot="L1prefiring_jetpt_2017BtoF.root", jetmapname="L1prefiring_jetpt_2017BtoF",
-                 photonroot="L1prefiring_photonpt_2017BtoF.root", photonmapname="L1prefiring_photonpt_2017BtoF"):
+                 photonroot="L1prefiring_photonpt_2017BtoF.root", photonmapname="L1prefiring_photonpt_2017BtoF", verbose = True):
 
         self.photon_file = self.open_root(basepath + "/inputs/prefire_maps/" + photonroot)
         self.photon_map = self.get_root_obj(self.photon_file, photonmapname)
@@ -16,9 +16,10 @@ class PrefCorr:
         self.jet_map = self.get_root_obj(self.jet_file, jetmapname)
 
         self.UseEMpT = ("jetempt" in jetroot)
-        print 'Calculating prefire weights with the files: '
-        print ' >> Jets   : %s'%jetroot
-        print ' >> Photons: %s'%photonroot
+        if verbose:
+          print 'Calculating prefire weights with the files: '
+          print ' >> Jets   : %s'%jetroot
+          print ' >> Photons: %s'%photonroot
 
     def open_root(self, path):
         r_file = ROOT.TFile.Open(path)
@@ -122,5 +123,5 @@ class PrefCorr:
         pref_prob = max(pref_prob - sqrt(stat*stat + syst*syst), 0.0)
       return pref_prob
 
-PrefCorr5TeV = lambda : PrefCorr(jetroot="L1prefiring_jetpt_2017BtoF.root", jetmapname="L1prefiring_jetpt_2017BtoF",
-                 photonroot="L1prefiring_photonpt_2017BtoF.root", photonmapname="L1prefiring_photonpt_2017BtoF")
+PrefCorr5TeV = lambda v : PrefCorr(jetroot="L1prefiring_jetpt_2017BtoF.root", jetmapname="L1prefiring_jetpt_2017BtoF",
+                 photonroot="L1prefiring_photonpt_2017BtoF.root", photonmapname="L1prefiring_photonpt_2017BtoF", verbose = v)

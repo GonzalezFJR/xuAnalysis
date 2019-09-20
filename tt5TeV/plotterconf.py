@@ -9,7 +9,7 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 
 ### Input and output
 #path = '../temp5TeV/sep17/'
-path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep18/'
+path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep19/'
 outpath = './tt5TeVplots/'
 
 ### Definition of the processes
@@ -31,7 +31,7 @@ colors ={
 'tt'  : kRed+1,
 'data': 1}
 
-systematics = 'MuonEff, ElecEff, TrigEff, Prefire, JES, JER, ISR, FSR'
+systematics = 'MuonEff, ElecEff, TrigEff, JES, JER'#, Prefire, ISR, FSR'
 
 Lumi = 296.1 #294.24 #296.1
 

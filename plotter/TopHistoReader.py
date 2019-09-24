@@ -1138,3 +1138,112 @@ class HistoManager:
 
   def GetHisto(self, sname, hname):
     return self.indic[sname][hname]
+
+
+class SampleSums:
+
+  def GetFiles(self):
+    self.files = GetFiles(self.path, self.sname)
+
+  def LoadTree(self):
+    self.tree = TChain(tname, tname)
+    for f in self.files: self.tree.Add(f)
+
+  def GetCountsFromSumWTree(self):
+   if not hasattr(self, 'treesow'):
+     #print 'WARNING: tree with sum of weights has not been loaded!!'
+     self.LoadTree()
+   count = 0
+   sow   = 0
+   for event in self.treesow:
+     count += event.genEventCount
+     sow   += event.genEventSumw
+   self.count = count
+   self.sow   = sow
+
+  def GetSumPDFhistoFromSumWTree(self):
+   if not hasattr(self, 'treesow'):
+     #print 'WARNING: tree with sum of weights has not been loaded!!'
+     self.LoadTree()
+   self.treesow.GetEntry(1)
+   nPDFweights = self.treesow.nLHEPdfSumw
+   h = TH1F('SumOfWeightsPDF', '', nPDFweights, 0.5, nPDFweights+0.5)
+   count = 0
+   sow   = 0
+   for event in self.treesow:
+     count += event.genEventCount
+     sow   += event.genEventSumw
+     for i in range(nPDFweights):
+       h.Fill(i+1, event.LHEPdfSumw[i])
+   h.SetDirectory(0)
+   #for i in range(h.GetNbinsX()): print '[%i] %1.2f'%(i, h.GetBinContent(i+1))
+   self.count = count
+   self.sow   = sow
+   return h
+
+  def GetSumScaleHistoFromSumWTree(self):
+   if not hasattr(self, 'treesow'):
+     #print 'WARNING: tree with sum of weights has not been loaded!!'
+     self.LoadTree()
+     return 
+   self.treesow.GetEntry(1)
+   nScaleWeights = self.treesow.nLHEScaleSumw
+   h = TH1F('SumOfWeightsScale', '', nScaleWeights, 0.5, nScaleWeights+0.5)
+   print 'GetEntries: ', self.treesow.GetEntries()
+   for event in self.treesow:
+     for i in range(nScaleWeights):
+       h.Fill(i+1, event.LHEScaleSumw[i])
+   h.SetDirectory(0)
+   #for i in range(h.GetNbinsX()): print '[%i] %1.2f'%(i, h.GetBinContent(i+1))
+   return h
+
+  def SetNormPDFhistoName(self, n):
+    self.normPDFhistoName = n
+
+  def SetNormScaleHistoName(self, n):
+    self.normScaleHitstoName = n
+    
+  def SetCountHistoName(self, n = 'Count'):
+    self.countName = n
+
+  def SetSOWname(self, n = 'SumWeights'):
+    self.SOWname = n
+
+  def GetHsumPDF(self, hname = ''):
+    if hname != '': self.SetNormPDFhistoName(hname)
+    self.hsumpdf = t.GetNamedHisto(self.normPDFhistoName) if self.normPDFhistoName != '' else self.GetSumPDFhistoFromSumWTree()
+    return self.hsumpdf
+
+  def GetHsumPDF(self, hname = ''):
+    if hname != '': self.SetNormPDFhistoName(hname)
+    self.hsumscale = t.GetNamedHisto(self.normScaleHitstoName) if self.normScaleHitstoName != '' else self.GetSumScaleHistoFromSumWTree()
+    return self.hsumscale
+
+  def GetCount(self, hname):
+    if hname!= '': self.SetCountHistoName(hname)
+    if self.t.IsHisto(self.countName):
+      h = t.GetNamedHisto(self.countName)
+      count = h.GetBinContent(1)
+      self.count = count
+    else: 
+      self.GetCountsFromSumWTree()
+    return self.count
+
+  def GetSOW(self, hname):
+    if hname!= '': self.SetSOWname(hname)
+    if self.t.IsHisto(self.SOWname):
+      h = t.GetNamedHisto(self.SOWname)
+      sow = h.GetBinContent(1)
+      self.sow   = sow
+    else:
+      self.GetCountsFromSumWTree()
+    return self.sow
+
+  def __init__(self, pathToTrees, sname, tname = 'Runs', normPDFhistoName = '', normScaleHitstoName = ''):
+    self.path = pathToTrees
+    self.sname = sname
+    self.tname = tname
+    self.GetFiles()
+    self.t = TopHistoReader(path)
+    self.SetNormPDFhistoName(normPDFhistoName)
+    self.SetNormScaleHitstoName(normScaleHitstoName)

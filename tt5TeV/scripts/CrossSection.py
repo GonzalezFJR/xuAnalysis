@@ -1,4 +1,4 @@
-from plotter.TopHistoReader import TopHistoReader, Process
+from plotter.TopHistoReader import TopHistoReader, Process, SampleSums
 from plotter.WeightReader import WeightReader
 from ROOT.TMath import Sqrt as sqrt
 from plotter.OutText import OutText
@@ -250,21 +250,21 @@ class CrossSection:
     t.bar()
     for pr in self.bkg:
       name = t.fix(" %s"%pr.GetName(), 16, 'l',0)
-      y    = t.fix("%1.2f"%pr.GetYield(),   8,0)
-      stat = t.fix("%1.2f"%pr.GetStatUnc(), 8,0)
-      syst = t.fix("%1.2f"%pr.GetSystAbsUnc(), 8,0)
+      y    = t.fix("%1.3f"%pr.GetYield(),   8,0)
+      stat = t.fix("%1.3f"%pr.GetStatUnc(), 8,0)
+      syst = t.fix("%1.3f"%pr.GetSystAbsUnc(), 8,0)
       t.line(name + t.vsep() + y + ((t.pm() + stat) if doStat else '') + ((t.pm() + syst) if doSyst else ''))
     t.sep()
-    totbkg     = t.fix("%1.2f"%self.GetTotBkg(), 8,0)
-    totbkgstat = t.fix("%1.2f"%self.GetTotBkgStatUnc(), 8,0)
-    totbkgsyst = t.fix("%1.2f"%self.GetTotBkgSystUnc(), 8,0)
+    totbkg     = t.fix("%1.3f"%self.GetTotBkg(), 8,0)
+    totbkgstat = t.fix("%1.3f"%self.GetTotBkgStatUnc(), 8,0)
+    totbkgsyst = t.fix("%1.3f"%self.GetTotBkgSystUnc(), 8,0)
     t.line(t.fix(" Total bkg", 16, 'l',0) + t.vsep() + totbkg + ((t.pm() + totbkgstat) if doStat else '') + ((t.pm() + totbkgsyst) if doSyst else ''))
     t.sep()
     y = self.GetSignalYield()
     signal = t.fix(" %s"%(self.GetSignal().GetName()), 16, 'l',0)
-    ysig   = t.fix("%1.2f"%y,8,0)
-    sigunc = t.fix("%1.2f"%(self.GetXsecSystUnc()*y),8,0)
-    sigsta = t.fix("%1.2f"%self.GetSignal().GetStatUnc(),8,0)
+    ysig   = t.fix("%1.3f"%y,8,0)
+    sigunc = t.fix("%1.3f"%(self.GetXsecSystUnc()*y),8,0)
+    sigsta = t.fix("%1.3f"%self.GetSignal().GetStatUnc(),8,0)
     t.line(signal + t.vsep() + ysig + ((t.pm() + sigsta) if doStat else '') + ((t.pm() + sigunc) if doSyst else ''))
     t.sep()
     t.line(t.fix(" Data", 16,'l',0) + t.vsep() + t.fix("%i"%self.GetData(),8,0))
@@ -292,19 +292,19 @@ class CrossSection:
       stat = self.GetXsecStatUnc()
       syst = self.GetEffUnc()
       lumi = self.GetXsecLumiUnc()
-      t.line(t.fix(' Fiducial cross section', 26, 'r') + t.vsep() + t.fix("%1.2f"%xsec,6))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
+      t.line(t.fix(' Fiducial cross section', 26, 'r') + t.vsep() + t.fix("%1.3f"%xsec,6))
+      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
+      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
+      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
     t.sep()
     xsec = self.GetXsec()
     stat = self.GetXsecStatUnc()
     syst = self.GetXsecSystUnc()
     lumi = self.GetXsecLumiUnc()
-    t.line(t.fix(' Inclusive cross section', 26, 'r') + t.vsep() + t.fix("%1.2f"%xsec,6))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.2f (%1.2f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
+    t.line(t.fix(' Inclusive cross section', 26, 'r') + t.vsep() + t.fix("%1.3f"%xsec,6))
+    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
+    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
+    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
     t.bar()
     t.write()
 
@@ -323,17 +323,17 @@ class CrossSection:
     t.bar()
     t.line(t.fix(' Source', 18, 'l') + t.vsep() + fix("value (%)", 6))
     t.sep()
-    for b in [x.GetName() for x in self.bkg]: t.line(fix(' '+b,18,'r') + t.vsep() + fix('%1.2f'%(self.GetXsecBkgRelUnc(b)*100), 6))
+    for b in [x.GetName() for x in self.bkg]: t.line(fix(' '+b,18,'r') + t.vsep() + fix('%1.3f'%(self.GetXsecBkgRelUnc(b)*100), 6))
     t.sep()
-    for e in exp.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.2f'%(exp[e]*100), 6))
+    for e in exp.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.3f'%(exp[e]*100), 6))
     t.sep()
-    for e in mod.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.2f'%(mod[e]*100), 6))
+    for e in mod.keys(): t.line(fix(' '+e,18,'l') + t.vsep() + fix('%1.3f'%(mod[e]*100), 6))
     t.sep()
-    t.line(fix(' Total systematic',18,'l')+t.vsep()+fix('%1.2f'%(syst*100), 6))
+    t.line(fix(' Total systematic',18,'l')+t.vsep()+fix('%1.3f'%(syst*100), 6))
     t.sep()
-    t.line(fix(' Statistics',18,'l')+t.vsep()+fix('%1.2f'%(stat*100), 6))
+    t.line(fix(' Statistics',18,'l')+t.vsep()+fix('%1.3f'%(stat*100), 6))
     t.sep()
-    t.line(fix(' Luminosity',18,'l')+t.vsep()+fix('%1.2f'%(lum*100), 6))
+    t.line(fix(' Luminosity',18,'l')+t.vsep()+fix('%1.3f'%(lum*100), 6))
     t.bar()
     t.write()
 
@@ -345,6 +345,17 @@ class CrossSection:
     if y    == '': y    = self.GetSignalYield()
     return (data - bkg)/y * self.GetThXsec()
 
+  def SetPathToTrees(self, ptt):
+    self.pathToTrees = ptt
+
+  def SetMotherName(self, mn):
+    self.mothername = mn
+
+  def GetNGenEvents(self):
+    self.treesow = TChain('Runs', 'Runs')
+    files = GetFiles(self.pathToTrees, self.mothername)
+    for f in files: self.treesow.Add(f)
+
   def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 308.54, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = []):
     ''' Set the xsec from histos '''
     if isinstance(expUnc, str): expUnc = expUnc.replace(' ', '').split(',')
@@ -354,10 +365,11 @@ class CrossSection:
     self.t.SetLumi(lumi)
     self.t.SetChan(chan); self.t.SetLevel(level)
     self.t.SetHistoNamePrefix('')
+    self.ss = SampleSums(self.pathToTrees, self.motherfname)
     signalName = signal[0]
     signalSample = signal[1]
     fiduEvents = self.t.GetFiduEvents(signalSample,level)
-    nGenEvents = self.t.GetNGenEvents(signalSample)
+    nGenEvents = self.ss.GetCount() #self.GetNGenEvents(signalSample)
     self.SetLumiUnc(lumiunc)
     self.SetFiduEvents(fiduEvents)
     self.SetGenEvents(nGenEvents)
@@ -375,10 +387,15 @@ class CrossSection:
     for e in expUnc: self.AddExpUnc(e, self.t.GetUnc(signal[1], chan, level, e))
     # Modeling uncertainties
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modUnc or 'scale' in modUnc:
-      w = WeightReader(path, '',chan, level, histoprefix = '')
-      w.SetSampleName(signalName)
+      pathToTrees = self.pathToTrees #'/pool/ciencias/userstorage/juanr/nanoAODv4/5TeV/5TeV_5sept/'
+      motherfname = self.mothername  #'TT_TuneCP5_PSweights_5p02TeV'
+      w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=296.1, histoprefix='')
+      #w.SetSampleName(signalName)
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())
+    if 'ISR' in modUnc or 'isr' in modUnc: self.AddModUnc('ISR', self.t.GetUnc(signalSample, chan, level, 'ISR'))
+    if 'FSR' in modUnc or 'fsr' in modUnc: self.AddModUnc('FSR', self.t.GetUnc(signalSample, chan, level, 'FSR'))
+
 
   def __init__(self, outpath = './temp/', lev = '', chan = '', genEvents = 1, fiduEvents = 1, textformat = "txt"):
     self.SetTextFormat(textformat)
@@ -396,6 +413,8 @@ class CrossSection:
     self.effUnc = {} # 'Name' : value
     self.SetOutPath(outpath)
     self.doFiducial = True
+    self.SetMotherName("TTTo2L2Nu")
+    self.SetPathToTrees("")
 
 ######################################################################################
 ### Auxiliar functions

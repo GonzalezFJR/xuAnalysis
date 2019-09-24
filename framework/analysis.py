@@ -322,7 +322,7 @@ class analysis:
       filename = fname
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
     pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
-    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '")\''
+    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "' + self.options + '")\''
     return t + pycom
 
   def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):

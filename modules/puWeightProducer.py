@@ -31,11 +31,11 @@ class puWeightProducer:
       print ' >> ' + targetfile
       
     pathtolib = "%s/src/WeightCalculatorFromHistogram_cc.so"%basepath
-    #if os.path.isfile(pathtolib): 
-    ROOT.gSystem.Load(pathtolib)
-    #else: #if "/WeightCalculatorFromHistogram_cc.so" not in ROOT.gSystem.GetLibraries():
-    # ROOT.gROOT.ProcessLine(".L %s/src/WeightCalculatorFromHistogram.cc++" %basepath)
-    dummy = ROOT.WeightCalculatorFromHistogram
+    if os.path.isfile(pathtolib): 
+      ROOT.gSystem.Load(pathtolib)
+    else: #if "/WeightCalculatorFromHistogram_cc.so" not in ROOT.gSystem.GetLibraries():
+      ROOT.gROOT.ProcessLine(".L %s/src/WeightCalculatorFromHistogram.cc++" %basepath)
+    #dummy = ROOT.WeightCalculatorFromHistogram
     self.beginFile(intree)
 
   def loadHisto(self,filename,hname):

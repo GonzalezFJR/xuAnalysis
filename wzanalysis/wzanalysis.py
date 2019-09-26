@@ -10,7 +10,7 @@ from ROOT.TMath import Sqrt as sqrt
 from ROOT import *
 from modules.puWeightProducer import puWeight_5TeV
 from modules.PrefireCorr import PrefCorr5TeV
-from modules.GetBTagSF import BtagReader
+#from modules.GetBTagSF import BtagReader
 
 ### Channel to ints
 class ch():
@@ -25,7 +25,9 @@ class lev():
   lep      = 0
   met      = 1
   wpt      = 2
-level = {lev.lep:'lep', lev.met:'met', lev.wpt:'wpt'}
+  m3l      = 3
+
+level = {lev.lep:'lep', lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l'}
 
 ### Systematic uncertainties
 class systematic():
@@ -72,11 +74,11 @@ class wzanalysis(analysis):
       self.LoadHisto('ElecTrigEE',    basepath+'./inputs/ScaleFactors_PbPb_LooseWP_EE_Centr_0_100_HLTonly_preliminaryID.root',  'g_scalefactors') # Endcap
 
       # Modules to have some weights in MC
-      self.PUweight = puWeight_5TeV(self.tchain)
-      self.PrefCorr = PrefCorr5TeV()
+      self.PUweight = puWeight_5TeV(self.tchain, False)
+      self.PrefCorr = PrefCorr5TeV(False)
 
     # To apply b tagging SF
-    self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Medium', 2017)
+    #self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Medium', 2017)
 
     # Uncertainties
     self.doSyst = False if ('noSyst' in self.options or self.isData) else True
@@ -162,6 +164,7 @@ class wzanalysis(analysis):
           isyst = systlabel[key_syst]
           # Event
           self.NewHisto('HT',   ichan,ilevel,isyst, 80, 0, 400)
+          self.NewHisto('HTmiss',   ichan,ilevel,isyst, 80, 0, 400)
           self.NewHisto('MET',  ichan,ilevel,isyst, 30, 0, 150)
           self.NewHisto('NJets',ichan,ilevel,isyst, 8 ,-0.5, 7.5)
           self.NewHisto('Btags',ichan,ilevel,isyst, 4 ,-0.5, 3.5)
@@ -225,7 +228,7 @@ class wzanalysis(analysis):
     maxdphi = max([lW.DeltaPhi(lZ0), lW.DeltaPhi(lZ1), lZ0.DeltaPhi(lZ1)])    
     tript   = (lW+lZ0+lZ1).Pt()
     zpt     = (lZ0+lZ1).Pt()
-
+    htmiss  = tript
     dphi  = DeltaPhi(lep0, lep1)
     mll   = InvMass(lep0, lep1)
     dipt  = DiPt(lep0, lep1)
@@ -240,10 +243,12 @@ class wzanalysis(analysis):
       jet0 = jets[0]
       j0pt = jet0.Pt(); j0eta = jet0.Eta(); j0phi = jet0.Phi()
       j0csv = jet0.GetCSVv2(); j0deepcsv = jet0.GetDeepCSV()
+      htmiss = (lW+lZ0+lZ1+TLorentzVector(jet0.P())).Pt()
     if njet > 1:
       jet1 = jets[1]
       j1pt = jet1.Pt(); j1eta = jet1.Eta(); j1phi = jet1.Phi()
       j1csv = jet1.GetCSVv2(); j1deepcsv = jet1.GetDeepCSV()
+      htmiss = (lW+lZ0+lZ1+TLorentzVector(jet0.P())+TLorentzVector(jet1.P())).Pt()
     else:
       j0pt = -1; j0eta = -999; j0phi = -999;
       j0csv = -1; j0deepcsv = -1;
@@ -251,6 +256,7 @@ class wzanalysis(analysis):
     ### Fill the histograms
     #if ich == ch.ElMu and ilev == lev.dilepton: print 'Syst = ', isys, ', weight = ', self.weight
     self.GetHisto('HT',   ich,ilev,isys).Fill(ht, self.weight)
+    self.GetHisto('HTmiss',   ich,ilev,isys).Fill(htmiss, self.weight)
     self.GetHisto('MET',  ich,ilev,isys).Fill(met, self.weight)
     self.GetHisto('NJets',ich,ilev,isys).Fill(njet, self.weight)
     self.GetHisto('Btags',ich,ilev,isys).Fill(nbtag, self.weight)
@@ -494,6 +500,7 @@ class wzanalysis(analysis):
     elif totId == 35: ich = ch.mee
     elif totId == 37: ich = ch.emm
     elif totId == 39: ich = ch.mmm
+    #if totId != 33 and totId != 37: return
     # lW, lZ1, lZ2
     mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
     if max(mz) == 0: return
@@ -509,7 +516,7 @@ class wzanalysis(analysis):
     zleps = [lZ1, lZ2]
     tleps = [lW, lZ1, lZ2]
     wpt = lW.Pt()
-    
+    m3l = (lW.P() + lZ1.P() + lZ2.P()).M()
     ### Trigger
     ###########################################
     trigger = {
@@ -579,6 +586,7 @@ class wzanalysis(analysis):
   
       if pmet.Pt() > 25: 
         self.FillAll(ich,lev.met,isyst,leps,jets,pmet)
-
       if wpt > 20: 
         self.FillAll(ich, lev.wpt, isyst, leps, jets, pmet)
+      if m3l > 100:
+	self.FillAll(ich, lev.m3l, isyst, leps, jets, pmet)

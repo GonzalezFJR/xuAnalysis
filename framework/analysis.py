@@ -222,8 +222,8 @@ class analysis:
     nevents = self.nRunEvents
     i0 = self.firstEvent
     if int(i) % int(self.nEventsPrintOut) == 0:
-      if   self.index == -1: print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
-      elif self.index == 0:  print 'Processing... %1.2f'%((float(i)-i0)/nevents*100) + ' %'
+      print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
+
 
   def getInputs(self,first = -1, last = -1):
     ''' Returns a list with [firstEvent, lastEvent] for paralel processing '''
@@ -366,6 +366,17 @@ class analysis:
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.manageOutput()
     self.tchain = TChain(self.treeName,self.treeName)
     for f in self.files: self.tchain.Add(f)
+
+    evlistmode = None
+    if not (self.elistf == ""):
+        evlistf = TFile(self.elistf,"READ")
+        evlist  = evlistf.Get("evlist")
+        evlistmode = "READING"
+    else:
+        evlistf = TFile("./"+ self.fileName + "_evlist.root","RECREATE")
+        evlist  = TEventList("evlist","evlist")
+        evlistmode = "RECORDING"
+
     self.init()
     self.createHistos()
     if self.index <= 0:
@@ -381,17 +392,34 @@ class analysis:
     if self.verbose >= 1: 
       print '[INFO] Loaded %i inputs'%len(self.inputs)
       print '[INFO] Created %i outputs'%len(self.obj)
-    for iEv in range(first, last):
-      #if self.verbose > 0: 
-      self.printprocess(iEv)
-      self.tchain.GetEntry(iEv)
-      self.hRunEvents.Fill(1)
-      if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
-      else: self.EventWeight = 1
+    if evlistmode == "RECORDING":
+      for iEv in range(first, last):
+        #if self.verbose > 0: 
+        self.printprocess(iEv)
+        self.tchain.GetEntry(iEv)
+        self.hRunEvents.Fill(1)
+        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+        else: self.EventWeight = 1
+        ### Start the analysis here!
+        passing = self.insideLoop(self.tchain)
+        if passing: evlist.Enter(iEv)
+      evlistf.cd()
+      evlist.Write()
+      evlistf.Close()
 
-      ### Start the analysis here!
-      self.insideLoop(self.tchain)
-
+    elif evlistmode == "READING":
+      print "Will apply reduced event list of length %i"%evlist.GetN()
+      for iiEv in range(1,evlist.GetN()+1):
+        #if self.verbose > 0: 
+        iEv = evlist.GetEntry(iiEv)
+        if iEv >= last or iEv < first: continue #To filter out in multicore
+        self.printprocess(iEv)
+        self.tchain.GetEntry(iEv)
+        self.hRunEvents.Fill(1)
+        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+        else: self.EventWeight = 1
+        ### Start the analysis here!
+        self.insideLoop(self.tchain)        
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.saveOutput()
     return self.obj
 
@@ -450,7 +478,7 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events',outname = ''):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events',outname = '', elistf=""):
     # Default values:
     self.inpath = fname
     self.out = ''
@@ -469,13 +497,14 @@ class analysis:
     self.tree = 0
     self.firstEvent = 0
     self.nRunEvents = 0
-    self.nEventsPrintOut = 10000
+    self.nEventsPrintOut = 100
     self.verbose = 1
     self.treeName = treeName
     self.SetVerbose(verbose)
     self.fileName = fileName
     self.inputs = {}
     self.SetOptions(options)
+    self.elistf = elistf
     if fileName != '': self.SetFiles(fname, fileName, chooseFile)
     else:              self.SetFiles(fname)
     self.SetXsec(xsec)

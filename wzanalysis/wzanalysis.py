@@ -26,8 +26,12 @@ class lev():
   met      = 1
   wpt      = 2
   m3l      = 3
+  htmiss   = 4
+  sr       = 5
+  srtight  = 6
+  tight    = 7
 
-level = {lev.lep:'lep', lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l'}
+level = {lev.lep:'lep', lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l', lev.htmiss:'htmiss', lev.sr:'sr', lev.tight:'tight', lev.srtight:'srtight'}
 
 ### Systematic uncertainties
 class systematic():
@@ -189,6 +193,9 @@ class wzanalysis(analysis):
           self.NewHisto('InvMass', ichan,ilevel,isyst, 60, 0, 300)
           self.NewHisto('DYMass',  ichan,ilevel,isyst, 200, 70, 110)
           self.NewHisto('MaxDeltaPhi',  ichan,ilevel,isyst, 20, 0, 1)
+          self.NewHisto('lZ0_genFlavor',  ichan,ilevel,isyst, 30, -0.5, 29.5)
+          self.NewHisto('lZ1_genFlavor',  ichan,ilevel,isyst, 30, -0.5, 29.5)
+          self.NewHisto('lW_genFlavor' ,  ichan,ilevel,isyst, 30, -0.5, 29.5)
 
           # Jets
           self.NewHisto('Jet0Pt',   ichan,ilevel,isyst, 60, 0, 300)
@@ -265,6 +272,10 @@ class wzanalysis(analysis):
     self.GetHisto("mz",      ich, ilev, isys).Fill(mz, self.weight)
     self.GetHisto("mtw",     ich, ilev, isys).Fill(mtw, self.weight)
     self.GetHisto("m3l",     ich, ilev, isys).Fill(m3l, self.weight)
+    self.GetHisto("lZ0_genFlavor",     ich, ilev, isys).Fill(ord(leptons[1].mcmatch), self.weight)
+    self.GetHisto("lZ1_genFlavor",     ich, ilev, isys).Fill(ord(leptons[2].mcmatch), self.weight)
+    self.GetHisto("lW_genFlavor" ,     ich, ilev, isys).Fill(ord(leptons[0].mcmatch), self.weight)
+    
 
     if   njet == 0: nbtagnjetsnum = nbtag
     elif njet == 1: nbtagnjetsnum = nbtag + 1
@@ -378,7 +389,11 @@ class wzanalysis(analysis):
       if dxy > 0.05 or dz > 0.1: continue
       # pT < 12 GeV, |eta| < 2.4
       if p.Pt() < 8 or abs(p.Eta()) > 2.4: continue
-      self.selLeptons.append(lepton(p, charge, 13))
+      passTightID = True
+      if t.Muon_jetIdx[i] >= 0:
+        if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.4941: passTightID = False
+      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
+      self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i], passTightID))
        
     ##### Electrons
     for i in range(t.nElectron):
@@ -394,18 +409,90 @@ class wzanalysis(analysis):
       if not convVeto: continue
       # Isolation (RelIso03) tight
       relIso03 = t.Electron_pfRelIso03_all[i]
-      #if   etaSC <= 1.479 and relIso03 > 0.0361: continue
-      #elif etaSC >  1.479 and relIso03 > 0.094:  continue
       # Tight IP
       dxy = abs(t.Electron_dxy[i])
       dz  = abs(t.Electron_dz[i] )
       if dxy > 0.05 or dz > 0.1: continue
       # pT > 12 GeV, |eta| < 2.4
       if p.Pt() < 12 or abs(p.Eta()) > 2.4: continue
-      self.selLeptons.append(lepton(p, charge, 11))
+      passTightID = True
+      if ord(t.Electron_lostHits[i]) > 0: passTightID = False
+      print 1, passTightID
+      if relIso03 > 0.04: passTightID = False
+      print 2, passTightID
+      if t.Electron_jetIdx[i] >= 0:
+        if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.4941: 
+          passTightID = False
+      print 3, passTightID
+      self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i], passTightID))
+      
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
+    ### Set trilepton channel
+    nLep = len(self.selLeptons)
+    if nLep < 3: return False
+    ### And look for OSSF
+    l0 = self.selLeptons[0]
+    l1 = self.selLeptons[1]
+    l2 = self.selLeptons[2]
+    totId = l0.GetPDGid() + l1.GetPDGid() + l2.GetPDGid()
+    ich = -1
+    if   totId == 33: ich = ch.eee
+    elif totId == 35: ich = ch.mee
+    elif totId == 37: ich = ch.emm
+    elif totId == 39: ich = ch.mmm
+    #if totId != 33 and totId != 37: return
+    # lW, lZ1, lZ2
+    mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
+    if max(mz) == 0: return False
+    mzdif = [abs(x-91) for x in mz]
+    minmzdif = min(mzdif)
+    if minmzdif == 0: return False # +++, --- 
+    elif minmzdif == mzdif[0]:
+      lZ1 = dc(l0); lZ2 = dc(l1); lW = dc(l2)
+    elif minmzdif == mzdif[1]:
+      lZ1 = dc(l0); lZ2 = dc(l2); lW = dc(l1)
+    elif minmzdif == mzdif[2]:
+      lZ1 = dc(l1); lZ2 = dc(l2); lW = dc(l0)
+
+
+    zleps = [lZ1, lZ2]
+    tleps = [lW, lZ1, lZ2]
+    #If Wpt  > 20 not needed any more
+    if max([x.p.Pt() for x in tleps]) < 20: return False
+    if abs(InvMass(zleps) - 91.) > 15.: return False
+
+    ### Trigger
+    ###########################################
+    trigger = {
+     ch.eee:t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIEle20_Ele12_CaloIdL_TrackIdL_IsoVL_DZ,
+     ch.mee:t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIEle20_Ele12_CaloIdL_TrackIdL_IsoVL_DZ,
+     ch.emm:t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10,
+     ch.mmm:t.HLT_HIL3Mu20 or t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10,
+    }
+    passTrig = trigger[ich]
+
+    ### Remove overlap events in datasets
+    # In tt @ 5.02 TeV, 
+    if self.isData:
+      if   self.sampleDataset == datasets.SingleElec:
+        if   ich == ch.eee: passTrig = trigger[ch.eee]
+        elif ich == ch.mee: passTrig = trigger[ch.eee] 
+        elif ich == ch.emm: passTrig = trigger[ch.eee] and not trigger[ch.mmm]
+        else:               passTrig = False
+      elif self.sampleDataset == datasets.SingleMuon:
+        if   ich == ch.mee: passTrig = trigger[ch.mmm] and not trigger[ch.eee]
+        elif ich == ch.emm: passTrig = trigger[ch.mmm]
+        elif ich == ch.mmm: passTrig = trigger[ch.mmm]
+        else:               passTrig = False
+      #elif self.sampleDataset == datasets.DoubleMuon:
+      #  if   ich == ch.mmm: passTrig = trigger[ch.mmm]
+      #  elif ich == ch.emm: passTrig = t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10
+      #  elif ich == ch.mee: passTrig = False
+      #  else:               passTrig = False
+    if not passTrig: return False
+
 
     # Lepton SF
     self.SFelec = 1; self.SFmuon = 1; self.SFelecErr = 0; self. SFmuonErr = 0
@@ -488,63 +575,21 @@ class wzanalysis(analysis):
     nJets = len(self.selJets)
     nBtag = GetNBtags(self.selJets)
 
-    ### Set trilepton channel
-    nLep = len(self.selLeptons)
-    if nLep < 3: return
-    l0 = self.selLeptons[0]
-    l1 = self.selLeptons[1]
-    l2 = self.selLeptons[2]
-    totId = l0.GetPDGid() + l1.GetPDGid() + l2.GetPDGid()
-    ich = -1
-    if   totId == 33: ich = ch.eee
-    elif totId == 35: ich = ch.mee
-    elif totId == 37: ich = ch.emm
-    elif totId == 39: ich = ch.mmm
-    #if totId != 33 and totId != 37: return
-    # lW, lZ1, lZ2
-    mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
-    if max(mz) == 0: return
-    mzdif = [abs(x-91) for x in mz]
-    minmzdif = min(mzdif)
-    if minmzdif == 0: return # +++, --- 
-    elif minmzdif == mzdif[0]:
-      lZ1 = dc(l0); lZ2 = dc(l1); lW = dc(l2)
-    elif minmzdif == mzdif[1]:
-      lZ1 = dc(l0); lZ2 = dc(l2); lW = dc(l1)
-    elif minmzdif == mzdif[2]:
-      lZ1 = dc(l1); lZ2 = dc(l2); lW = dc(l0)
-    zleps = [lZ1, lZ2]
-    tleps = [lW, lZ1, lZ2]
+
+
+
+
+
     wpt = lW.Pt()
     m3l = (lW.P() + lZ1.P() + lZ2.P()).M()
-    ### Trigger
-    ###########################################
-    trigger = {
-     ch.eee:t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIEle20_Ele12_CaloIdL_TrackIdL_IsoVL_DZ,
-     ch.mee:t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIEle20_Ele12_CaloIdL_TrackIdL_IsoVL_DZ,
-     ch.emm:t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf or t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10,
-     ch.mmm:t.HLT_HIL3Mu20 or t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10,
-    }
-    passTrig = trigger[ich]
 
-    ### Remove overlap events in datasets
-    # In tt @ 5.02 TeV, 
-    if self.isData:
-      if   self.sampleDataset == datasets.SingleElec:
-        if   ich == ch.eee: passTrig = trigger[ch.eee]
-        elif ich == ch.mee: passTrig = trigger[ch.eee] 
-        elif ich == ch.emm: passTrig = trigger[ch.eee] and not trigger[ch.mmm]
-        else:               passTrig = False
-      elif self.sampleDataset == datasets.SingleMuon:
-        if   ich == ch.mee: passTrig = trigger[ch.mmm] and not trigger[ch.eee]
-        elif ich == ch.emm: passTrig = trigger[ch.mmm]
-        elif ich == ch.mmm: passTrig = trigger[ch.mmm]
-        else:               passTrig = False
-      #elif self.sampleDataset == datasets.DoubleMuon:
-      #  if   ich == ch.mmm: passTrig = trigger[ch.mmm]
-      #  elif ich == ch.emm: passTrig = t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10
-      #  elif ich == ch.mee: passTrig = False
-      #  else:               passTrig = False
+    if nJets > 1:
+      htmiss = (lW.P()+lZ1.P()+lZ2.P()+TLorentzVector(self.selJets[0].P())+TLorentzVector(self.selJets[1].P())).Pt()
+    elif nJets > 0:
+      htmiss = (lW.P()+lZ1.P()+lZ2.P()+TLorentzVector(self.selJets[0].P())).Pt()
+    else:
+      htmiss = (lW.P()+lZ1.P()+lZ2.P()).Pt()
+
 
     ### Event weight and othe global variables
     ###########################################
@@ -570,9 +615,7 @@ class wzanalysis(analysis):
     self.SetWeight(systematic.nom)
     weight = self.weight
 
-    if not passTrig: return
-    if max([x.p.Pt() for x in tleps]) < 20: return
-    if abs(InvMass(zleps) - 91.) > 15.: return
+
     
     for isyst in systlabel.keys():
       if not self.doSyst and isyst != systematic.nom: continue
@@ -589,4 +632,15 @@ class wzanalysis(analysis):
       if wpt > 20: 
         self.FillAll(ich, lev.wpt, isyst, leps, jets, pmet)
       if m3l > 100:
-	self.FillAll(ich, lev.m3l, isyst, leps, jets, pmet)
+        self.FillAll(ich, lev.m3l, isyst, leps, jets, pmet)
+      if htmiss > 15:
+        self.FillAll(ich, lev.htmiss, isyst, leps, jets, pmet)
+      if wpt > 20 and htmiss > 15 and m3l > 100:
+        self.FillAll(ich, lev.sr, isyst, leps, jets, pmet)
+
+      if tleps[0].passTightID and wpt > 20 and htmiss > 15 and m3l > 100:
+        self.FillAll(ich, lev.srtight, isyst, leps, jets, pmet)
+
+      if tleps[0].passTightID:
+        self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)
+    return True

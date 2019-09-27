@@ -48,10 +48,14 @@ def Draw(name = 'Lep0Pt_eee_lep', rebin = 1, xtit = '', ytit = 'Events', doStack
 
 joblist = []
 #lev = 'met' #lep, met
-for lev in ['lep', 'wpt','m3l']:
+for lev in ['sr','tight', 'srtight']:
   for ch in ['eee','mee','emm','mmm','All']:
  #joblist.append(Draw(GetAllCh('htmiss', lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV')
     if ch == 'All':
+      joblist.append(Draw(GetAllCh('HT', lev), 1, 'H_{T} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetAllCh('HTmiss', lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetAllCh('TrilepPt', lev), 1, 'p_{T}^{lll} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetAllCh('ZPt', lev), 1, 'p_{T}^{Z} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetAllCh('MET', lev), 1, 'p_{T}^{miss} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetAllCh('m3l', lev), 1, 'm_{3l} (GeV)',      'Events / 10 GeV'))
       joblist.append(Draw(GetAllCh('mtw',lev), 1, 'm_{T}^{W} (GeV)',    'Events / 10 GeV'))
@@ -69,7 +73,15 @@ for lev in ['lep', 'wpt','m3l']:
       joblist.append(Draw(GetAllCh('ZPt', lev),  1, 'Z p_{T} (GeV)', 'Events'))
       joblist.append(Draw(GetAllCh('MaxDeltaPhi', lev), 1, 'max(#Delta#phi (ll)) (rad/#pi)', 'Events'))
       joblist.append(Draw(GetAllCh('NJets', lev), 1, 'Jet multiplicity', 'Events', True))
+      joblist.append(Draw(GetAllCh('lW_genFlavor', lev), 1, 'Generator Flavor (lepW)', 'Events'))
+      joblist.append(Draw(GetAllCh('lZ0_genFlavor', lev), 1, 'Generator Flavor (lepZ0)', 'Events'))
+      joblist.append(Draw(GetAllCh('lZ1_genFlavor', lev), 1, 'Generator Flavor (lepZ1)', 'Events'))
+
     else:
+      joblist.append(Draw(GetName('HT', ch, lev), 1, 'H_{T} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetName('HTmiss', ch, lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetName('TrilepPt', ch, lev), 1, 'p_{T}^{lll} (GeV)', 'Events / 5 GeV'))
+      joblist.append(Draw(GetName('ZPt', ch, lev), 1, 'p_{T}^{Z} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetName('MET',ch, lev), 1, 'p_{T}^{miss} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetName('m3l',ch, lev), 1, 'm_{3l} (GeV)',      'Events / 10 GeV'))
       joblist.append(Draw(GetName('mtw',ch, lev), 1, 'm_{T}^{W} (GeV)',    'Events'))
@@ -87,6 +99,9 @@ for lev in ['lep', 'wpt','m3l']:
       joblist.append(Draw(GetName('ZPt',ch, lev),  1, 'Z p_{T} (GeV)', 'Events'))
       joblist.append(Draw(GetName('MaxDeltaPhi',ch, lev), 1, 'max(#Delta#phi (ll)) (rad/#pi)', 'Events'))
       joblist.append(Draw(GetName('NJets',ch, lev), 1, 'Jet multiplicity', 'Events', True))
+      joblist.append(Draw(GetName('lW_genFlavor',ch, lev), 1, 'Generator Flavor (lepW)', 'Events'))
+      joblist.append(Draw(GetName('lZ0_genFlavor',ch, lev), 1, 'Generator Flavor (lepZ0)', 'Events'))
+      joblist.append(Draw(GetName('lZ1_genFlavor',ch, lev), 1, 'Generator Flavor (lepZ1)', 'Events'))
 
 if doParallel:
   from multiprocessing import Pool

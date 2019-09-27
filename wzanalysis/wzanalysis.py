@@ -48,7 +48,7 @@ class systematic():
   PUDo = 9
   PrefireUp = 10
   PrefireDo = 11
-systlabel = {systematic.nom:'', systematic.MuonEffUp:'MuonEffUp', systematic.MuonEffDo:'MuonEffDown', systematic.ElecEffUp:'ElecEffUp', systematic.ElecEffDo:'ElecEffDown', systematic.JESUp:'JESUp', systematic.JESDo:'JESDown', systematic.JERUp:'JERUp', systematic.JERDo:'JERDown'}
+systlabel = {systematic.nom:''}#, systematic.MuonEffUp:'MuonEffUp', systematic.MuonEffDo:'MuonEffDown', systematic.ElecEffUp:'ElecEffUp', systematic.ElecEffDo:'ElecEffDown', systematic.JESUp:'JESUp', systematic.JESDo:'JESDown', systematic.JERUp:'JERUp', systematic.JERDo:'JERDown'}
 #systematic.PUUp:'PUUp', systematic.PUDo:'PUDown'}
 
 ### Datasets to ints
@@ -379,7 +379,7 @@ class wzanalysis(analysis):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
-      # Tight ID
+      """# Tight ID
       if not t.Muon_mediumId[i]: continue
       # Tight ISO, RelIso04 < 0.15
       if not t.Muon_pfRelIso04_all[i] < 0.25: continue
@@ -392,15 +392,15 @@ class wzanalysis(analysis):
       passTightID = True
       if t.Muon_jetIdx[i] >= 0:
         if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.4941: passTightID = False
-      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
-      self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i], passTightID))
+      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False"""
+      self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i], False))
        
     ##### Electrons
     for i in range(t.nElectron):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Electron_pt[i], t.Electron_eta[i], t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
-      etaSC    = abs(p.Eta());
+      """etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
       convVeto = t.Electron_convVeto[i]
       R9       = t.Electron_r9[i]
@@ -423,8 +423,8 @@ class wzanalysis(analysis):
       if t.Electron_jetIdx[i] >= 0:
         if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.4941: 
           passTightID = False
-      print 3, passTightID
-      self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i], passTightID))
+      print 3, passTightID"""
+      self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i], False))
       
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
@@ -445,11 +445,11 @@ class wzanalysis(analysis):
     #if totId != 33 and totId != 37: return
     # lW, lZ1, lZ2
     mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
-    if max(mz) == 0: return False
+    if max(mz) == 0: return False # +++, ---
     mzdif = [abs(x-91) for x in mz]
     minmzdif = min(mzdif)
-    if minmzdif == 0: return False # +++, --- 
-    elif minmzdif == mzdif[0]:
+    #if minmzdif == 0: return False # This made no sense here, we would be filtering exactly on peak Zs!  
+    if minmzdif == mzdif[0]:
       lZ1 = dc(l0); lZ2 = dc(l1); lW = dc(l2)
     elif minmzdif == mzdif[1]:
       lZ1 = dc(l0); lZ2 = dc(l2); lW = dc(l1)
@@ -460,8 +460,8 @@ class wzanalysis(analysis):
     zleps = [lZ1, lZ2]
     tleps = [lW, lZ1, lZ2]
     #If Wpt  > 20 not needed any more
-    if max([x.p.Pt() for x in tleps]) < 20: return False
-    if abs(InvMass(zleps) - 91.) > 15.: return False
+    """if max([x.p.Pt() for x in tleps]) < 20: return False
+    if abs(InvMass(zleps) - 91.) > 15.: return False"""
 
     ### Trigger
     ###########################################
@@ -626,7 +626,7 @@ class wzanalysis(analysis):
       leps = tleps
 
       self.FillAll(ich, lev.lep, isyst, leps, jets, pmet)
-  
+      """
       if pmet.Pt() > 25: 
         self.FillAll(ich,lev.met,isyst,leps,jets,pmet)
       if wpt > 20: 
@@ -642,5 +642,5 @@ class wzanalysis(analysis):
         self.FillAll(ich, lev.srtight, isyst, leps, jets, pmet)
 
       if tleps[0].passTightID:
-        self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)
+        self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)"""
     return True

@@ -48,10 +48,11 @@ def Draw(name = 'Lep0Pt_eee_lep', rebin = 1, xtit = '', ytit = 'Events', doStack
 
 joblist = []
 #lev = 'met' #lep, met
-for lev in ['sr','tight', 'srtight']:
+for lev in ['lep']:#'sr','tight', 'srtight']:
   for ch in ['eee','mee','emm','mmm','All']:
  #joblist.append(Draw(GetAllCh('htmiss', lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV')
     if ch == 'All':
+      joblist.append(Draw(GetAllCh('Yields', ''), 1, 'Yields', 'Events'))
       joblist.append(Draw(GetAllCh('HT', lev), 1, 'H_{T} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetAllCh('HTmiss', lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetAllCh('TrilepPt', lev), 1, 'p_{T}^{lll} (GeV)', 'Events / 5 GeV'))
@@ -78,6 +79,7 @@ for lev in ['sr','tight', 'srtight']:
       joblist.append(Draw(GetAllCh('lZ1_genFlavor', lev), 1, 'Generator Flavor (lepZ1)', 'Events'))
 
     else:
+      joblist.append(Draw(GetName('Yields', ch, ''), 1, 'Yields', 'Events'))
       joblist.append(Draw(GetName('HT', ch, lev), 1, 'H_{T} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetName('HTmiss', ch, lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV'))
       joblist.append(Draw(GetName('TrilepPt', ch, lev), 1, 'p_{T}^{lll} (GeV)', 'Events / 5 GeV'))
@@ -111,7 +113,7 @@ if doParallel:
   def execute(com):
     eval(com)
 
-  with closing(Pool(8)) as p:
+  with closing(Pool(60)) as p:
     print "Now running " + str(len(joblist)) + " commands using: " + str(8) + " processes. Please wait" 
     retlist1 = p.map_async(execute, joblist, 1)
     while not retlist1.ready():

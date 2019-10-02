@@ -379,7 +379,7 @@ class wzanalysis(analysis):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
-      """# Tight ID
+      # Tight ID
       if not t.Muon_mediumId[i]: continue
       # Tight ISO, RelIso04 < 0.15
       if not t.Muon_pfRelIso04_all[i] < 0.25: continue
@@ -392,7 +392,7 @@ class wzanalysis(analysis):
       passTightID = True
       if t.Muon_jetIdx[i] >= 0:
         if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.4941: passTightID = False
-      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False"""
+      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
       self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i], False))
        
     ##### Electrons
@@ -400,7 +400,7 @@ class wzanalysis(analysis):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Electron_pt[i], t.Electron_eta[i], t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
-      """etaSC    = abs(p.Eta());
+      etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
       convVeto = t.Electron_convVeto[i]
       R9       = t.Electron_r9[i]
@@ -417,13 +417,10 @@ class wzanalysis(analysis):
       if p.Pt() < 12 or abs(p.Eta()) > 2.4: continue
       passTightID = True
       if ord(t.Electron_lostHits[i]) > 0: passTightID = False
-      print 1, passTightID
       if relIso03 > 0.04: passTightID = False
-      print 2, passTightID
       if t.Electron_jetIdx[i] >= 0:
         if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.4941: 
           passTightID = False
-      print 3, passTightID"""
       self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i], False))
       
     leps = self.selLeptons
@@ -460,8 +457,8 @@ class wzanalysis(analysis):
     zleps = [lZ1, lZ2]
     tleps = [lW, lZ1, lZ2]
     #If Wpt  > 20 not needed any more
-    """if max([x.p.Pt() for x in tleps]) < 20: return False
-    if abs(InvMass(zleps) - 91.) > 15.: return False"""
+    if max([x.p.Pt() for x in tleps]) < 20: return False
+    if abs(InvMass(zleps) - 91.) > 15.: return False
 
     ### Trigger
     ###########################################
@@ -594,14 +591,14 @@ class wzanalysis(analysis):
     ### Event weight and othe global variables
     ###########################################
     self.nvtx   = t.PV_npvs
-    '''
+    
     if not self.isData:
       self.PUSF   = t.puWeight
       self.PUUpSF = t.puWeightUp
       self.PUDoSF = t.puWeightDown
     else:
       self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
-    '''
+    
     self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
 
     self.prefWeight = 1; self.prefWeightUp = 1; self.prefWeightDo = 1

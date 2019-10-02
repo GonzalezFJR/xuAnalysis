@@ -21,6 +21,7 @@ processDic = {
 #'data': 'HighEGJet, SingleMuon'}##SingleMuon
 processes = ['VV', 'DY', 'top', 'WZ']
 
+process = processDic
 ### Definition of colors for the processes
 colors ={
 'WZ'  : kYellow-4,

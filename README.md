@@ -16,8 +16,6 @@ or using ssh:
 Implement your analysis in "myAnalysis/myAnalysis.py".
 Edit the cfg file "myAnalysis/testcfg.cfg". Introduce the path to the trees and the sample. 
 
-    source executeTest.sh
-
 ## Description of the analysis
 
 ### The framework

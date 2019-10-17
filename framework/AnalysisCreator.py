@@ -20,6 +20,12 @@ class AnalysisCreator:
     for l in lines:
       self.selection += '%s%s\n'%(' '*addNSpaces, l)
 
+  def AddHeader(self, h):
+    self.header += h
+
+  def AddInit(self, t):
+    self.init += t
+
   def AddCut(self, cut):
     cut = self.CraftCut(cut)
     self.cuts.append(cut)
@@ -33,7 +39,7 @@ class AnalysisCreator:
     if tit == '': tit = hname
     hline = 'self.CreateTH1F("%s", "%s", %i, %1.2f, %1.2f)\n'%(hname, tit, nbins, b0, bN)
     var = self.vars[hname]
-    cut = ' ' if self.histocuts[hname] == '' else ' if %s:'%self.histocuts[hname]
+    cut = '' if self.histocuts[hname] == '' else 'if %s:'%self.histocuts[hname]
     fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, var, (','+self.weights[hname]) if self.weights[hname] != '' else '')
     self.histos.append(hline)
     if write: self.fillLine.append(fillLine)
@@ -88,8 +94,11 @@ class AnalysisCreator:
     body  = "'''\n Analysis %s, created by xuAnalysis\n https://github.com/GonzalezFJR/xuAnalysis\n'''\n\n"%self.analysisName
     body += 'import os,sys\nsys.path.append(os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/")\n'
     body += 'from framework.analysis import analysis\nimport framework.functions as fun\nfrom ROOT import TLorentzVector\n\n'
+    body += self.header
     body += 'class %s(analysis):\n'%self.analysisName
-    body += '  def init(self):\n    # Create your histograms here\n'
+    body += '  def init(self):\n'
+    body += self.init
+    body +='    # Create your histograms here\n'
     for line in self.histos: body += '    %s\n'%line
     body += '\n  def insideLoop(self,t):\n    # WRITE YOU ANALYSIS HERE\n\n'
 
@@ -113,6 +122,7 @@ class AnalysisCreator:
 
   def GetConfigFileTemplate(self):
     path = self.path
+    print 'PATH : ', path
     if path == '': path = '/Insert/path/to/trees/here/'
     cfg  = '# cfg file to run xuAnalysis\n'
     cfg += '# To execute: \n'
@@ -174,6 +184,8 @@ class AnalysisCreator:
     self.SetNSlots(nSlots)
     self.SetWeight(weight)
     self.SetBasePath(basepath)
+    self.header = ''
+    self.init = ''
     self.selection = ''
     self.cuts = []
     self.histos = []

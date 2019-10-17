@@ -10,7 +10,7 @@ def isdigit(a):
   if m == '-' and n.isdigit(): return True
   return False
 
-def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verbose = False, FullPaths = False):
+def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verbose = False, FullPaths = False, retry = True):
   ''' Find rootfiles in path with a given name '''
   files = []
   if ',' in sampleName:
@@ -39,9 +39,10 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
     files.append(f)
   if FullPaths: files = [path + x for x in files]
   if len(files) == 0: 
-    files = findValidRootfiles(path, 'Tree_' + sampleName, getOnlyNumberedFiles, verbose, FullPaths)
-  if len(files) == 0: 
-    print '[ERROR]: Not files "' + sampleName + '" found in: ' + path
+    if retry: files = findValidRootfiles(path, 'Tree_' + sampleName, getOnlyNumberedFiles, verbose, FullPaths, False)
+    if len(files) == 0: 
+      print '[ERROR]: Not files "' + sampleName + '" found in: ' + path
+      return []
   return files
 
 def GetFiles(path, name, verbose = False):
@@ -59,6 +60,19 @@ def GetNGenEvents(fname):
     h = f.Get('Count')
     return h.GetBinContent(1)
   else: print '[ERROR] [GetNGenEvents]: wrong input' 
+
+def GetHisto(fname, hname):
+  ''' Returns a histogram from files fname '''
+  if isinstance(fname, list):
+    h0 = GetHisto(fname[0], hname)
+    for fi in fname[1:]: h0.Add(GetHisto(fi, hname))
+    return h0
+  else:
+    f = TFile.Open(fname)
+    h = f.Get(hname)
+    h.SetDirectory(0)
+    f.Close()
+    return h
 
 def GetSumWeights(fname):
   ''' Returns number of events from the 'SumWeights' histograms '''

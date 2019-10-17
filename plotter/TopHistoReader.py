@@ -1,10 +1,11 @@
 import os,sys
 #import ROOT
-from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis
+from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis, TChain
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
 from ROOT import gPad, gROOT
 from ROOT.TMath import Sqrt as sqrt
 from copy import deepcopy
+from framework.fileReader import GetFiles
 average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/')
@@ -21,6 +22,7 @@ class TopHistoReader:
    self.histoprefix = p
 
  def SetPath(self, path):
+   if path == '': path = '/'
    if not path[-1] == '/': path += '/'
    self.path = path
 
@@ -82,7 +84,8 @@ class TopHistoReader:
    if syst != '':
      if self.IsHisto(pr, name + '_' + syst) or self.IsHisto(pr, name + '_' + syst+'Up') or self.IsHisto(pr, name + '_' + syst+'Down'): return True
      return False
-   filename = self.path + self.fileprefix + pr + '.root'
+   if not pr.endswith('.root'): pr += '.root'
+   filename = self.path + self.fileprefix + pr
    f = TFile.Open(filename)
    if not hasattr(f, name): return False
    else: return True
@@ -113,7 +116,8 @@ class TopHistoReader:
        h.Add(self.GetNamedHisto(n, pr, rebin))
      return h
 
-   filename = self.path + self.fileprefix + pr + '.root'
+   filename = self.path + self.fileprefix + pr
+   if not filename.endswith('.root'): filename += '.root'
    if self.verbose: print ' >> Opening file: ' + filename
    f = TFile.Open(filename)
    if self.verbose: print ' >> Looking for histo: ' + name
@@ -202,11 +206,11 @@ class TopHistoReader:
    self.SetIsData(False)
    return h.GetBinContent(1)
 
- def GetFiduEvents(self, pr = '', ilev = ''):
+ def GetFiduEvents(self, pr = '', ilev = '', chan = ''):
    ''' Returns value for FiduEvents histogram '''
    if ilev != '': self.SetLevel(ilev)
    self.SetIsData(True)
-   h = self.GetNamedHisto("FiduEvents",pr)
+   h = self.GetNamedHisto("H_FiduYields_%s"%chan,pr)
    self.SetIsData(False)
    y = h.GetBinContent(self.GetBinNumberForLevel(self.level))
    self.SetIsData(False)
@@ -727,7 +731,9 @@ class HistoSaver:
   self.outname = n
 
  def GetOutFileName(self):
-  return self.outdir + self.outname + '.root'
+  oname = self.outdir + self.outname
+  if not oname.endswith('.root'): oname += '.root'
+  return oname
 
  def AddSystematic(self, *s):
   if len(s) == 1: s = s[0] 
@@ -1146,7 +1152,7 @@ class SampleSums:
     self.files = GetFiles(self.path, self.sname)
 
   def LoadTree(self):
-    self.tree = TChain(tname, tname)
+    self.tree = TChain(self.tname, self.tname)
     for f in self.files: self.tree.Add(f)
 
   def GetCountsFromSumWTree(self):
@@ -1155,7 +1161,7 @@ class SampleSums:
      self.LoadTree()
    count = 0
    sow   = 0
-   for event in self.treesow:
+   for event in self.tree:
      count += event.genEventCount
      sow   += event.genEventSumw
    self.count = count
@@ -1221,7 +1227,7 @@ class SampleSums:
 
   def GetCount(self, hname):
     if hname!= '': self.SetCountHistoName(hname)
-    if self.t.IsHisto(self.countName):
+    if self.t.IsHisto(self.files[0], self.countName):
       h = t.GetNamedHisto(self.countName)
       count = h.GetBinContent(1)
       self.count = count
@@ -1231,7 +1237,7 @@ class SampleSums:
 
   def GetSOW(self, hname):
     if hname!= '': self.SetSOWname(hname)
-    if self.t.IsHisto(self.SOWname):
+    if self.t.IsHisto(self.files[0],self.SOWname):
       h = t.GetNamedHisto(self.SOWname)
       sow = h.GetBinContent(1)
       self.sow   = sow
@@ -1244,6 +1250,6 @@ class SampleSums:
     self.sname = sname
     self.tname = tname
     self.GetFiles()
-    self.t = TopHistoReader(path)
+    self.t = TopHistoReader('')#self.path)
     self.SetNormPDFhistoName(normPDFhistoName)
-    self.SetNormScaleHitstoName(normScaleHitstoName)
+    self.SetNormScaleHistoName(normScaleHitstoName)

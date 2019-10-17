@@ -23,8 +23,8 @@ class looper(AnalysisCreator):
     self.CreateAnalysis()
     #cfgpath = '%s/%s.cfg'%(self.outpath, self.cfgname)
     cfgpath = self.cfgname
-    print 'Executing analysis \'%s\' using cfg file \'%s\' in \'%s/%s/\'...'%(self.analysisName, cfgpath, self.outpath, self.analysisName)
-    return run('%s/%s/%s'%(self.outpath,self.analysisName,cfgpath))
+    print 'Executing analysis \'%s\' using cfg file \'%s\' in \'%s/%s/\'...'%(self.analysisName, cfgpath, mypath+self.outpath, self.analysisName)
+    return run('%s/%s/%s'%(mypath+self.outpath,self.analysisName,cfgpath))
 
   def AutoRemove(self):
     command = 'rm -r %s/%s'%(self.outpath, self.analysisName)
@@ -50,6 +50,8 @@ class looper(AnalysisCreator):
     self.SetOptions(options)
     self.SetNSlots(nSlots)
     self.SetWeight(weight)
+    self.header = ''
+    self.init = ''
     self.selection = ''
     self.cuts = []
     self.histos = []

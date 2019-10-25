@@ -20,6 +20,7 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
   s.SetBinLabels(binlabels)
   hm.SetStackOverflow(doStackOverflow)
   name = GetName(var, ch, lev)
+  hm.IsScaled = False
   hm.SetHisto(name, rebin)
   s.SetHistosFromMH(hm)
   s.SetOutName(name)
@@ -42,13 +43,17 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
 lev = 'dilepton'
 ch = 'ElMu'
 
+Draw('Lep0Eta', 'MuMu', lev, 2, 'Lep #eta', 'Events', False, maxscale = 1.6)
+Draw('Lep0Eta', 'ElEl', lev, 2, 'Lep #eta', 'Events', False, maxscale = 1.6)
 Draw('DYMass', 'MuMu', lev, 10, 'm_{#mu#mu} (GeV)', 'Events', False, maxscale = 1.6)
 Draw('DYMass', 'ElEl', lev, 10, 'm_{ee} ',          'Events', False, maxscale = 1.6)
 for chan in ['ElEl', 'MuMu', 'ElMu']:
   Draw('NJets',  chan, 'dilepton', 1, 'Jet multiplicity', 'Events', True)
   Draw('Yields', chan, '', 1, 'Level', 'Events', False, maxscale = 1.2)
+  Draw('YieldsSS', chan, '', 1, 'Level', 'Events', False, maxscale = 1.2)
   for lev in ['dilepton', '2jets']:
     if lev == '2jets' and chan != 'ElMu': continue
+    Draw('Lep0Eta', chan, lev, 2, 'Lep #eta', 'Events', False, maxscale = 1.6)
     Draw('Lep0Pt', chan, lev, 2, 'Leading lep p_{T} (GeV)', 'Events', False, maxscale = 1.6)
     Draw('Lep1Pt', chan, lev, 2, 'Subeading lep p_{T} (GeV)', 'Events', False, maxscale = 1.6)
     Draw('DilepPt', chan, lev, 2, 'Dilepton p_{T} (GeV)', 'Events', False, maxscale = 1.6)

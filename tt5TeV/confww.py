@@ -9,27 +9,26 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 
 ### Input and output
 #path = '../temp5TeV/sep17/'
-#path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep22/'
 path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/oct22/'
-outpath = '~/www/tt5TeV/newplots/'
+outpath = './WW5TeVplots/'
 
 ### Definition of the processes
 processDic = {
-'VV'  : 'WZTo3LNU,WWTo2L2Nu,ZZTo2L2Nu,ZZTo4L',
-'Nonprompt': 'TTsemilep,W0JetsToLNu,W1JetsToLNu,W2JetsToLNu,W3JetsToLNu',#'WJetsToLNu,TTsemilep',
-'tW'  : 'tW_noFullHad,  tbarW_noFullHad',
+'VZ'  : 'WZTo3LNU,ZZTo2L2Nu,ZZTo4L',
+'WW'  : 'WWTo2L2Nu',
+'Nonprompt': 'WJetsToLNu,TTsemilep',
+'top'  : 'TT,tW_noFullHad,  tbarW_noFullHad',
 'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
-'tt'  : 'TT',
 'data': 'HighEGJet, SingleMuon'}##SingleMuon
-processes = ['VV', 'Nonprompt', 'DY', 'tW', 'tt']
+processes = ['VZ', 'Nonprompt', 'DY', 'top', 'WW']
 
 ### Definition of colors for the processes
 colors ={
-'VV'  : kTeal+5,
+'WW'  : kTeal+5,
 'Nonprompt': kGray+2,
-'tW'  : kOrange+1,
+'VZ'  : kOrange+1,
 'DY'  : kAzure+2,
-'tt'  : kRed+1,
+'top' : kRed+1,
 'data': 1}
 
 systematics = 'MuonEff, ElecEff, TrigEff, JES, JER'#, Prefire, ISR, FSR'

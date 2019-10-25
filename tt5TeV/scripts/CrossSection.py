@@ -1,5 +1,6 @@
 from plotter.TopHistoReader import TopHistoReader, Process, SampleSums
 from plotter.WeightReader import WeightReader
+from framework.fileReader import GetFiles
 from ROOT.TMath import Sqrt as sqrt
 from plotter.OutText import OutText
 
@@ -349,27 +350,27 @@ class CrossSection:
     self.pathToTrees = ptt
 
   def SetMotherName(self, mn):
-    self.mothername = mn
+    self.motherfname = mn
 
   def GetNGenEvents(self):
     self.treesow = TChain('Runs', 'Runs')
-    files = GetFiles(self.pathToTrees, self.mothername)
+    files = GetFiles(self.pathToTrees, self.motherfname)
     for f in files: self.treesow.Add(f)
 
-  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 308.54, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = []):
+  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 308.54, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = [], histoPrefix = ''):
     ''' Set the xsec from histos '''
     if isinstance(expUnc, str): expUnc = expUnc.replace(' ', '').split(',')
     if isinstance(modUnc, str): modUnc = modUnc.replace(' ', '').split(',')
     self.SetChan(chan); self.SetLevel(level)
     self.t = TopHistoReader(path)
+    self.t.SetHistoNamePrefix(histoPrefix)
     self.t.SetLumi(lumi)
     self.t.SetChan(chan); self.t.SetLevel(level)
-    self.t.SetHistoNamePrefix('')
-    self.ss = SampleSums(self.pathToTrees, self.motherfname)
+    self.ss = SampleSums(self.pathToTrees, self.motherfname, 'Runs')
     signalName = signal[0]
     signalSample = signal[1]
-    fiduEvents = self.t.GetFiduEvents(signalSample,level)
-    nGenEvents = self.ss.GetCount() #self.GetNGenEvents(signalSample)
+    fiduEvents = self.t.GetFiduEvents(signalSample,level,chan)
+    nGenEvents = self.ss.GetCount('Count') #self.GetNGenEvents(signalSample)
     self.SetLumiUnc(lumiunc)
     self.SetFiduEvents(fiduEvents)
     self.SetGenEvents(nGenEvents)
@@ -388,8 +389,8 @@ class CrossSection:
     # Modeling uncertainties
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modUnc or 'scale' in modUnc:
       pathToTrees = self.pathToTrees #'/pool/ciencias/userstorage/juanr/nanoAODv4/5TeV/5TeV_5sept/'
-      motherfname = self.mothername  #'TT_TuneCP5_PSweights_5p02TeV'
-      w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=296.1, histoprefix='')
+      motherfname = self.motherfname #'TT_TuneCP5_PSweights_5p02TeV'
+      w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=296.1, histoprefix=histoPrefix)
       #w.SetSampleName(signalName)
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())

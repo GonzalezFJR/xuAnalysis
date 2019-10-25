@@ -61,6 +61,8 @@ class looper(AnalysisCreator):
     self.fillLine = []
     self.weights = {}
     self.histocuts = {}
+    self.syst = ['']
+    self.expr = {}
     if cut != '': self.AddCut(cut)
     if processdic != {}:
       for pr in processdic:

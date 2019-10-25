@@ -533,6 +533,7 @@ class Stack(Plot):
         h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
         self.hleg.append(h)
         leg.AddEntry(self.hleg[-1], pr, 'f')
+      for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')
       if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
       leg.Draw()
 

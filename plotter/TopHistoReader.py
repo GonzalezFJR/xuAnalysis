@@ -1008,11 +1008,13 @@ class HistoManager:
     return sum2
 
   def ScaleByLumi(self):
+    if self.IsScaled: return
     for pr in self.processList:
       for h in self.indic[pr]: 
         self.indic[pr][h].SetStats(0)
         self.indic[pr][h].SetTitle('')
         self.indic[pr][h].Scale(self.lumi)
+    self.IsScaled = True
 
   def GetUncHist(self, syst = '', includeStat = True):
     ''' syst is a name, not a label... returns nominal histo with nice uncertainties '''
@@ -1111,6 +1113,7 @@ class HistoManager:
     self.indic = indic
     self.lumi = lumi
     self.readFromTrees = False
+    self.IsScaled = False
     if(indic == {} and path != '' and processDic != {}): self.readFromTrees = True
     if self.readFromTrees and hname != '':
       self.SetHisto(hname, rebin)
@@ -1144,6 +1147,29 @@ class HistoManager:
 
   def GetHisto(self, sname, hname):
     return self.indic[sname][hname]
+
+  def Save(self, outname = 'htemp', htag = ''):
+    if not outname.endswith('.root'): outname+='.root'
+    if os.path.isfile(outname): os.rename(outname, outname+'.old')
+    fout = TFile.Open(outname,'recreate')
+    if htag == '': htag = self.histoname
+    prlist = self.indic.keys()
+    for pr in prlist:
+      hlist = self.indic[pr].keys()
+      for h in hlist:
+        if htag != '' and not h.startswith(htag): continue
+        histo = self.indic[pr][h]
+        if htag == h: # Nominal!
+          histo.SetName(pr)
+          histo.Write()
+        else:
+          term = h[len(htag):]
+          if term.startswith('_'): term = term[1:]
+          histo.SetName("%s_%s"%(pr, term))
+          histo.Write()
+    fout.Close()
+          
+    
 
 
 class SampleSums:

@@ -846,6 +846,15 @@ class HistoManager:
     if isinstance(listOfProcesses, str): listOfProcesses = listOfProcesses.split(',')
     self.processList = listOfProcesses
 
+  def AddToSignals(self, signals):
+    if isinstance(signals, str):
+      if ',' in signals: signals = signals.replace(' ', '').split(',')
+      else             : signals = [signals]
+      self.AddToSignals(signals)
+      return
+    else: self.signalProcess += signals
+                     
+
   def SetHistoName(self, hname, rebin = 1):
     self.histoname = hname
     self.rebin = 1
@@ -904,7 +913,7 @@ class HistoManager:
       self.SumHistos('')
       for s in self.systname: self.SumHistos(s)
       return
-    if syst == '':
+    elif syst == '':
       if isinstance(self.histoname, list):
         h = self.indic[self.processList[0]][self.histoname[0]].Clone("sum0")
         for hname in self.histoname[1:]:
@@ -1009,7 +1018,7 @@ class HistoManager:
 
   def ScaleByLumi(self):
     if self.IsScaled: return
-    for pr in self.processList:
+    for pr in self.processList + self.signalProcess:
       for h in self.indic[pr]: 
         self.indic[pr][h].SetStats(0)
         self.indic[pr][h].SetTitle('')
@@ -1106,6 +1115,7 @@ class HistoManager:
     self.SetSystList(syslist)
     self.sumdic = {}
     self.systlabels = []
+    self.signalProcess = []
     self.SetProcessDic(processDic)
     self.SetSystDic(systdic)
     self.SetTopReader(path)
@@ -1123,11 +1133,14 @@ class HistoManager:
       for hm in HM: self.Add(hm)
       return self
     if not self.histoname == HM.histoname or not self.rebin == HM.rebin:
+      HM.lumi = 1
       HM.SetHisto(self.histoname, self.rebin)
     self.sumdic = {}
-    #self.lumi = 1
+    self.lumi = 1
     for pr in self.indic.keys():
+      #print '>>>> hadding process: %s'%pr
       for hname in self.indic[pr].keys():
+        #print '   ---> hname = ', hname
         self.indic[pr][hname].Add(HM.indic[pr][hname])
     self.LookForSystLabels()
     self.SumHistos()
@@ -1167,6 +1180,11 @@ class HistoManager:
           if term.startswith('_'): term = term[1:]
           histo.SetName("%s_%s"%(pr, term))
           histo.Write()
+    hdata = self.GetDataHisto()
+    if hdata == None: hdata = self.GetSumBkg()
+    hdata.SetName('data_obs')
+    hdata.SetDirectory(0)
+    hdata.Write()
     fout.Close()
           
     

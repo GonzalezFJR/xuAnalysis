@@ -247,8 +247,8 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1F()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
-    else:                     h = TH1F(name, title, nbins, b0, bN)
+    if isinstance(b0, array): h = TH1F(name+'_'+self.outname, title, nbins, b0)
+    else:                     h = TH1F(name+'_'+self.outname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -256,8 +256,8 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1D()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1D(name, title, nbins, b0)
-    else:                     h = TH1D(name, title, nbins, b0, bN)
+    if isinstance(b0, array): h = TH1D(name+'_'+self.outname, title, nbins, b0)
+    else:                     h = TH1D(name+'_'+self.outname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 

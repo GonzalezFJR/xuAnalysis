@@ -26,7 +26,7 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
   if verbose: print ' >> Looking for files in path: ' + path
   for f in os.listdir(path):
     if not f[-5:] == '.root': continue
-    if not '_' in f: continue
+    #if not '_' in f: continue
     n = f[:-5].split('_')[-1]
     s = f[:-5].split('_')[:-1]
     if not isdigit(n): s.append(n)

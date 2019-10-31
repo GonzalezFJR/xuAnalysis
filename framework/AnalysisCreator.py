@@ -60,6 +60,7 @@ class AnalysisCreator:
   def AddExpr(self, ename, var, expr):
     if not isinstance(var, list): var = [var]
     for v in var: 
+      if v == '': continue
       st = 'fun.GetValue(t, "%s", syst)'%v
       expr = re.sub(r'\b%s\b'%v, st, expr)
     self.expr[ename] = expr

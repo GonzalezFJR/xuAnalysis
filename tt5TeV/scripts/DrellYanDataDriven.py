@@ -155,7 +155,7 @@ class DYDD:
    chan, level = self.SetChanAndLevel(chan, level)
    rinElec, errElec = self.GetDataIn(elname, level)
    rinMuon, errMuon  = self.GetDataIn(muname, level)
-   k = (rinElec/rinMuon if rinMuon != 0 else 0) if self.GetChan() == elname else (rinMuon/rinElec if rinElec != 0 else 0)
+   k = (rinElec/rinMuon if rinMuon != 0 else 0) if chan == elname else (rinMuon/rinElec if rinElec != 0 else 0)
    kerr = k*SumSquare([errElec/(2*rinElec) if rinElec != 0 else 0,errMuon/(2*rinMuon) if rinMuon !=0 else 0])
    return k, kerr
 

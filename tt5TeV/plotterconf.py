@@ -10,14 +10,15 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 ### Input and output
 #path = '../temp5TeV/sep17/'
 #path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep22/'
-path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/oct22/'
-outpath = '~/www/tt5TeV/newplots/'
+path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/nov21v2/'
+outpath = '/nfs/fanae/user/juanr/www/tt5TeV/metCheck/'
 
 ### Definition of the processes
 processDic = {
 'VV'  : 'WZTo3LNU,WWTo2L2Nu,ZZTo2L2Nu,ZZTo4L',
-'Nonprompt': 'TTsemilep,W0JetsToLNu,W1JetsToLNu,W2JetsToLNu,W3JetsToLNu',#'WJetsToLNu,TTsemilep',
+'Nonprompt': 'TTsemilep, W0JetsToLNu,W1JetsToLNu,W2JetsToLNu,W3JetsToLNu',#'WJetsToLNu,TTsemilep',
 'tW'  : 'tW_noFullHad,  tbarW_noFullHad',
+#'DY'  : 'DYJetsToLL_MLL50',
 'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
 'tt'  : 'TT',
 'data': 'HighEGJet, SingleMuon'}##SingleMuon

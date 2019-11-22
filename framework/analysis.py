@@ -368,14 +368,15 @@ class analysis:
     for f in self.files: self.tchain.Add(f)
 
     evlistmode = None
-    if not (self.elistf == ""):
-        evlistf = TFile(self.elistf,"READ")
-        evlist  = evlistf.Get("evlist")
-        evlistmode = "READING"
-    else:
-        evlistf = TFile("./"+ self.fileName + "_evlist.root","RECREATE")
-        evlist  = TEventList("evlist","evlist")
-        evlistmode = "RECORDING"
+    if self.elistf:
+        if not (self.elistf == ""):
+            evlistf = TFile(self.elistf,"READ")
+            evlist  = evlistf.Get("evlist")
+            evlistmode = "READING"
+        else:
+            evlistf = TFile("./"+ self.fileName + "_evlist.root","RECREATE")
+            evlist  = TEventList("evlist","evlist")
+            evlistmode = "RECORDING"
 
     self.init()
     self.createHistos()
@@ -392,34 +393,46 @@ class analysis:
     if self.verbose >= 1: 
       print '[INFO] Loaded %i inputs'%len(self.inputs)
       print '[INFO] Created %i outputs'%len(self.obj)
-    if evlistmode == "RECORDING":
-      for iEv in range(first, last):
-        #if self.verbose > 0: 
-        self.printprocess(iEv)
-        self.tchain.GetEntry(iEv)
-        self.hRunEvents.Fill(1)
-        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
-        else: self.EventWeight = 1
-        ### Start the analysis here!
-        passing = self.insideLoop(self.tchain)
-        if passing: evlist.Enter(iEv)
-      evlistf.cd()
-      evlist.Write()
-      evlistf.Close()
 
-    elif evlistmode == "READING":
-      print "Will apply reduced event list of length %i"%evlist.GetN()
-      for iiEv in range(1,evlist.GetN()+1):
-        #if self.verbose > 0: 
-        iEv = evlist.GetEntry(iiEv)
-        if iEv >= last or iEv < first: continue #To filter out in multicore
-        self.printprocess(iEv)
-        self.tchain.GetEntry(iEv)
-        self.hRunEvents.Fill(1)
-        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
-        else: self.EventWeight = 1
-        ### Start the analysis here!
-        self.insideLoop(self.tchain)        
+    if self.elistf:
+      if evlistmode == "RECORDING":
+        for iEv in range(first, last):
+          #if self.verbose > 0: 
+          self.printprocess(iEv)
+          self.tchain.GetEntry(iEv)
+          self.hRunEvents.Fill(1)
+          if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+          else: self.EventWeight = 1
+          ### Start the analysis here!
+          passing = self.insideLoop(self.tchain)
+          if passing: evlist.Enter(iEv)
+        evlistf.cd()
+        evlist.Write()
+        evlistf.Close()
+
+      elif evlistmode == "READING":
+        print "Will apply reduced event list of length %i"%evlist.GetN()
+        for iiEv in range(1,evlist.GetN()+1):
+          #if self.verbose > 0: 
+          iEv = evlist.GetEntry(iiEv)
+          if iEv >= last or iEv < first: continue #To filter out in multicore
+          self.printprocess(iEv)
+          self.tchain.GetEntry(iEv)
+          self.hRunEvents.Fill(1)
+          if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+          else: self.EventWeight = 1
+          ### Start the analysis here!
+          self.insideLoop(self.tchain)
+     else:
+       for iEv in range(first, last): 
+         self.printprocess(iEv) 
+         self.tchain.GetEntry(iEv) 
+         self.hRunEvents.Fill(1) 
+         if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights 
+         else: self.EventWeight = 1 
+         ### Start the analysis here! 
+         self.insideLoop(self.tchain)
+ 
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.saveOutput()
     return self.obj
 

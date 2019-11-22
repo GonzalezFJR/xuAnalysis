@@ -251,7 +251,7 @@ def main(ocfgfile = ''):
               print "Loaded elistfile from %s, remember to check that this makes sense or you might be screwed"%(elist+ "/" + l + "_evlist.root")
               elistfiles[l] = elist+ "/" + l + "_evlist.root"
           else:
-            elistfiles[l] = ""
+            elistfiles[l] = False
       else:
         lst = l.split(':')
         key = lst[0]

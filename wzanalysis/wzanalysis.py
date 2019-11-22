@@ -13,6 +13,7 @@ from modules.PrefireCorr import PrefCorr5TeV
 #from modules.GetBTagSF import BtagReader
 
 ### Channel to ints
+### Thse are the 4 available production channels in 3l WZ
 class ch():
   eee  = 0
   mmm  = 1
@@ -21,20 +22,22 @@ class ch():
 chan = {ch.eee:'eee', ch.mmm:'mmm', ch.mee:'mee', ch.emm:'emm'}
 
 ### Levels to ints
+### These are the cut levels, i.e. the steps at which we save plots when running
 class lev():
-  lep      = 0
-  met      = 1
-  wpt      = 2
-  m3l      = 3
-  htmiss   = 4
-  sr       = 5
-  srtight  = 6
-  tight    = 7
+  lep      = 0 #Has 3 leptons, all other cuts inherit from these
+  met      = 1 #MET >= 20
+  wpt      = 2 #pt(lepW) >= 20
+  m3l      = 3 #m3l >= 100 cut
+  htmiss   = 4 #htmiss >= 20 cut
+  sr       = 5 #SR with all loose leptons
+  srtight  = 6 #SR with tight ID applied
+  tight    = 7 #Tight ID but not SR cuts
 
-level = {lev.lep:'lep', lev.tight : 'tight'}
-"""lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l', lev.htmiss:'htmiss', lev.sr:'sr', lev.tight:'tight', lev.srtight:'srtight'}"""
+### The dictionary is needed in order to run everything
+level = {lev.lep:'lep', lev.tight : 'tight', lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l', lev.htmiss:'htmiss', lev.sr:'sr', lev.tight:'tight', lev.srtight:'srtight'}
 
 ### Systematic uncertainties
+### In the future need to reenable, but for the moment we optimize without them
 class systematic():
   nom       = -1 # Nominal
   MuonEffUp = 0
@@ -62,13 +65,11 @@ class datasets():
 dataset = {datasets.SingleElec:'HighEGJet', datasets.SingleMuon:'SingleMuon'}
 
 ################ Analysis
+################ The main analysis class with all the needed things
 class wzanalysis(analysis):
   def init(self):
-    # Load SF files
+    # Load Scale Factor files
     if not self.isData:
-      #self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, abseta
-      #self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, abseta
-      #self.LoadHisto('ElecSF',    basepath+'./inputs/ElecTightCBid94X.root',  'EGamma_SF2D') # eta, pt
       self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, abseta
       self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, abseta
       self.LoadHisto('RecoEB',    basepath+'./inputs/ElecReco_EB_30_100.root',  'g_scalefactors') # Barrel
@@ -79,7 +80,9 @@ class wzanalysis(analysis):
       self.LoadHisto('ElecTrigEE',    basepath+'./inputs/ScaleFactors_PbPb_LooseWP_EE_Centr_0_100_HLTonly_preliminaryID.root',  'g_scalefactors') # Endcap
 
       # Modules to have some weights in MC
+      # Pile Up
       self.PUweight = puWeight_5TeV(self.tchain, False)
+      # Trigger prefiring
       self.PrefCorr = PrefCorr5TeV(False)
 
     # To apply b tagging SF
@@ -99,7 +102,7 @@ class wzanalysis(analysis):
 
     self.resetObjects()
 
-    # Sample name
+    # Sample names
     name = self.sampleName
     self.isDY = True if 'DY' in self.sampleName else False
 
@@ -108,12 +111,11 @@ class wzanalysis(analysis):
     for i, dataName in dataset.items(): 
       if dataName == name: self.sampleDataset = i
 
-    # Jet and lep pT
+    # Jet global pT cuts
     self.JetPtCut  = 20
-    self.LepPtCut  = 8
-    self.Lep0PtCut = 20
 
   def resetObjects(self):
+    # This is called each time we enter a new iteration: either for each new event or due to an alternative shape systematic variation
     self.selLeptons = []
     self.selJets = []
     self.pmet = TLorentzVector()
@@ -145,7 +147,8 @@ class wzanalysis(analysis):
     return self.obj[self.GetName(var, chan, level, syst)]
 
   def createHistos(self):
-    ''' Create all the histos for the analysis '''
+    ''' Create all the histos for the analysis 
+    This includes all possible plots that you can do later'''
     ### Yields histos
     for key_chan in chan:
       ichan = chan[key_chan]
@@ -213,7 +216,7 @@ class wzanalysis(analysis):
           self.NewHisto('JetAllDCsv', ichan,ilevel,isyst, 40, 0, 1)
 
   def FillHistograms(self, leptons, jets, pmet, ich, ilev, isys):
-    ''' Fill all the histograms. Take the inputs from lepton list, jet list, pmet '''
+    ''' Fill all the histograms. Take the inputs from lepton list, jet list, pmet, etc... '''
     if not len(leptons) >= 3: return # Just in case
     self.SetWeight(isys)
     mz = InvMass(leptons[1],leptons[2])
@@ -233,6 +236,7 @@ class wzanalysis(analysis):
     lZ0pt = lZ0.Pt(); lZ0eta = lZ0.Eta(); lZ0phi = lZ0.Phi()
     lZ1pt = lZ1.Pt(); lZ1eta = lZ1.Eta(); lZ1phi = lZ1.Phi()
     
+    # Enjoy the lepton high level variables 
     maxdphi = max([lW.DeltaPhi(lZ0), lW.DeltaPhi(lZ1), lZ0.DeltaPhi(lZ1)])    
     tript   = (lW+lZ0+lZ1).Pt()
     zpt     = (lZ0+lZ1).Pt()
@@ -240,7 +244,8 @@ class wzanalysis(analysis):
     dphi  = DeltaPhi(lep0, lep1)
     mll   = InvMass(lep0, lep1)
     dipt  = DiPt(lep0, lep1)
-                     
+    
+    #Then MET and JET related  
     met = pmet.Pt()
     ht = 0; 
     for j in jets: ht += j.Pt()
@@ -370,6 +375,7 @@ class wzanalysis(analysis):
     return leps, jets, pmet
 
   def insideLoop(self, t):
+    # This is called for each event and has the meaty part of the analysis
     self.resetObjects()
 
     ### Lepton selection
@@ -381,23 +387,23 @@ class wzanalysis(analysis):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
-      # Tight ID
+      # Loose (analysis) ID == MediumPrompt POG ID 
       if not t.Muon_mediumPromptId[i]: continue
-      # Tight ISO, RelIso04 < 0.15
+      # Loose ISO
       if not t.Muon_miniIsoId[i] >= 2: continue
       if not t.Muon_sip3d[i] < 5: continue
-      # Tight IP
+      # Loose IP
       dxy = abs(t.Muon_dxy[i])
       dz  = abs(t.Muon_dz[i] )
       if dxy > 0.05 or dz > 0.1: continue
-      # pT < 12 GeV, |eta| < 2.4
+      # Acceptance cuts; Momentum cut to respect trigger requirements
       if p.Pt() < 8 or abs(p.Eta()) > 2.4: continue
+      # Now the tight (analysis) ID (leptonMVA + tighter miniIso)
       passTightID = True
       if t.Muon_mvaTTH[i] < 0.75: passTightID = False
       if t.Muon_miniIsoId[i] < 4: passTightID = False
       if t.Muon_jetIdx[i] >= 0:
-        if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522:  continue
-      #if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
+        if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522: passTightID = False
       self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i] if not(self.isData) else "\0", passTightID))
        
     ##### Electrons
@@ -410,27 +416,34 @@ class wzanalysis(analysis):
       passTightID = True
       dxy = abs(t.Electron_dxy[i])
       dz  = abs(t.Electron_dz[i] )
+      # Loose (analysis) ID is POG MVALoose WP `miniIso
       if dxy > 0.05 or dz > 0.1: continue
+      # Acceptance cuts (tighter lepton pt cut due to trigger)
       if p.Pt() < 12 or abs(p.Eta()) > 2.4: continue
       if ord(t.Electron_lostHits[i]) > 0: continue
       if not(t.Electron_mvaFall17V2Iso_WPL[i]): continue
       if not(t.Electron_miniPFRelIso_all[i] < 0.4): continue
-      if not(t.Electron_sip3d > 8): passTightID = False
       if not(t.Electron_convVeto[i]): continue
+
+      # Tight (analysis) ID is leptonMVA + tighter miniIso
+      if not(t.Electron_sip3d > 8): passTightID = False
       if (t.Electron_mvaTTH[i] < 0.25): passTightID = False
       if (t.Electron_miniPFRelIso_all[i] > 0.1): passTightID = False
       if t.Electron_jetIdx[i] >= 0:
-        if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.1522: continue
+        if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.1522: passTightID = False
 
       self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i] if not(self.isData) else "\0", passTightID))
       
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
+
+    # Order leptons by pT
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
     ### Set trilepton channel
     nLep = len(self.selLeptons)
+    # >= 3 leptons for WZ, != 4 to decrease ZZ
     if nLep != 3: return False
-    ### And look for OSSF
+    ### And look for OSSF and classify the channel
     l0 = self.selLeptons[0]
     l1 = self.selLeptons[1]
     l2 = self.selLeptons[2]
@@ -441,12 +454,12 @@ class wzanalysis(analysis):
     elif totId == 37: ich = ch.emm
     elif totId == 39: ich = ch.mmm
     #if totId != 33 and totId != 37: return
-    # lW, lZ1, lZ2
+    # lW, lZ1, lZ2 assignation (same as 13 TeV)
     mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
     #if max(mz) == 0: return False # +++, ---
     mzdif = [abs(x-91) for x in mz]
     minmzdif = min(mzdif)
-    if minmzdif == 0: return False # This made no sense here, we would be filtering exactly on peak Zs!  
+    #if minmzdif == 0: return False # This made no sense here, we would be filtering exactly on peak Zs!  
     if minmzdif == mzdif[0]:
       lZ1 = dc(l0); lZ2 = dc(l1); lW = dc(l2)
     elif minmzdif == mzdif[1]:
@@ -457,9 +470,11 @@ class wzanalysis(analysis):
 
     zleps = [lZ1, lZ2]
     tleps = [lW, lZ1, lZ2]
-    #If Wpt  > 20 not needed any more
+    #If Wpt  > 20 this is not needed any more
     #if max([x.p.Pt() for x in tleps]) < 20: return False
-    #if abs(InvMass(zleps) - 91.) > 15.: return False
+
+    # On Z-peak
+    if abs(InvMass(zleps) - 91.) > 15.: return False
 
     ### Trigger
     ###########################################
@@ -484,12 +499,6 @@ class wzanalysis(analysis):
         elif ich == ch.emm: passTrig = trigger[ch.mmm]
         elif ich == ch.mmm: passTrig = trigger[ch.mmm]
         else:               passTrig = False
-      #elif self.sampleDataset == datasets.DoubleMuon:
-      #  if   ich == ch.mmm: passTrig = trigger[ch.mmm]
-      #  elif ich == ch.emm: passTrig = t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10
-      #  elif ich == ch.mee: passTrig = False
-      #  else:               passTrig = False
-    #if not passTrig: return False
 
 
     # Lepton SF
@@ -573,11 +582,6 @@ class wzanalysis(analysis):
     nJets = len(self.selJets)
     nBtag = GetNBtags(self.selJets)
 
-
-
-
-
-
     wpt = lW.Pt()
     m3l = (lW.P() + lZ1.P() + lZ2.P()).M()
 
@@ -587,7 +591,6 @@ class wzanalysis(analysis):
       htmiss = (lW.P()+lZ1.P()+lZ2.P()+TLorentzVector(self.selJets[0].P())).Pt()
     else:
       htmiss = (lW.P()+lZ1.P()+lZ2.P()).Pt()
-
 
     ### Event weight and othe global variables
     ###########################################
@@ -612,9 +615,10 @@ class wzanalysis(analysis):
     ###########################################
     self.SetWeight(systematic.nom)
     weight = self.weight
+    # Better require the trigger properly 
+    if not passTrig: return
 
-
-    
+    # And now fill all histograms for each variation  
     for isyst in systlabel.keys():
       if not self.doSyst and isyst != systematic.nom: continue
       if self.isData and isyst != systematic.nom: continue
@@ -624,7 +628,7 @@ class wzanalysis(analysis):
       leps = tleps
 
       self.FillAll(ich, lev.lep, isyst, leps, jets, pmet)
-      """
+      
       if pmet.Pt() > 25: 
         self.FillAll(ich,lev.met,isyst,leps,jets,pmet)
       if wpt > 20: 
@@ -638,9 +642,7 @@ class wzanalysis(analysis):
      
       if tleps[0].passTightID and wpt > 20 and htmiss > 15 and m3l > 100:
         self.FillAll(ich, lev.srtight, isyst, leps, jets, pmet)
-      """
-      #print tleps[0].passTightID, m3l > 105, wpt > 20, abs(InvMass(zleps) - 91.) < 15.
-      #print ich, lev.tight, isyst, leps, jets, pmet
+      
       if tleps[0].passTightID and m3l > 105 and wpt > 20 and abs(InvMass(zleps) - 91.) < 30. and pmet.Pt() > 15:
         self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)
 

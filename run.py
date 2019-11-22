@@ -110,15 +110,21 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
     sendJobs = False
   if isinstance(sample, str) and ',' in sample: sample = sample.replace(' ','').split(',')
   sap = sample if not isinstance(sample, list) else sample[0]
-  gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root'])
+  gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root', path + sap + '.root'])
   if len(gs) == 0: print 'ERROR: file %s not found in %s'%(sap, path)
   isData = GuessIsData(gs[0])
   
   xsec = GetXsec(xsec, outname, verbose, isData) if not dotest else 1
 
-  selecModul = __import__('%s.%s'%(selection,selection))
-  modul = getattr(selecModul, selection)
-  analysis = getattr(modul, selection)
+  try:
+    selecModul = __import__('%s.%s'%(selection,selection))
+  except:
+    selecModul = __import__('%s'%selection)
+  try:
+    modul = getattr(selecModul, selection)
+    analysis = getattr(modul, selection)
+  except:
+    analysis = getattr(selecModul, selection)
   evRang = []
   samples = GetFiles(path, sample)
   sname = samples[0].split('/')[-1]
@@ -209,6 +215,10 @@ def main(ocfgfile = ''):
   print '>> fname = ', fname
   if os.path.isfile(fname):
     if verbose: print ' >> Using config file \'%s\'...'%fname
+    ptocfg = './'
+    if '/' in fname: ptocfg = fname[0:fname.rfind('/')+1]
+    print 'Path to cfg = ', ptocfg
+    sys.path.append(ptocfg)
     selection = ''
     spl = []
     samplefiles = {}

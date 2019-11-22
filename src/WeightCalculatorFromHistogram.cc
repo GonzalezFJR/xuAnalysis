@@ -73,6 +73,8 @@ TH1* WeightCalculatorFromHistogram::ratio(TH1 *hist, TH1* targethist, bool fixLa
   for(int i=0; i<nbins; ++i) {
     float weight = vals[i] !=0 ? targetvals[i]/vals[i] : 1.;
     if(verbose_) std::cout <<  std::setprecision(3) << weight << " ";
+    //std::cout <<  std::setprecision(3) << weight << " "; // XXX
+    //std::cout << std::endl;
     weights.push_back(weight);
   }
   if(verbose_) std::cout << "." << std::endl;

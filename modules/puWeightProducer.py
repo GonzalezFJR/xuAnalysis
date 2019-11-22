@@ -16,10 +16,10 @@ class puWeightProducer:
       self.myh = self.loadHisto(myfile,myhist)
     else:
         self.fixLargeWeights = False #AR: it seems to crash with it, to be deugged
-    self.autoPU=True
-    ROOT.gROOT.cd()
-    self.myh=self.targeth.Clone("autoPU")
-    self.myh.Reset()
+        self.autoPU=True
+        ROOT.gROOT.cd()
+        self.myh=self.targeth.Clone("autoPU")
+        self.myh.Reset()
     self.name = name
     self.norm = norm
     self.verbose = verbose
@@ -35,7 +35,7 @@ class puWeightProducer:
       ROOT.gSystem.Load(pathtolib)
     else: #if "/WeightCalculatorFromHistogram_cc.so" not in ROOT.gSystem.GetLibraries():
       ROOT.gROOT.ProcessLine(".L %s/src/WeightCalculatorFromHistogram.cc++" %basepath)
-    #dummy = ROOT.WeightCalculatorFromHistogram
+    dummy = ROOT.WeightCalculatorFromHistogram
     self.beginFile(intree)
 
   def loadHisto(self,filename,hname):
@@ -63,14 +63,13 @@ class puWeightProducer:
       self.out.Branch(self.name+"Down","F")
    '''
 
-  def GetWeight(self, event, direc = 0):
+  def GetWeight(self, nvtx, direc = 0):
     """process event, return True (go to next module) or False (fail, go to next event)"""
-    if hasattr(event,self.nvtxVar):
-      nvtx = int(getattr(event,self.nvtxVar))
-      weight = self._worker.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
-      if direc ==  0: return weight
-      if direc ==  1: return self._worker_plus.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
-      if direc == -1: return self._worker_minus.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
+    #if hasattr(event,self.nvtxVar): nvtx = int(getattr(event,self.nvtxVar))
+    weight = self._worker.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
+    if direc ==  0: return weight
+    if direc ==  1: return self._worker_plus.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
+    if direc == -1: return self._worker_minus.getWeight(nvtx) if nvtx < self.myh.GetNbinsX() else 1
     else: return 1
     '''
       self.out.GetBranch(self.name).Fill(weight)

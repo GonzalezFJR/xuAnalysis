@@ -145,7 +145,7 @@ class WeightReader:
    self.SetYield(t.GetYield()*self.GetLumi())
    self.hpdf      = t.GetHisto(n,self.PDFhistoName)
    self.hscale    = t.GetHisto(n,self.scaleHistoName)
-   self.hPS       = t.GetHisto(n,self.PShistoName)
+   #self.hPS       = t.GetHisto(n,self.PShistoName)
    if self.pathToTrees != '' and self.motherfname != '': self.LoadTreeSumOfWeights(self.pathToTrees, self.motherfname)
    self.hsumpdf   = t.GetNamedHisto(self.normPDFhistoName)    if self.normPDFhistoName    != '' else self.GetSumPDFhistoFromSumWTree()
    self.hsumscale = t.GetNamedHisto(self.normScaleHitstoName) if self.normScaleHitstoName != '' else self.GetSumScaleHistoFromSumWTree()

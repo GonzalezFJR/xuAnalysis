@@ -247,8 +247,8 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1F()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1F(name, title, nbins, b0)
-    else:                     h = TH1F(name, title, nbins, b0, bN)
+    if isinstance(b0, array): h = TH1F(name+'_'+self.outname, title, nbins, b0)
+    else:                     h = TH1F(name+'_'+self.outname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -256,8 +256,8 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1D()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1D(name, title, nbins, b0)
-    else:                     h = TH1D(name, title, nbins, b0, bN)
+    if isinstance(b0, array): h = TH1D(name+'_'+self.outname, title, nbins, b0)
+    else:                     h = TH1D(name+'_'+self.outname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -322,7 +322,7 @@ class analysis:
       filename = fname
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
     pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
-    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '")\''
+    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "' + self.options + '")\''
     return t + pycom
 
   def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):
@@ -447,6 +447,8 @@ class analysis:
     if self.index >= 0: out = self.outpath + self.outname + '_' + str(self.index) + '.root'
     if self.verbose >= 0: print ' >> Saving output in: ' + out
     self.outNormal = out
+    pout = './' if not '/' in out else out[:out.rfind('/')+1]
+    if not os.path.isdir(pout): os.mkdir(pout)
     fout = TFile.Open(out, "recreate")
     if objlist == None: objlist = self.obj
     for element in objlist: objlist[element].Write()

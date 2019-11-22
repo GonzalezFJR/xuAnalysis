@@ -365,12 +365,14 @@ class HistoComp(Plot):
 
   def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = ''):
     if self.doNorm: h.Scale(1/h.Integral())
+    h.SetStats(0); h.SetLineWidth(2); h.SetTitle('')
     if isinstance(color, int):
       h.SetLineColor(color)
-      h.SetFillColor(color)
+      #h.SetFillColor(color)
     self.histos.append([h, drawOpt, drawErr, addToLeng])
 
   def AddRatioHisto(self, h, drawOpt = 'hist', drawErr = 0):
+    h.SetTitle('')
     self.ratioh.append([h, drawOpt, drawErr])
 
   def Draw(self, doSetLogy = False):
@@ -496,6 +498,10 @@ class Stack(Plot):
     if hasattr(self, 'MCstatUnc'): self.MCstatUnc.Draw("e2,same")
     if hasattr(self, 'MCunc'):     self.MCunc    .Draw("e2,same")
 
+    # Extra histograms
+    for h in self.overlapHistos:
+      h.Draw("hist,same")
+
     # Errors in data
     if hasattr(self, 'hData'):
       self.hData.SetBinErrorOption(TH1.kPoisson)
@@ -527,6 +533,7 @@ class Stack(Plot):
         h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
         self.hleg.append(h)
         leg.AddEntry(self.hleg[-1], pr, 'f')
+      for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')
       if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
       leg.Draw()
 
@@ -550,6 +557,7 @@ class Stack(Plot):
         self.hRatio.Draw('pE0X0,same')
         self.hRatio.SetMaximum(self.PlotRatioMax)
         self.hRatio.SetMinimum(self.PlotRatioMin)
+      for h in self.extraRatio: h.Draw("hist, same")
       legr.Draw()
     else: 
       for r in self.Tex: r.Draw()
@@ -597,8 +605,28 @@ class Stack(Plot):
     self.MCstatUnc.SetFillColorAlpha(color, alpha)
     self.MCstatUnc.SetFillStyle(fill)
 
+  def AddOverlapHisto(self, h):
+    self.overlapHistos.append(h)
+
+  def AddSignalHisto(self, h, color = 1, mode = 'overlap', ratioBkg = True):
+    ''' mode = overlap, stack, ontop '''
+    h.SetLineColor(color)
+    h.SetLineWidth(2)
+    if mode == 'overlap' or mode == 'ontop': h.SetFillStyle(0)
+    hBkg = self.TotMC.Clone('ontop_%s'%h.GetName())
+    if mode == 'ontop': h.Add(hBkg)
+    if ratioBkg:
+      hRatio = h.Clone('ratio_%s'%h.GetName())
+      hRatio.Divide(hBkg)
+      self.extraRatio.append(hRatio)
+    h.SetDirectory(0)
+    self.AddOverlapHisto(h)
+     
+
   def __init__(self, outpath = './', outname = 'temp', doRatio = True, HM='', colors=''):
     self.Initialize(outpath, outname, doRatio)
     self.colors = colors
     self.HM = HM
+    self.overlapHistos = []
+    self.extraRatio = []
     if HM!= '': self.SetHistosFromMH(HM)

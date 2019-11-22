@@ -1,4 +1,4 @@
-import os,sys
+import os,sys, re
 mypath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(mypath)
 
@@ -20,6 +20,17 @@ class AnalysisCreator:
     for l in lines:
       self.selection += '%s%s\n'%(' '*addNSpaces, l)
 
+  def AddSyst(self, syst):
+    if isinstance(syst, list): self.syst += syst
+    elif ',' in syst: self.AddSyst(syst.replace(' ', '').split(','))
+    else: self.syst.append(syst)
+
+  def AddHeader(self, h):
+    self.header += h
+
+  def AddInit(self, t):
+    self.init += t
+
   def AddCut(self, cut):
     cut = self.CraftCut(cut)
     self.cuts.append(cut)
@@ -31,14 +42,28 @@ class AnalysisCreator:
     self.vars[hname] = var
     self.histocuts[hname] = cut
     if tit == '': tit = hname
-    hline = 'self.CreateTH1F("%s", "%s", %i, %1.2f, %1.2f)\n'%(hname, tit, nbins, b0, bN)
+    for syst in self.syst:
+      hline = 'self.CreateTH1F("%s%s", "%s", %i, %1.2f, %1.2f)\n'%(hname, '' if syst == '' else '_'+syst, tit, nbins, b0, bN)
+      self.histos.append(hline)
     var = self.vars[hname]
-    cut = ' ' if self.histocuts[hname] == '' else ' if %s:'%self.histocuts[hname]
-    fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, var, (','+self.weights[hname]) if self.weights[hname] != '' else '')
-    self.histos.append(hline)
+    weight = self.weights[hname]
+    cut = '' if self.histocuts[hname] == '' else ' if %s:'%self.histocuts[hname]
+    if var    in self.expr.keys()  : varstring = var
+    else                           : varstring = 'fun.GetValue(t, "%s",syst)'%var
+    if   weight == ''              : weistring = ''
+    elif weight in self.expr.keys(): weistring = ', ' + weight
+    else                           : weistring = ', fun.GetValue(t, "%s",syst)'%weight
+    fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, varstring, weistring)
     if write: self.fillLine.append(fillLine)
     else    : return fillLine
-           
+
+  def AddExpr(self, ename, var, expr):
+    if not isinstance(var, list): var = [var]
+    for v in var: 
+      if v == '': continue
+      st = 'fun.GetValue(t, "%s", syst)'%v
+      expr = re.sub(r'\b%s\b'%v, st, expr)
+    self.expr[ename] = expr
 
   def CraftCut(self, cut):
     return cut
@@ -88,9 +113,14 @@ class AnalysisCreator:
     body  = "'''\n Analysis %s, created by xuAnalysis\n https://github.com/GonzalezFJR/xuAnalysis\n'''\n\n"%self.analysisName
     body += 'import os,sys\nsys.path.append(os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/")\n'
     body += 'from framework.analysis import analysis\nimport framework.functions as fun\nfrom ROOT import TLorentzVector\n\n'
+    body += self.header
+    body += '\nsystematics = ' + str(self.syst) + '\n'
     body += 'class %s(analysis):\n'%self.analysisName
-    body += '  def init(self):\n    # Create your histograms here\n'
-    for line in self.histos: body += '    %s\n'%line
+    body += '  def init(self):\n'
+    body += self.init
+    body +='    # Create your histograms here\n'
+    #if len(self.syst) > 0: body +='    for syst in systematics:\n'     
+    for line in self.histos: body += '    %s%s\n'%('  ' if len(self.syst) > 0 else '', line)
     body += '\n  def insideLoop(self,t):\n    # WRITE YOU ANALYSIS HERE\n\n'
 
     if self.selection != '': 
@@ -101,18 +131,22 @@ class AnalysisCreator:
       body += '\n    # Requirements\n'
       for cut in self.cuts: body += '    if not %s: return\n'%cut
 
+
     hnames = self.vars.keys()
     if len(hnames) > 0:
       body += '\n    # Filling the histograms\n'
+      if len(self.syst) > 0: body += '\n    for syst in systematics:\n'
+      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr])
     #  for h in hnames:
     #    var = self.vars[h]
     #    cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
     #    body += '  %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, h, var, (','+self.weights[h]) if self.weights[h] != '' else '')
-    for line in self.fillLine: body += '%s\n'%line
+    for line in self.fillLine: body += '%s%s\n'%('  ' if len(self.syst) > 0 else '', line)
     return body
 
   def GetConfigFileTemplate(self):
     path = self.path
+    print 'PATH : ', path
     if path == '': path = '/Insert/path/to/trees/here/'
     cfg  = '# cfg file to run xuAnalysis\n'
     cfg += '# To execute: \n'
@@ -174,6 +208,8 @@ class AnalysisCreator:
     self.SetNSlots(nSlots)
     self.SetWeight(weight)
     self.SetBasePath(basepath)
+    self.header = ''
+    self.init = ''
     self.selection = ''
     self.cuts = []
     self.histos = []
@@ -182,6 +218,8 @@ class AnalysisCreator:
     self.vars = {}
     self.weights = {}
     self.histocuts = {}
+    self.syst = ['']
+    self.expr = {}
 
 
 def main():

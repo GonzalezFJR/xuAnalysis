@@ -251,6 +251,8 @@ class tt5TeV(analysis):
     self.isTT    = True if self.outname[0:2] == 'TT' else False
     self.isDY    = True if 'DY' in self.sampleName      else False
 
+    self.NewHisto('PUWeights', '', '', '', 100,0,5)
+
     ### Yields histos
     if self.isTT: self.NewHisto('FiduEvents', '', '', '', 5,0,5)
     for key_chan in chan:
@@ -607,7 +609,7 @@ class tt5TeV(analysis):
       p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
       # Tight ID
-      if not t.Muon_tightId[i]: continue
+      #if not t.Muon_tightId[i]: continue
       # Tight ISO, RelIso04 < 0.15
       if not t.Muon_pfRelIso04_all[i] < 0.15: continue
       # Tight IP
@@ -633,7 +635,7 @@ class tt5TeV(analysis):
       convVeto = t.Electron_convVeto[i]
       R9       = t.Electron_r9[i]
       # Tight cut-based Id
-      if not t.Electron_cutBased[i] >= 4: continue # Tightcut-based Id
+      if not t.Electron_cutBased[i] >= 2: continue # 4 Tightcut-based Id
       if not convVeto: continue
       # Isolation (RelIso03) tight --> Included in nanoAOD cutbased bit!!
       relIso03 = t.Electron_pfRelIso03_all[i]
@@ -649,6 +651,7 @@ class tt5TeV(analysis):
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
+    self.selLeptons.reverse()
 
     # Lepton SF
     self.SFelec = 1; self.SFmuon = 1; self.SFelecErr = 0; self. SFmuonErr = 0
@@ -673,6 +676,7 @@ class tt5TeV(analysis):
           self.SFelecErr += serr*serr + rerr*rerr
       self.SFelecErr = sqrt(self.SFelecErr)
       self.SFmuonErr = sqrt(self.SFmuonErr)
+      self.SFmuon = 1
 
     ### Jet selection
     ###########################################
@@ -770,9 +774,9 @@ class tt5TeV(analysis):
       elif ich == ch.ElMu:
         mu = l0 if l0.IsMuon() else l1
         el = l1 if l0.IsMuon() else l0
-        self.TrigSF   = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys = 0)
-        self.TrigSFUp = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys = 0)
-        self.TrigSFDo = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys = 0)
+        self.TrigSF   = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys =  0)
+        self.TrigSFUp = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys =  1)
+        self.TrigSFDo = self.GetEMuTrigSF(el.Pt(), el.Eta(), mu.Pt(), mu.Eta(), sys = -1)
 
     ### Remove overlap events in datasets
     # In tt @ 5.02 TeV, 
@@ -797,12 +801,11 @@ class tt5TeV(analysis):
     #  self.PUSF   = t.puWeight
     #  self.PUUpSF = t.puWeightUp
     #  self.PUDoSF = t.puWeightDown
-    '''
-    elif not self.isData:
-      self.PUSF   = self.PUweight.GetWeight(t)
-      self.PUUpSF = self.PUweight.GetWeightUp(t)
-      self.PUDoSF = self.PUweight.GetWeightDown(t)
-    '''
+    #if not self.isData:
+    #  self.PUSF   = self.PUweight.GetWeight(t)
+    #  self.PUUpSF = self.PUweight.GetWeightUp(t)
+    #  self.PUDoSF = self.PUweight.GetWeightDown(t)
+    self.obj['PUWeights'].Fill(self.PUSF)
  
     self.prefWeight = 1; self.prefWeightUp = 1; self.prefWeightDo = 1
     if not self.isData:

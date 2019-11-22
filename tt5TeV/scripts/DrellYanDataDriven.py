@@ -1,10 +1,13 @@
-from plotter.TopHistoReader import TopHistoReader
-from plotter.OutText import OutText
+import os,sys
+sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis_all/',1)[0]+'/xuAnalysis_all/')
+from plotter.TopHistoReader import TopHistoReader, OutText
 
 from ROOT.TMath import Sqrt as sqrt
 square  = lambda x : x*x
 SumSquare = lambda x : sqrt(sum([square(i) for i in x]))
 
+elname = 'ElEl' #Elec
+muname = 'MuMu' #Muon
 class DYDD:
 
  ### Set methods
@@ -15,16 +18,26 @@ class DYDD:
  def SetOutPath(self, p):
    self.outpath = p
  
- def SetMode(self, mode = 'OF'):
+ def SetMode(self, mode = 'OF', hname = ''):
    self.doOF = True
-   if mode == 'SF' or mode == 'ElEl' or mode == 'MuMu':
+   if mode in ['SF', 'Elec', 'ElEl', 'Muon', 'MuMu']:
      self.doOF = False
-   if   self.doOF: self.SetZhistoName('DYHistoElMu')
-   else: self.SetZhistoName('DYHisto')
+   if   self.doOF: 
+     if hname != '': self.SetHistoNameOF(hname)
+     self.SetZhistoName(self.hnameOF)
+   else:
+     if hname != '': self.SetHistoNameSF(hname)
+     self.SetZhistoName(self.hnameSF)
 
  def SetLumi(self, l):
    self.lumi = l
    self.t.SetLumi(self.lumi)
+
+ def SetHistoNameOF(self, h = 'DY_InvMass'):
+   self.hnameOF = h
+
+ def SetHistoNameSF(self, h = 'DY_SF_InvMass'):
+   self.hnameSF = h
 
  def SetDYsamples(self, f):
    self.DYfiles = f
@@ -89,6 +102,7 @@ class DYDD:
    zname = self.GetZhistoName()
    if level == 'dilepton' and zname[-4:] == 'ElMu': zname = zname[:-4]
    h = self.t.GetHisto(pr,zname, chan, level)
+   h.SetDirectory(0)
    return h
 
  def GetHdata(self, chan, level):
@@ -139,9 +153,9 @@ class DYDD:
  def GetKfactor(self, chan = '', level = ''):
    ''' Calculate the k factor k_ee, k_mumu '''
    chan, level = self.SetChanAndLevel(chan, level)
-   rinElec, errElec = self.GetDataIn('ElEl', level)
-   rinMuon, errMuon  = self.GetDataIn('MuMu', level)
-   k = (rinElec/rinMuon if rinMuon != 0 else 0) if self.GetChan() == 'ElEl' else (rinMuon/rinElec if rinElec != 0 else 0)
+   rinElec, errElec = self.GetDataIn(elname, level)
+   rinMuon, errMuon  = self.GetDataIn(muname, level)
+   k = (rinElec/rinMuon if rinMuon != 0 else 0) if self.GetChan() == elname else (rinMuon/rinElec if rinElec != 0 else 0)
    kerr = k*SumSquare([errElec/(2*rinElec) if rinElec != 0 else 0,errMuon/(2*rinMuon) if rinMuon !=0 else 0])
    return k, kerr
 
@@ -152,17 +166,17 @@ class DYDD:
    if mode != '': self.SetMode(mode)
    routin, routin_err = self.GetRoutin(chan, level) 
    NemuIn, NemuIn_err = self.GetDataIn('ElMu', level)
-   kee,   keerr    = self.GetKfactor('ElEl', level)
-   NeeIn, NeeInerr = self.GetDataIn( 'ElEl', level)
-   kmm  , kmmrr    = self.GetKfactor('MuMu', level)
-   NmmIn, NmmInerr = self.GetDataIn( 'MuMu', level)
+   kee,   keerr    = self.GetKfactor(elname, level)
+   NeeIn, NeeInerr = self.GetDataIn( elname, level)
+   kmm  , kmmrr    = self.GetKfactor(muname, level)
+   NmmIn, NmmInerr = self.GetDataIn( muname, level)
    est    = lambda r, Nin, Nemu, k : r*(Nin-Nemu*k/2)
-   esterr = lambda r, Nin, Nemu, k, er, eNin, eNemu, ek : SumSquare([est(r, Nin, Nemu, k)*er/r, r*eNin, r*k/2*eNemu, r*Nemu/2*ek])
+   esterr = lambda r, Nin, Nemu, k, er, eNin, eNemu, ek : SumSquare([est(r, Nin, Nemu, k)*(er/r if r != 0 else 0), r*eNin, r*k/2*eNemu, r*Nemu/2*ek])
    N = 0; Nerr = 0
-   if chan == 'ElEl': 
+   if chan == elname: 
      N    = est(routin, NeeIn, NemuIn, kee)
      Nerr = esterr(routin, NeeIn, NemuIn, kee, routin_err, NeeInerr, NemuIn_err, keerr)
-   elif chan == 'MuMu': 
+   elif chan == muname: 
      N    = est(routin, NmmIn, NemuIn, kmm)
      Nerr = esterr(routin, NmmIn, NemuIn, kmm, routin_err, NmmInerr, NemuIn_err, kmmrr)
    else: # ElMu
@@ -171,7 +185,7 @@ class DYDD:
      yDYe = self.t.GetYieldStatUnc(self.GetDYfiles(), 'ElMu')
      SF,err = self.GetScaleFactor('ElMu')
      N = yDY*SF
-     Nerr = N*SumSquare([err/SF,yDYe/yDY])
+     Nerr = N*SumSquare([err/SF if SF!=0 else err, yDYe/yDY if yDY != 0 else yDYe])
    if N < 0:
      N = 0; Nerr = 0;
    if not Nerr == Nerr: Nerr = 0
@@ -183,16 +197,16 @@ class DYDD:
    if chan == 'ElMu': self.SetMode('ElMu')
    if mode != '': self.SetMode(mode)
    SF = 1; err = 0
-   if chan == 'ElEl' or chan == 'MuMu':
+   if chan == muname or chan == elname:
      dd, dde = self.GetDYDD(chan)
      mo, moe = self.GetMCout(chan)
      SF = dd/mo if mo != 0 else 0
      err = SF*SumSquare([dde/dd if dd != 0 else 0, moe/mo if mo != 0 else 0])
    elif chan == 'ElMu':
-     e, er = self.GetScaleFactor('ElEl')
-     m, mr = self.GetScaleFactor('MuMu')
+     e, er = self.GetScaleFactor(elname)
+     m, mr = self.GetScaleFactor(muname)
      SF = sqrt(e*m)
-     err = SF*SumSquare([er/e, mr/m])
+     err = SF*SumSquare([er/e if e!= 0 else 0, mr/m if m != 0 else 0])
    return SF,err
 
  def PrintDYestimate(self, doSF = False, name = '', level = ''):
@@ -207,30 +221,30 @@ class DYDD:
    s = lambda tit,vee,vmm,vem : t.line(t.fix(tit,20) + t.vsep() + t.fix(vee,22,'c') + t.vsep()+ t.fix(vmm,22,'c') + t.vsep() + t.fix(vem,22,'c'))
    v = lambda val, err : '%1.3f'%val + t.pm() + '%1.3f'%err
    d = lambda val, err : '%1.0f'%val + t.pm() + '%1.2f'%err
-   s('','ElEl','MuMu','ElMu')
+   s('',elname,muname,'ElMu')
    t.sep()
-   mie, miee = self.GetMCin( 'ElEl')
-   moe, moee = self.GetMCout('ElEl')
-   mim, mime = self.GetMCin( 'MuMu')
-   mom, mome = self.GetMCout('MuMu')
+   mie, miee = self.GetMCin( elname)
+   moe, moee = self.GetMCout(elname)
+   mim, mime = self.GetMCin( muname)
+   mom, mome = self.GetMCout(muname)
    s(' N_in        (MC)',v(mie,miee),v(mim,mime),'')
    s(' N_out       (MC)',v(moe,moee),v(mom,mome),'')
 
-   re, ree   = self.GetRoutin('ElEl')
-   rm, rme   = self.GetRoutin('MuMu')
+   re, ree   = self.GetRoutin(elname)
+   rm, rme   = self.GetRoutin(muname)
    s(' R_(out/in)  (MC)',v(re,ree),v(rm,rme),'')
 
-   ke, kee   = self.GetKfactor('ElEl')
-   km, kme   = self.GetKfactor('MuMu')
+   ke, kee   = self.GetKfactor(elname)
+   km, kme   = self.GetKfactor(muname)
    s(' k_ll            ',v(ke,kee),v(km,kme),'')
 
-   ie, ier   = self.GetDataIn('ElEl')
-   im, imr   = self.GetDataIn('MuMu')
+   ie, ier   = self.GetDataIn(elname)
+   im, imr   = self.GetDataIn(muname)
    iem, iemr = self.GetDataIn('ElMu')
    s(' N_in      (Data)',d(ie,ier),d(im,imr),d(iem,iemr))
    t.sep()
-   dde, ddee = self.GetDYDD('ElEl')
-   ddm, ddme = self.GetDYDD('MuMu')
+   dde, ddee = self.GetDYDD(elname)
+   ddm, ddme = self.GetDYDD(muname)
    tmc   = ' DY estimate out (MC) ' if doSF else ' DY estimate (MC)'
    tdata = ' DY estimate out (DD) ' if doSF else ' DY estimate (DD)'
    if doSF:
@@ -243,8 +257,8 @@ class DYDD:
      s(' DY estimate (MC)',v(moe, moee),v(mom, mome),v(yDY, yDYe))
      s(' DY estimate (DD)',v(dde, ddee),v(ddm, ddme),v(ddem, ddeme))
    t.sep()
-   sfee, sfeee = self.GetScaleFactor('ElEl')
-   sfmm, sfmme = self.GetScaleFactor('MuMu')
+   sfee, sfeee = self.GetScaleFactor(elname)
+   sfmm, sfmme = self.GetScaleFactor(muname)
    if doSF:
      s(' DD/MC ratio     ',v(sfee,sfeee), v(sfmm,sfmme),'')
    else:
@@ -261,32 +275,39 @@ class DYDD:
    t.bar()
    s = lambda tit,vee,vmm,vem : t.line(t.fix(tit,22) + t.vsep() + t.fix(vee,16,'c') + t.vsep()+ t.fix(vmm,16,'c') + t.vsep() + t.fix(vem,16,'c'))
    v = lambda val, err : '%1.2f'%val + t.pm() + '%1.2f'%err
-   s('','ElEl','MuMu','ElMu')
+   s('',elname,muname,'ElMu')
    t.sep()
-   labels = ['Inclusive','== 1 jet', '== 2 jets', '>= 3 jets','>= 2 jets, >= 1 btag', '>= 2 btag']
-   levels = ['dilepton', 'eq1jet', 'eq2jet', 'geq3jet','1btag', '2btag']
+   #labels = ['Inclusive','== 1 jet', '== 2 jets', '>= 3 jets','>= 2 jets, >= 1 btag', '>= 2 btag']
+   #levels = ['dilepton', 'eq1jet', 'eq2jet', 'geq3jet','1btag', '2btag']
+   labels = ['Inclusive','>= 2 jets',' >= 1 btag']
+   levels = ['dilepton', '2jets', '1btag']
    for i in range(len(labels)):
      if i == 4: t.sep()
      lab = labels[i]
      lev = levels[i]
-     sfe, sfee = self.GetScaleFactor('ElEl', lev, 'SF')
-     sfm, sfme = self.GetScaleFactor('MuMu', lev, 'SF')
+     sfe, sfee = self.GetScaleFactor(elname, lev, 'SF')
+     sfm, sfme = self.GetScaleFactor(muname, lev, 'SF')
      sfo, sfoe = self.GetScaleFactor('ElMu', lev, 'OF')
      s(' '+lab, v(sfe,sfee) if sfe > 0 else '-', v(sfm,sfme) if sfm > 0 else '-', v(sfo,sfoe) if sfo > 0 else '-')
    t.bar()
    t.write()
 
- def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', histoName = 'DYHisto', lumi = 308.54, massRange = [91-15, 91+15], mode = ''):
+ def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', lumi = 308.54, massRange = [91-15, 91+15], mode = '', histonameprefix = 'H', hname = 'DY_InvMass'):
    self.SetPath(path)
    self.SetOutPath(outpath)
    self.t = TopHistoReader(path)
+   self.t.SetHistoNamePrefix(histonameprefix)
    self.SetLumi(lumi)
    self.SetChanAndLevel(chan, level)
    self.SetDYsamples(DYsamples)
    self.SetDataSamples(DataSamples)
-   self.SetZhistoName(histoName)
    self.SetMassRange(massRange[0], massRange[1])
-   if chan == 'ElMu': self.SetMode('OF')
-   else             : self.SetMode('SF')
+   self.SetHistoNameOF(); self.SetHistoNameSF()
+   if chan == 'ElMu': 
+     if hname != '': self.SetHistoNameOF(hname)
+     self.SetMode('OF')
+   else             : 
+     if hname != '': self.SetHistoNameSF(hname)
+     self.SetMode('SF')
    if mode != '': self.SetMode(mode)
 

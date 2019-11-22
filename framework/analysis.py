@@ -247,8 +247,9 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1F()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1F(name+'_'+self.outname, title, nbins, b0)
-    else:                     h = TH1F(name+'_'+self.outname, title, nbins, b0, bN)
+    hname = name if not self.onTheFly else name+'_'+self.outname
+    if isinstance(b0, array): h = TH1F(hname, title, nbins, b0)
+    else:                     h = TH1F(hname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -256,8 +257,9 @@ class analysis:
     ''' Constructor for TH1F '''
     h = TH1D()
     h.Sumw2()
-    if isinstance(b0, array): h = TH1D(name+'_'+self.outname, title, nbins, b0)
-    else:                     h = TH1D(name+'_'+self.outname, title, nbins, b0, bN)
+    hname = name if not self.onTheFly else name+'_'+self.outname
+    if isinstance(b0, array): h = TH1D(hname, title, nbins, b0)
+    else:                     h = TH1D(hname, title, nbins, b0, bN)
     self.AddToOutputs(name,h)
     return h
 
@@ -473,6 +475,7 @@ class analysis:
     self.nRunEvents = 0
     self.nEventsPrintOut = 10000
     self.verbose = 1
+    self.onTheFly = 'onTheFly' in options
     self.treeName = treeName
     self.SetVerbose(verbose)
     self.fileName = fileName

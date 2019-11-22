@@ -48,7 +48,7 @@ def Draw(name = 'Lep0Pt_eee_lep', rebin = 1, xtit = '', ytit = 'Events', doStack
 
 joblist = []
 #lev = 'met' #lep, met
-for lev in ['lep']:#'sr','tight', 'srtight']:
+for lev in ['lep','sr','tight', 'srtight', 'met', 'm3l','wpt','htmiss']:
   for ch in ['eee','mee','emm','mmm','All']:
  #joblist.append(Draw(GetAllCh('htmiss', lev), 1, 'H_{T}^{miss} (GeV)', 'Events / 5 GeV')
     if ch == 'All':
@@ -113,7 +113,7 @@ if doParallel:
   def execute(com):
     eval(com)
 
-  with closing(Pool(60)) as p:
+  with closing(Pool(8)) as p:
     print "Now running " + str(len(joblist)) + " commands using: " + str(8) + " processes. Please wait" 
     retlist1 = p.map_async(execute, joblist, 1)
     while not retlist1.ready():

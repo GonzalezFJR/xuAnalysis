@@ -9,7 +9,7 @@ class ModelPredict:
       data = np.array(data)
       p = self.model.predict(data)[0]
     else:               p = self.model.predict_proba(data)[0]
-    return p[0]
+    return 1-p[0]
     
 
   def __init__(self, model, type = 'keras'):

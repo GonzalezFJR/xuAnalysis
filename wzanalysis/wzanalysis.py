@@ -31,7 +31,8 @@ class lev():
   srtight  = 6
   tight    = 7
 
-level = {lev.lep:'lep', lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l', lev.htmiss:'htmiss', lev.sr:'sr', lev.tight:'tight', lev.srtight:'srtight'}
+level = {lev.lep:'lep', lev.tight : 'tight'}
+"""lev.met:'met', lev.wpt:'wpt', lev.m3l:'m3l', lev.htmiss:'htmiss', lev.sr:'sr', lev.tight:'tight', lev.srtight:'srtight'}"""
 
 ### Systematic uncertainties
 class systematic():
@@ -151,8 +152,8 @@ class wzanalysis(analysis):
       for key_syst in systlabel.keys():
         if not self.doSyst and key_syst != systematic.nom: continue
         isyst = systlabel[key_syst]
-        self.NewHisto('Yields',   ichan, '', isyst, 5, 0, 5)
-        self.NewHisto('YieldsSS', ichan, '', isyst, 5, 0, 5)
+        self.NewHisto('Yields',   ichan, '', isyst, 8, 0, 8)
+        self.NewHisto('YieldsSS', ichan, '', isyst, 8, 0, 8)
 
     ### Analysis histos
     for key_chan in chan:
@@ -325,6 +326,7 @@ class wzanalysis(analysis):
   def FillYieldsHistos(self, ich, ilev, isyst):
     ''' Fill histograms for yields '''
     self.SetWeight(isyst)
+    #print "Weight: ", self.weight, ich, ilev, isyst
     self.GetHisto('Yields',   ich, '', isyst).Fill(ilev, self.weight)
 
   def FillAll(self, ich, ilev, isyst, leps, jets, pmet):
@@ -380,9 +382,10 @@ class wzanalysis(analysis):
       p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
       # Tight ID
-      if not t.Muon_mediumId[i]: continue
+      if not t.Muon_mediumPromptId[i]: continue
       # Tight ISO, RelIso04 < 0.15
-      if not t.Muon_pfRelIso04_all[i] < 0.25: continue
+      if not t.Muon_miniIsoId[i] >= 2: continue
+      if not t.Muon_sip3d[i] < 5: continue
       # Tight IP
       dxy = abs(t.Muon_dxy[i])
       dz  = abs(t.Muon_dz[i] )
@@ -390,45 +393,43 @@ class wzanalysis(analysis):
       # pT < 12 GeV, |eta| < 2.4
       if p.Pt() < 8 or abs(p.Eta()) > 2.4: continue
       passTightID = True
+      if t.Muon_mvaTTH[i] < 0.75: passTightID = False
+      if t.Muon_miniIsoId[i] < 4: passTightID = False
       if t.Muon_jetIdx[i] >= 0:
-        if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.4941: passTightID = False
-      if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
-      self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i], False))
+        if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522:  continue
+      #if not t.Muon_pfRelIso04_all[i] < 0.1: passTightID = False
+      self.selLeptons.append(lepton(p, charge, 13, t.Muon_genPartFlav[i] if not(self.isData) else "\0", passTightID))
        
     ##### Electrons
     for i in range(t.nElectron):
       p = TLorentzVector()
       p.SetPtEtaPhiM(t.Electron_pt[i], t.Electron_eta[i], t.Electron_phi[i], t.Electron_mass[i])
       charge = t.Electron_charge[i]
-      etaSC    = abs(p.Eta());
-      dEtaSC   = t.Electron_deltaEtaSC[i]
+      etaSC    = abs(p.Eta())
       convVeto = t.Electron_convVeto[i]
-      R9       = t.Electron_r9[i]
-      # Tight cut-based Id
-      if not t.Electron_cutBased[i] >= 2: continue # Loose
-      if not convVeto: continue
-      # Isolation (RelIso03) tight
-      relIso03 = t.Electron_pfRelIso03_all[i]
-      # Tight IP
+      passTightID = True
       dxy = abs(t.Electron_dxy[i])
       dz  = abs(t.Electron_dz[i] )
       if dxy > 0.05 or dz > 0.1: continue
-      # pT > 12 GeV, |eta| < 2.4
       if p.Pt() < 12 or abs(p.Eta()) > 2.4: continue
-      passTightID = True
-      if ord(t.Electron_lostHits[i]) > 0: passTightID = False
-      if relIso03 > 0.04: passTightID = False
+      if ord(t.Electron_lostHits[i]) > 0: continue
+      if not(t.Electron_mvaFall17V2Iso_WPL[i]): continue
+      if not(t.Electron_miniPFRelIso_all[i] < 0.4): continue
+      if not(t.Electron_sip3d > 8): passTightID = False
+      if not(t.Electron_convVeto[i]): continue
+      if (t.Electron_mvaTTH[i] < 0.25): passTightID = False
+      if (t.Electron_miniPFRelIso_all[i] > 0.1): passTightID = False
       if t.Electron_jetIdx[i] >= 0:
-        if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.4941: 
-          passTightID = False
-      self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i], False))
+        if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.1522: continue
+
+      self.selLeptons.append(lepton(p, charge, 11, t.Electron_genPartFlav[i] if not(self.isData) else "\0", passTightID))
       
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
     ### Set trilepton channel
     nLep = len(self.selLeptons)
-    if nLep < 3: return False
+    if nLep != 3: return False
     ### And look for OSSF
     l0 = self.selLeptons[0]
     l1 = self.selLeptons[1]
@@ -442,10 +443,10 @@ class wzanalysis(analysis):
     #if totId != 33 and totId != 37: return
     # lW, lZ1, lZ2
     mz = [CheckZpair(l0,l1), CheckZpair(l0,l2), CheckZpair(l1,l2)]
-    if max(mz) == 0: return False # +++, ---
+    #if max(mz) == 0: return False # +++, ---
     mzdif = [abs(x-91) for x in mz]
     minmzdif = min(mzdif)
-    #if minmzdif == 0: return False # This made no sense here, we would be filtering exactly on peak Zs!  
+    if minmzdif == 0: return False # This made no sense here, we would be filtering exactly on peak Zs!  
     if minmzdif == mzdif[0]:
       lZ1 = dc(l0); lZ2 = dc(l1); lW = dc(l2)
     elif minmzdif == mzdif[1]:
@@ -457,8 +458,8 @@ class wzanalysis(analysis):
     zleps = [lZ1, lZ2]
     tleps = [lW, lZ1, lZ2]
     #If Wpt  > 20 not needed any more
-    if max([x.p.Pt() for x in tleps]) < 20: return False
-    if abs(InvMass(zleps) - 91.) > 15.: return False
+    #if max([x.p.Pt() for x in tleps]) < 20: return False
+    #if abs(InvMass(zleps) - 91.) > 15.: return False
 
     ### Trigger
     ###########################################
@@ -488,7 +489,7 @@ class wzanalysis(analysis):
       #  elif ich == ch.emm: passTrig = t.HLT_HIL3DoubleMu0 or t.HLT_HIL3DoubleMu10
       #  elif ich == ch.mee: passTrig = False
       #  else:               passTrig = False
-    if not passTrig: return False
+    #if not passTrig: return False
 
 
     # Lepton SF
@@ -634,10 +635,13 @@ class wzanalysis(analysis):
         self.FillAll(ich, lev.htmiss, isyst, leps, jets, pmet)
       if wpt > 20 and htmiss > 15 and m3l > 100:
         self.FillAll(ich, lev.sr, isyst, leps, jets, pmet)
-
+     
       if tleps[0].passTightID and wpt > 20 and htmiss > 15 and m3l > 100:
         self.FillAll(ich, lev.srtight, isyst, leps, jets, pmet)
+      """
+      #print tleps[0].passTightID, m3l > 105, wpt > 20, abs(InvMass(zleps) - 91.) < 15.
+      #print ich, lev.tight, isyst, leps, jets, pmet
+      if tleps[0].passTightID and m3l > 105 and wpt > 20 and abs(InvMass(zleps) - 91.) < 30. and pmet.Pt() > 15:
+        self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)
 
-      if tleps[0].passTightID:
-        self.FillAll(ich, lev.tight, isyst, leps, jets, pmet)"""
     return True

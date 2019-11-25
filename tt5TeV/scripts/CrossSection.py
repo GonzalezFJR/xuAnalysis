@@ -4,6 +4,8 @@ from framework.fileReader import GetFiles
 from ROOT.TMath import Sqrt as sqrt
 from plotter.OutText import OutText
 
+from tt5TeV import lev, level, invlevel
+
 class CrossSection:
   
   ### Add background, signal and data numbers
@@ -369,7 +371,10 @@ class CrossSection:
     self.ss = SampleSums(self.pathToTrees, self.motherfname, 'Runs')
     signalName = signal[0]
     signalSample = signal[1]
-    fiduEvents = self.t.GetFiduEvents(signalSample,level,chan)
+
+    # GetFiduEvents
+    hfiduname = 'FiduEvents'#_%s'%chan
+    fiduEvents = self.t.GetNamedHisto(hfiduname,signalSample).GetBinContent(invlevel[level])
     nGenEvents = self.ss.GetCount('Count') #self.GetNGenEvents(signalSample)
     self.SetLumiUnc(lumiunc)
     self.SetFiduEvents(fiduEvents)
@@ -414,7 +419,7 @@ class CrossSection:
     self.effUnc = {} # 'Name' : value
     self.SetOutPath(outpath)
     self.doFiducial = True
-    self.SetMotherName("TTTo2L2Nu")
+    self.SetMotherName("TT_TuneCP5_5p02TeV")
     self.SetPathToTrees("")
 
 ######################################################################################

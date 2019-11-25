@@ -54,6 +54,9 @@ class object:
   def GetFlav(self):
     return self.pdgid
 
+  def GetIso(self):
+    return self.iso
+
   def Pt(self):
     return self.p.Pt()
 

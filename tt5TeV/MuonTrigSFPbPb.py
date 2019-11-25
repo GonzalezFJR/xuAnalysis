@@ -165,3 +165,197 @@ def GetMuonTrigEff(pt, eta, sys = 0):
     n = n + dn if sys > 0 else n - dn
     d = d + dd if sys > 0 else d - dd
   return n, d
+
+##################################################################
+### Tracking
+
+def tnp_weight_glbtrk_pbpb_MC(eta):
+  den = 1
+  if   (eta >= -2.4 and eta <= -2.1):  den = 0.985973;
+  elif (eta >  -2.1 and eta <= -1.6):  den = 0.99412;
+  elif (eta >  -1.6 and eta <= -1.2):  den = 0.996646;
+  elif (eta >  -1.2 and eta <= -0.9):  den = 0.991832;
+  elif (eta >  -0.9 and eta <=  0  ):  den = 0.985575;
+  elif (eta >   0   and eta <=  0.9):  den = 0.985295;
+  elif (eta >   0.9 and eta <=  1.2):  den = 0.992634;
+  elif (eta >   1.2 and eta <=  1.6):  den = 0.996896;
+  elif (eta >   1.6 and eta <=  2.1):  den = 0.994506;
+  elif (eta >   2.1 and eta <=  2.4):  den = 0.987764;
+  return den
+
+
+def tnp_weight_glbtrk_pbpb_Data(eta, idx = 0):
+		if (idx == 0):
+			if (eta >= -2.4 and eta <= -2.1): num = 1;
+			elif (eta > -2.1 and eta <= -1.6): num = 0.986484;
+			elif (eta > -1.6 and eta <= -1.2): num = 0.998253;
+			elif (eta > -1.2 and eta <= -0.9): num = 0.987887;
+			elif (eta > -0.9 and eta <= 0): num = 0.987426;
+			elif (eta > 0 and eta <= 0.9): num = 0.981425;
+			elif (eta > 0.9 and eta <= 1.2): num = 0.984663;
+			elif (eta > 1.2 and eta <= 1.6): num = 0.992795;
+			elif (eta > 1.6 and eta <= 2.1): num = 0.983557;
+			elif (eta > 2.1 and eta <= 2.4): num = 0.954671;
+
+		elif (idx == 1): # stat up
+			if (eta >= -2.4 and eta <= -2.1): num = 1;
+			elif (eta > -2.1 and eta <= -1.6): num = 0.99644;
+			elif (eta > -1.6 and eta <= -1.2): num = 1;
+			elif (eta > -1.2 and eta <= -0.9): num = 0.994144;
+			elif (eta > -0.9 and eta <= 0): num = 0.992029;
+			elif (eta > 0 and eta <= 0.9): num = 0.987024;
+			elif (eta > 0.9 and eta <= 1.2): num = 0.992709;
+			elif (eta > 1.2 and eta <= 1.6): num = 0.997686;
+			elif (eta > 1.6 and eta <= 2.1): num = 0.991048;
+			elif (eta > 2.1 and eta <= 2.4): num = 0.979823;
+
+		elif (idx == 2):  # stat down
+			if   (eta >= -2.4 and eta <= -2.1): num = 0.979675;
+			elif (eta >  -2.1 and eta <= -1.6): num = 0.974748;
+			elif (eta >  -1.6 and eta <= -1.2): num = 0.993399;
+			elif (eta >  -1.2 and eta <= -0.9): num = 0.978866;
+			elif (eta >  -0.9 and eta <=  0  ): num = 0.98235;
+			elif (eta >   0   and eta <=  0.9): num = 0.974871;
+			elif (eta >   0.9 and eta <=  1.2): num = 0.974046;
+			elif (eta >   1.2 and eta <=  1.6): num = 0.985567;
+			elif (eta >   1.6 and eta <=  2.1): num = 0.974474;
+			elif (eta >   2.1 and eta <=  2.4): num = 0.92457;
+		
+		elif (idx == -1):  # syst up
+			if (eta >= -2.4 and eta <= -2.1): num = 1.0107;
+			elif (eta > -2.1 and eta <= -1.6): num = 0.992138;
+			elif (eta > -1.6 and eta <= -1.2): num = 0.999945;
+			elif (eta > -1.2 and eta <= -0.9): num = 0.988701;
+			elif (eta > -0.9 and eta <= 0): num = 0.988734;
+			elif (eta > 0 and eta <= 0.9): num = 0.985979;
+			elif (eta > 0.9 and eta <= 1.2): num = 0.987238;
+			elif (eta > 1.2 and eta <= 1.6): num = 0.994278;
+			elif (eta > 1.6 and eta <= 2.1): num = 0.98701;
+			elif (eta > 2.1 and eta <= 2.4): num = 0.960013;
+		
+		elif (idx == -2) : # syst down
+			if (eta >= -2.4 and eta <= -2.1): num = 0.989305;
+			elif (eta > -2.1 and eta <= -1.6): num = 0.980829;
+			elif (eta > -1.6 and eta <= -1.2): num = 0.99656;
+			elif (eta > -1.2 and eta <= -0.9): num = 0.987074;
+			elif (eta > -0.9 and eta <= 0): num = 0.986119;
+			elif (eta > 0 and eta <= 0.9): num = 0.976872;
+			elif (eta > 0.9 and eta <= 1.2): num = 0.982088;
+			elif (eta > 1.2 and eta <= 1.6): num = 0.991312;
+			elif (eta > 1.6 and eta <= 2.1): num = 0.980103;
+			elif (eta > 2.1 and eta <= 2.4): num = 0.949328;
+
+		return num
+
+def tnp_weight_muid_pbpb_MC(eta):
+   if   (eta >= -2.4 and eta <= -2.1): den = 0.994139; 
+   elif (eta >  -2.1 and eta <= -1.6): den = 0.99449; 
+   elif (eta >  -1.6 and eta <= -1.2): den = 0.983536; 
+   elif (eta >  -1.2 and eta <= -0.9): den = 0.964562; 
+   elif (eta >  -0.9 and eta <= -0.6): den = 0.973316; 
+   elif (eta >  -0.6 and eta <= -0.3): den = 0.981446; 
+   elif (eta >  -0.3 and eta <=  0  ): den = 0.968189; 
+   elif (eta >   0   and eta <=  0.3): den = 0.9617; 
+   elif (eta >   0.3 and eta <=  0.6): den = 0.979738; 
+   elif (eta >   0.6 and eta <=  0.9): den = 0.969536; 
+   elif (eta >   0.9 and eta <=  1.2): den = 0.960259; 
+   elif (eta >   1.2 and eta <=  1.6): den = 0.983279; 
+   elif (eta >   1.6 and eta <=  2.1): den = 0.99477; 
+   elif (eta >   2.1 and eta <=  2.4): den = 0.994065; 
+   return den
+
+
+def tnp_weight_muid_pbpb_Data(eta, idx = 0):
+   syst = 0.6e-2
+   if (idx == 0):
+	   if (eta >= -2.4 and eta <= -2.1): num = 0.984278; 
+	   elif (eta > -2.1 and eta <= -1.6): num = 0.994031; 
+	   elif (eta > -1.6 and eta <= -1.2): num = 0.978562; 
+	   elif (eta > -1.2 and eta <= -0.9): num = 0.954321; 
+	   elif (eta > -0.9 and eta <= -0.6): num = 0.966508; 
+	   elif (eta > -0.6 and eta <= -0.3): num = 0.98402; 
+	   elif (eta > -0.3 and eta <= 0): num = 0.958369; 
+	   elif (eta > 0 and eta <= 0.3): num = 0.959429; 
+	   elif (eta > 0.3 and eta <= 0.6): num = 0.976528; 
+	   elif (eta > 0.6 and eta <= 0.9): num = 0.967646; 
+	   elif (eta > 0.9 and eta <= 1.2): num = 0.961046; 
+	   elif (eta > 1.2 and eta <= 1.6): num = 0.980274; 
+	   elif (eta > 1.6 and eta <= 2.1): num = 0.991677; 
+	   elif (eta > 2.1 and eta <= 2.4): num = 0.993007; 
+   elif (idx == 1): # stat up
+	   if (eta >= -2.4 and eta <= -2.1): num = 0.987203; 
+	   elif (eta > -2.1 and eta <= -1.6): num = 0.995641; 
+	   elif (eta > -1.6 and eta <= -1.2): num = 0.981641; 
+	   elif (eta > -1.2 and eta <= -0.9): num = 0.958889; 
+	   elif (eta > -0.9 and eta <= -0.6): num = 0.970274; 
+	   elif (eta > -0.6 and eta <= -0.3): num = 0.986882; 
+	   elif (eta > -0.3 and eta <= 0): num = 0.962433; 
+	   elif (eta > 0 and eta <= 0.3): num = 0.96344; 
+	   elif (eta > 0.3 and eta <= 0.6): num = 0.979706; 
+	   elif (eta > 0.6 and eta <= 0.9): num = 0.971414; 
+	   elif (eta > 0.9 and eta <= 1.2): num = 0.965537; 
+	   elif (eta > 1.2 and eta <= 1.6): num = 0.983167; 
+	   elif (eta > 1.6 and eta <= 2.1): num = 0.99336; 
+	   elif (eta > 2.1 and eta <= 2.4): num = 0.995579; 
+	   num *= (1+syst)
+   elif (idx == -1): # stat down
+	   if (eta >= -2.4 and eta <= -2.1): num = 0.98094; 
+	   elif (eta > -2.1 and eta <= -1.6): num = 0.992199; 
+	   elif (eta > -1.6 and eta <= -1.2): num = 0.975247; 
+	   elif (eta > -1.2 and eta <= -0.9): num = 0.949482; 
+	   elif (eta > -0.9 and eta <= -0.6): num = 0.962497; 
+	   elif (eta > -0.6 and eta <= -0.3): num = 0.980916; 
+	   elif (eta > -0.3 and eta <= 0): num = 0.954075; 
+	   elif (eta > 0 and eta <= 0.3): num = 0.955169; 
+	   elif (eta > 0.3 and eta <= 0.6): num = 0.973111; 
+	   elif (eta > 0.6 and eta <= 0.9): num = 0.963634; 
+	   elif (eta > 0.9 and eta <= 1.2): num = 0.956295; 
+	   elif (eta > 1.2 and eta <= 1.6): num = 0.977135; 
+	   elif (eta > 1.6 and eta <= 2.1): num = 0.987932; 
+	   elif (eta > 2.1 and eta <= 2.4): num = 0.989895; 
+	   num *= (1-syst)
+   elif (idx == 2): # syst up
+     return tnp_weight_muid_pbpb_Data(eta) * (1 + syst)
+   elif (idx == -2): # syst down
+     return tnp_weight_muid_pbpb_Data(eta) * (1 - syst)
+   else: 
+     print 'WARNING: wrong ID'
+     return 1;
+   return num
+
+
+def GetMuonEff(pt, eta, sys = 0):
+  geff = lambda e1,e2 : e1+e2-e1*e2
+  data  = tnp_weight_glbtrk_pbpb_Data(eta, sys)
+  mc    = tnp_weight_glbtrk_pbpb_MC(eta)
+  data2 = tnp_weight_muid_pbpb_Data(eta, sys)
+  mc2   = tnp_weight_muid_pbpb_MC(eta)
+  #SF    = (data/mc)*(data2/mc2)
+  SF    = (data2/mc2)
+  return SF
+
+def GetMuonEffDimuon(pt, eta, pt2, eta2, sys):
+  SF1 = GetMuonEff(pt,  eta,  sys)
+  SF2 = GetMuonEff(pt2, eta2, sys)
+  return SF1*SF2
+
+#def tnp_weight_trig_pbpb_MC(pt, eta, idx):
+#  if pt < 15: pt = 15.01
+#  return 0.9775;
+
+def testSFs():
+  nb = 10
+  for ieta in range(nb):
+    eta0 = -2.3
+    eta  = eta0 + (2.3*2)/nb*(1+ieta)
+    data  = tnp_weight_glbtrk_pbpb_Data(eta)
+    mc    = tnp_weight_glbtrk_pbpb_MC(eta)
+    data2 = tnp_weight_muid_pbpb_Data(eta)
+    mc2   = tnp_weight_muid_pbpb_MC(eta)
+    print '[%1.2f]    Reco: %1.3f,    ID: %1.3f'%(eta, data/mc, data2/mc2)
+
+def testTrig():
+  for pt in [20, 30, 40, 50, 60]:
+    for eta in [-2, -1, 0, 1, 2]:
+      print "[%1.0f, %1.0f] %1.2f"%(pt, eta, GetMuonTrigSF(pt,eta, 15, eta)[0])
+

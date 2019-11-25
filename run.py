@@ -102,7 +102,7 @@ def GetTStringVectorSamples(path, samples):
   v = GetTStringVector(samples)
 
 
-def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events'):
+def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events', elistf=""):
 
   if dotest:
     nEvents  = 1000
@@ -130,7 +130,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   sname = samples[0].split('/')[-1]
   options = GetOptions(path, sname, options)
   if nEvents != 0: evRang = [FirstEvent, nEvents]
-  an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName)
+  an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName, elistf=elistf)
   an.SetOutDir(outpath)
   an.SetOutName(outname)
 
@@ -177,6 +177,8 @@ def main(ocfgfile = ''):
   parser.add_argument('--nEvents'         , default=0            , help = 'Number of events')
   parser.add_argument('--nSlots','-n'     , default=-1           , help = 'Number of slots')
   parser.add_argument('--treeName'        , default='Events'     , help = 'Name of the tree')
+  parser.add_argument('--elist'           , default='None'       , help = 'Name of the folder with prefilter eventlists')
+
 
   args = parser.parse_args()
   if hasattr(args, 'selection'): selection   = args.selection
@@ -198,6 +200,7 @@ def main(ocfgfile = ''):
   sendJobs    = int(args.sendJobs)
   queue       = args.queue
   treeName    = args.treeName
+  elist       = args.elist if not(args.elist=='None') else False 
 
   aarg = sys.argv
   ncores = nSlots
@@ -219,6 +222,7 @@ def main(ocfgfile = ''):
     selection = ''
     spl = []
     samplefiles = {}
+    elistfiles  = {}
     nslots = {}
     f = open(fname)
     lines = f.readlines()
@@ -238,6 +242,16 @@ def main(ocfgfile = ''):
           spl.append(l)
           samplefiles[l]=l
           nslots[l]=nSlots
+          if elist:
+            if not os.path.isfile(elist+ "/" + l + "_evlist.root"): 
+              print "Warning: no elist find found in %s , will not apply event prefiltering but I will generate them for you"%(elist+ "/" + l + "_evlist.root")
+              elistfiles[l] = ""
+
+            else: 
+              print "Loaded elistfile from %s, remember to check that this makes sense or you might be screwed"%(elist+ "/" + l + "_evlist.root")
+              elistfiles[l] = elist+ "/" + l + "_evlist.root"
+          else:
+            elistfiles[l] = False
       else:
         lst = l.split(':')
         key = lst[0]
@@ -263,7 +277,7 @@ def main(ocfgfile = ''):
           spl.append(key)
           samplefiles[key] = val
           nslots[key] = ncor
-  
+          elistfiles[key] = False
     # Re-assign arguments...
     if '--pretend' in aarg or '-p' in aarg : pretend     = args.pretend
     if '--test'    in aarg or '-t' in aarg : dotest      = args.test
@@ -302,12 +316,13 @@ def main(ocfgfile = ''):
       nslots[spl[0]] = 1
       #samplefiles[spl[0]] = [samplefiles[spl[0]][0]]
       outname = 'test'
-  
+    
     for sname in spl:
       outname = sname
       sample  = samplefiles[sname]
+      elistf  = elistfiles[sname]
       ncores  = nslots[sname]
-      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName)
+      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName, elistf)
   
   else: # no config file...
     out[outname] = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName)

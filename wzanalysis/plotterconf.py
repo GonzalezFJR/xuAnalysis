@@ -9,7 +9,7 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 
 ### Input and output
 #path = '../temp5TeV/sep17/'
-path = '../histosWZ/'
+path = '../tempWZ/'
 outpath = 'plotsWZ/'
 
 ### Definition of the processes
@@ -17,10 +17,11 @@ processDic = {
 'WZ'  : 'WZTo3LNU',
 'VV'  : 'WWTo2L2Nu,ZZTo2L2Nu,ZZTo4L',
 'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
-'top'  : 'TT,tW_noFullHad,tbarW_noFullHad',
-'data': 'HighEGJet, SingleMuon'}##SingleMuon
+'top'  : 'TT,tW_noFullHad,tbarW_noFullHad'}
+#'data': 'HighEGJet, SingleMuon'}##SingleMuon
 processes = ['VV', 'DY', 'top', 'WZ']
 
+process = processDic
 ### Definition of colors for the processes
 colors ={
 'WZ'  : kYellow-4,

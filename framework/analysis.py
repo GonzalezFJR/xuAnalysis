@@ -423,15 +423,15 @@ class analysis:
           else: self.EventWeight = 1
           ### Start the analysis here!
           self.insideLoop(self.tchain)
-     else:
-       for iEv in range(first, last): 
-         self.printprocess(iEv) 
-         self.tchain.GetEntry(iEv) 
-         self.hRunEvents.Fill(1) 
-         if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights 
-         else: self.EventWeight = 1 
-         ### Start the analysis here! 
-         self.insideLoop(self.tchain)
+    else:
+      for iEv in range(first, last): 
+        self.printprocess(iEv) 
+        self.tchain.GetEntry(iEv) 
+        self.hRunEvents.Fill(1) 
+        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights 
+        else: self.EventWeight = 1 
+        ### Start the analysis here! 
+        self.insideLoop(self.tchain)
  
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.saveOutput()
     return self.obj

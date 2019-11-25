@@ -277,7 +277,7 @@ def main(ocfgfile = ''):
           spl.append(key)
           samplefiles[key] = val
           nslots[key] = ncor
-  
+          elistfiles[key] = False
     # Re-assign arguments...
     if '--pretend' in aarg or '-p' in aarg : pretend     = args.pretend
     if '--test'    in aarg or '-t' in aarg : dotest      = args.test
@@ -316,7 +316,7 @@ def main(ocfgfile = ''):
       nslots[spl[0]] = 1
       #samplefiles[spl[0]] = [samplefiles[spl[0]][0]]
       outname = 'test'
-  
+    
     for sname in spl:
       outname = sname
       sample  = samplefiles[sname]

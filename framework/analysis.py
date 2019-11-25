@@ -222,8 +222,8 @@ class analysis:
     nevents = self.nRunEvents
     i0 = self.firstEvent
     if int(i) % int(self.nEventsPrintOut) == 0:
-      print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
-
+      if self.index == -1: print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
+      elif self.index == 0:  print 'Processing... %1.2f'%((float(i)-i0)/nevents*100) + ' %'
 
   def getInputs(self,first = -1, last = -1):
     ''' Returns a list with [firstEvent, lastEvent] for paralel processing '''

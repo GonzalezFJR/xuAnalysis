@@ -596,14 +596,13 @@ class wzanalysis(analysis):
     ###########################################
     self.nvtx   = t.PV_npvs
     
+    self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
     if not self.isData:
-      self.PUSF   = t.puWeight
-      self.PUUpSF = t.puWeightUp
-      self.PUDoSF = t.puWeightDown
+      self.PUSF   = self.PUweight.GetWeight(t.Pileup_nPU)
+      self.PUUpSF = self.PUweight.GetWeightUp(t.Pileup_nPU)
+      self.PUDoSF = self.PUweight.GetWeightDown(t.Pileup_nPU)
     else:
       self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
-    
-    self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
 
     self.prefWeight = 1; self.prefWeightUp = 1; self.prefWeightDo = 1
     if not self.isData:

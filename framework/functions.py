@@ -338,3 +338,8 @@ def GetValue(tree, var, syst = '', index = -1):
     else:
       print 'ERROR: var %s not in tree!!'%var
       return 0
+
+def replaceWords(string, word, newstring):
+  import re
+  return re.sub(r'\b%s\b'%word, newstring, string)
+

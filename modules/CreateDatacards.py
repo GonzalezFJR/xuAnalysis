@@ -1,3 +1,4 @@
+# python ../../../modules/CreateDatacards.py mt2 -s stop275_100 -u "MuonEff, ElecEff, Trig, PU, ISR, FSR, Pref"
 import os,sys
 from ROOT import gROOT
 basepath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'

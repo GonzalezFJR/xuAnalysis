@@ -13,7 +13,7 @@ def manageMergedOutput(folder, sampleName, force = False):
       print 'Skipping...'
       return False
     else:
-      print 'Moving to .bck...'
+      print 'Moving to .bkg...'
       os.system('mv ' + folder + sampleName + '.root ' + folder + sampleName + '.root.bkg')
       return True 
   return True
@@ -33,10 +33,10 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
   out = outputDir + name + '.root'
   inf = ''; 
   nfiles = 0
+  if out in listOfFiles: listOfFiles.pop(listOfFiles.index(out))
   for x in listOfFiles: 
-    if not x == out: 
-      nfiles += 1
-      inf += x + ' ' 
+    nfiles += 1
+    inf += x + ' ' 
   if nfiles <= 1: return
   if not manageMergedOutput(outputDir, name, force): return
   print ' >> Adding ' + name + ' (%i files)'%nfiles
@@ -45,7 +45,8 @@ def hadd(listOfFiles, name = '', inputdir = '', outputDir = '', verbose = False,
     if verbose: print 'Executing command: ' + command
     os.system(command)
     if rm:  
-      for x  in listOfFiles: os.system('rm ' + x)
+      for x  in listOfFiles: 
+        os.system('rm ' + x)
   else: print ' >> PRETENDING!!\n >> ' + command
 
 def main():

@@ -363,11 +363,12 @@ class HistoComp(Plot):
       cp.Draw()
   '''
 
-  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = ''):
+  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = '', lineStyle = 1):
     if self.doNorm: h.Scale(1/h.Integral())
     h.SetStats(0); h.SetLineWidth(2); h.SetTitle('')
     if isinstance(color, int):
       h.SetLineColor(color)
+      h.SetLineStyle(lineStyle)
       #h.SetFillColor(color)
     self.histos.append([h, drawOpt, drawErr, addToLeng])
 
@@ -397,7 +398,7 @@ class HistoComp(Plot):
     self.SetAxisPlot(self.histos[0][0])
     dmax = max(dmax)
     dmin = min(dmin)
-    self.legend.Draw()
+    if self.legend.GetNRows() > 0: self.legend.Draw()
 
     # Set maximum and minimum
     if isinstance(self.PlotMaximum, float): self.histos[0][0].SetMaximum(self.PlotMaximum)
@@ -425,7 +426,10 @@ class HistoComp(Plot):
         self.ratioh[0][0].SetMinimum(self.PlotRatioMin)
         for h in self.ratioh: 
           h[0].Draw(h[1] + ',same')
-          if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
+          if h[2] != 0 and h[2] != '': 
+            hrat = h[0].Clone()
+            hrat.SetFillStyle(3244)
+            hrat.Draw('same,'+h[2])
         
     # Save
     gPad.SetTickx();
@@ -630,3 +634,83 @@ class Stack(Plot):
     self.overlapHistos = []
     self.extraRatio = []
     if HM!= '': self.SetHistosFromMH(HM)
+
+
+
+class HistoUnc(HistoComp):
+  ''' Example:
+      cp = HistoUnc('./temp/', doRatio = True, doNorm = True)
+      cp.AddHisto(hdata, 'pe', 'e2', 'Data')
+      cp.AddHisto(hMC,   'hist', '', 'MC')
+      cp.autoRatio = True
+      cp.Draw()
+  '''
+
+  def AddHistoNom(self, h):
+    self.hNo = h
+    self.AddHisto(h, 'hist', 'e2' if self.DrawStatUnc else 0, 0, 1, 1)
+    self.rnom = self.hNo.Clone('rnom')
+    for b in range(0, self.rnom.GetNbinsX()+2): 
+      bc = self.rnom.GetBinContent(b)
+      berr = self.rnom.GetBinError(b) / bc if bc != 0 else 0
+      self.rnom.SetBinError(b, berr)
+      self.rnom.SetBinContent(b, 1.)
+      #print 'berr: ', berr
+    self.rnom.SetLineStyle(2)
+    self.rnom.SetLineWidth(2)
+    self.rnom.SetLineColor(kGray+1)
+    self.rnom.SetFillColor(kTeal-9)
+    self.rnom.SetFillStyle(1)
+    self.AddRatioHisto(self.rnom, 'hist', 'e2')
+
+  def AddHistoUp(self, h):
+    self.hUp = h
+    self.hUp.SetLineWidth(2); self.hUp.SetTitle('');
+    self.hUp.SetStats(0); self.hUp.SetLineColor(kAzure+2)
+    self.AddHisto(self.hUp, 'hist', 0, 0, kAzure+2, 2)
+    self.rUp = self.hUp.Clone('hUp')
+    #self.rUp.Divide(self.hNo)
+    for b in range(0, self.rUp.GetNbinsX()+1):
+      bc = self.rUp.GetBinContent(b)
+      d  = self.hNo.GetBinContent(b)
+      self.rUp.SetBinContent(b, 1 if (bc==0 or d==0) else bc/d)
+    self.AddRatioHisto(self.rUp, 'hist', 0)
+    if self.rUp.GetMinimum()*0.80 < self.PlotRatioMin: self.SetRatioMin(self.rUp.GetMinimum()*0.80)
+    if self.rUp.GetMaximum()*1.20 > self.PlotRatioMax: self.SetRatioMax(self.rUp.GetMaximum()*1.2)
+    self.rUp.SetLineStyle(1)
+
+  def AddHistoDown(self, h):
+    self.hDo = h
+    self.hDo.SetLineWidth(2); self.hDo.SetTitle('');
+    self.hDo.SetStats(0); self.hDo.SetLineColor(kRed+1)
+    self.AddHisto(self.hDo, 'hist', 0, 0, kRed+1, 2)
+    self.rDo = self.hDo.Clone('hDo')
+    #self.rDo.Divide(self.hNo)
+    for b in range(0, self.rDo.GetNbinsX()+1):
+      bc = self.rDo.GetBinContent(b)
+      d  = self.hNo.GetBinContent(b)
+      self.rDo.SetBinContent(b, 1 if (bc==0 or d==0) else bc/d)
+    self.rDo.SetLineStyle(1)
+    if self.rDo.GetMinimum()*0.80 < self.PlotRatioMin: self.SetRatioMin(self.rDo.GetMinimum()*0.80)
+    if self.rDo.GetMaximum()*1.20 > self.PlotRatioMax: self.SetRatioMax(self.rDo.GetMaximum()*1.2)
+    self.AddRatioHisto(self.rDo, 'hist', 0)
+
+  def __init__(self, outpath = './', outname = 'temp', tag = '', doNorm = False, drawStatErr = True, xtit = '', ytit = 'Events'):
+    self.Initialize(outpath, outname, True)
+    self.doNorm = doNorm
+    self.DrawStatUnc = drawStatErr
+    self.autoRatio = False
+    self.histos = []
+    self.ratioh = []
+    self.SetPlotMaxScale(1.3)
+    self.AddTex(tag, 0.65, 0.88, 0.05)
+    self.SetHistoPad(x0 = 0.0, y0 = 0.47, x1 = 1, y1 = 1)
+    self.SetRatioPad(x0 = 0.0, y0 = 0.00, x1 = 1, y1 = 0.52)
+    self.SetHistoPadMargins(top = 0.14, bottom = 0.10, right = 0.03, left = 0.10)
+    self.SetRatioPadMargins(top = 0.08, bottom = 0.25, right = 0.03, left = 0.10)
+    self.SetYratioTitle('Unc./Nom.', 0.10, 0.4, labSize = 0.08)
+    self.SetXtitle(xtit, 0.12, 0.8, labSize = 0.09)
+    self.SetYtitle(ytit, 0.12, 0.35, labSize = 0.08)
+    self.SetTextLumi(texlumi = '%2.1f fb^{-1} (13 TeV)' if not doNorm else '', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05)
+    self.SetRatioMin(0.95); self.SetRatioMax(1.05)
+

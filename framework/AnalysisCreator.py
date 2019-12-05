@@ -1,6 +1,7 @@
 import os,sys, re
 mypath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(mypath)
+import functions as fun
 
 class AnalysisCreator:
   def AddSelection(self, selection):
@@ -22,6 +23,7 @@ class AnalysisCreator:
 
   def AddSyst(self, syst):
     if isinstance(syst, list): self.syst += syst
+    elif syst == '': return
     elif ',' in syst: self.AddSyst(syst.replace(' ', '').split(','))
     else: self.syst.append(syst)
 
@@ -31,8 +33,10 @@ class AnalysisCreator:
   def AddInit(self, t):
     self.init += t
 
-  def AddCut(self, cut):
-    cut = self.CraftCut(cut)
+  def AddCut(self, cut, variables = ''):
+    if not isinstance(variables, list): variables = [variables]
+    for v in variables: cut = fun.replaceWords(cut, v, 'fun.GetValue(t, "%s",syst)'%v)
+    #cut = self.CraftCut(cut)
     self.cuts.append(cut)
 
   def AddHisto(self, var, hname, nbins, b0 = 0, bN = 0, bins = [], weight = '', sys = '', cut = '', tit = '', write = True):
@@ -53,7 +57,7 @@ class AnalysisCreator:
     if   weight == ''              : weistring = ''
     elif weight in self.expr.keys(): weistring = ', ' + weight
     else                           : weistring = ', fun.GetValue(t, "%s",syst)'%weight
-    fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, varstring, weistring)
+    fillLine = '   %s self.obj[%s].Fill(%s%s)\n'%(cut, "'"+hname+"' + '_%s'%syst if syst != '' else '"+hname+"'", varstring, weistring)
     if write: self.fillLine.append(fillLine)
     else    : return fillLine
 
@@ -120,14 +124,14 @@ class AnalysisCreator:
     body += self.init
     body +='    # Create your histograms here\n'
     #if len(self.syst) > 0: body +='    for syst in systematics:\n'     
-    for line in self.histos: body += '    %s%s\n'%('  ' if len(self.syst) > 0 else '', line)
+    for line in self.histos: body += '    %s%s'%('  ' if len(self.syst) > 0 else '', line)
     body += '\n  def insideLoop(self,t):\n    # WRITE YOU ANALYSIS HERE\n\n'
 
     if self.selection != '': 
       body += '\n    # Selection\n'
       body += self.selection
 
-    if len(self.cuts) > 0:
+    if len(self.cuts) > 0 and len(self.syst) == 0:
       body += '\n    # Requirements\n'
       for cut in self.cuts: body += '    if not %s: return\n'%cut
 
@@ -135,7 +139,10 @@ class AnalysisCreator:
     hnames = self.vars.keys()
     if len(hnames) > 0:
       body += '\n    # Filling the histograms\n'
-      if len(self.syst) > 0: body += '\n    for syst in systematics:\n'
+      if len(self.syst) > 0: 
+        body += '\n    for syst in systematics:\n'
+        body += '\n      # Requirements\n'
+        for cut in self.cuts: body += '      if not %s: return\n'%cut
       for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr])
     #  for h in hnames:
     #    var = self.vars[h]

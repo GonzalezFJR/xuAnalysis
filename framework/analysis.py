@@ -463,7 +463,7 @@ class analysis:
     if self.verbose >= 0: print ' >> Saving output in: ' + out
     self.outNormal = out
     pout = './' if not '/' in out else out[:out.rfind('/')+1]
-    if not os.path.isdir(pout): os.mkdir(pout)
+    if not os.path.isdir(pout): os.system("mkdir -p %s"%pout)
     fout = TFile.Open(out, "recreate")
     if objlist == None: objlist = self.obj
     for element in objlist: objlist[element].Write()

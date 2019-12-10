@@ -13,13 +13,14 @@ from numpy import arange
 gROOT.SetBatch(1)
 treeName="MiniTree"
 
-# Set constants
-outpath = './Unc/SR/'
-model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
-
 # Set signal masses
 ms = 275
 ml = 100
+
+# Set constants
+outpath = './Unc/SR/mass%i_%i/'%(ms, ml)
+os.system("mkdir -p %s"%outpath)
+model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
 
 # Set year
 year = 2018
@@ -29,7 +30,7 @@ year = 2018
 l = looper(path=path[year], nSlots = 20, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)
 
 # Add processes
-processes = ['tt']
+processes = processDic[year].keys() #['tt']
 for p in processes: l.AddSample(p,  processDic[year][p])
 
 # Systematic uncertainties

@@ -908,6 +908,7 @@ class HistoManager:
       found = False
       name = "%s_%s"%(hname, syst) if syst != '' else hname
       for pr in self.processList:
+        if hname == '%s': name = "%s_%s"%(pr, syst) if syst != '' else pr
         khist = self.indic[pr].keys()
         if name in khist: found = True
       if found: self.systlabels.append(syst)
@@ -1112,12 +1113,13 @@ class HistoManager:
           self.indic[p][hname].SetLineWidth(0)
           hStack.Add(self.indic[p][hname])
       else:
-        self.indic[p][self.histoname].SetFillColor(col)
-        self.indic[p][self.histoname].SetFillStyle(1000)
-        self.indic[p][self.histoname].SetLineColor(0)
-        self.indic[p][self.histoname].SetLineStyle(0)
-        self.indic[p][self.histoname].SetLineWidth(0)
-        hStack.Add(self.indic[p][self.histoname])
+        hname = self.histoname if not self.histoname == '%s' else p
+        self.indic[p][hname].SetFillColor(col)
+        self.indic[p][hname].SetFillStyle(1000)
+        self.indic[p][hname].SetLineColor(0)
+        self.indic[p][hname].SetLineStyle(0)
+        self.indic[p][hname].SetLineWidth(0)
+        hStack.Add(self.indic[p][hname])
     return hStack
       
   def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}):

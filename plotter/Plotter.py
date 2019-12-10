@@ -425,6 +425,7 @@ class HistoComp(Plot):
         self.ratioh[0][0].SetMaximum(self.PlotRatioMax)
         self.ratioh[0][0].SetMinimum(self.PlotRatioMin)
         for h in self.ratioh: 
+          h[0].SetFillStyle(0)
           h[0].Draw(h[1] + ',same')
           if h[2] != 0 and h[2] != '': 
             hrat = h[0].Clone()
@@ -648,7 +649,7 @@ class HistoUnc(HistoComp):
 
   def AddHistoNom(self, h):
     self.hNo = h
-    self.AddHisto(h, 'hist', 'e2' if self.DrawStatUnc else 0, 0, 1, 1)
+    self.AddHisto(h, 'hist', 0, 0, 1, 1)
     self.rnom = self.hNo.Clone('rnom')
     for b in range(0, self.rnom.GetNbinsX()+2): 
       bc = self.rnom.GetBinContent(b)
@@ -660,7 +661,7 @@ class HistoUnc(HistoComp):
     self.rnom.SetLineWidth(2)
     self.rnom.SetLineColor(kGray+1)
     self.rnom.SetFillColor(kTeal-9)
-    self.rnom.SetFillStyle(1)
+    self.rnom.SetFillStyle(1000)
     self.AddRatioHisto(self.rnom, 'hist', 'e2')
 
   def AddHistoUp(self, h):
@@ -710,7 +711,7 @@ class HistoUnc(HistoComp):
     self.SetRatioPadMargins(top = 0.08, bottom = 0.25, right = 0.03, left = 0.10)
     self.SetYratioTitle('Unc./Nom.', 0.10, 0.4, labSize = 0.08)
     self.SetXtitle(xtit, 0.12, 0.8, labSize = 0.09)
-    self.SetYtitle(ytit, 0.12, 0.35, labSize = 0.08)
+    self.SetYtitle(ytit, 0.12, 0.42, labSize = 0.08)
     self.SetTextLumi(texlumi = '%2.1f fb^{-1} (13 TeV)' if not doNorm else '', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05)
     self.SetRatioMin(0.95); self.SetRatioMax(1.05)
 

@@ -47,6 +47,10 @@ class AnalysisCreator:
   def AddHeader(self, h):
     self.header += h
 
+  def AddSampleOptions(self, h):
+    self.sampleOptions += h
+    if not self.sampleOptions.endswith('\n'): self.sampleOptions += '\n'
+
   def AddInit(self, t):
     self.init += t
 
@@ -136,9 +140,10 @@ class AnalysisCreator:
     body += 'import os,sys\nsys.path.append(os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/")\n'
     body += 'from framework.analysis import analysis\nimport framework.functions as fun\nfrom ROOT import TLorentzVector\n\n'
     body += self.header
-    body += '\nsystematics = ' + str(self.syst) + '\n'
+    body += '%s'%self.sampleOptions
     body += 'class %s(analysis):\n'%self.analysisName
     body += '  def init(self):\n'
+    body += '      self.systematics = ' + str(self.syst) + '\n'
     body += self.init
     body +='    # Create your histograms here\n'
     #if len(self.syst) > 0: body +='    for syst in systematics:\n'     
@@ -158,7 +163,7 @@ class AnalysisCreator:
     if len(hnames) > 0:
       body += '\n    # Filling the histograms\n'
       if len(self.syst) > 0: 
-        body += '\n    for syst in systematics:\n'
+        body += '\n    for syst in self.systematics:\n'
         body += '\n      # Requirements\n'
         for cut in self.cuts: body += '      if not (%s): continue\n'%cut
       for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr]) if not self.exprorder[expr] else ''
@@ -247,6 +252,7 @@ class AnalysisCreator:
     self.weights = {}
     self.histocuts = {}
     self.syst = ['']
+    self.sampleOptions = ''
     self.expr = {}
     self.exprorder = {}
 

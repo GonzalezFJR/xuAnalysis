@@ -27,7 +27,7 @@ year = 2018
 
 # Create the looper, set readOutput to true to read previous temporary rootfiles created for each sample
 #l = looper(path=path[year], nSlots = 6, treeName = 'MiniTree', options = 'merge', nEvents = 1000, outpath='tempfiles/')
-l = looper(path=path[year], nSlots = 20, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)
+l = looper(path=path[year], nSlots = 5, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)
 
 # Add processes
 processes = processDic[year].keys() #['tt']
@@ -41,9 +41,9 @@ systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
 # Lines below to read the DNN values
 l.AddHeader('from framework.mva import ModelPredict\n')
 l.AddInit('      self.pd1 = ModelPredict("%s")\n'%model)
+l.AddInit("      if self.sampleName in ['tt_hdampUp', 'tt_hdampDown', 'tt_UEUp', 'tt_UEDown', 'data', 'data_obs', 'Data']: self.systematics = ['']\n")
 l.AddSyst(systlist)
 loopcode = '''
-if syst != '' and self.sampleName in ['tt_hdampUp', 'tt_hdampDown', 'tt_UEUp', 'tt_UEDown']: return
 values = [%i,  %i, t.TDilep_Pt, t.TDeltaPhi, t.TDeltaEta, t.TLep0Pt, t.TLep0Eta, t.TLep1Pt, vmet, t.TLep1Eta, vmll, vmt2, vht]
 prob1 = self.pd1.GetProb(values)
 '''%(ms, ml)

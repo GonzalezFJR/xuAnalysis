@@ -90,6 +90,7 @@ class looper(AnalysisCreator):
     self.syst = ['']
     self.expr = {}
     self.exprorder = {}
+    self.sampleOptions = ''
     if cut != '': self.AddCut(cut)
     if processdic != {}:
       for pr in processdic:

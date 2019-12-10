@@ -344,7 +344,8 @@ def GetValue(tree, var, syst = '', index = -1):
     vart = "%s%s"%(var,syst)
     if    hasattr(tree, vars): return (getattr(tree, vars) if index == -1 else getattr(tree, vars)[index])
     elif  hasattr(tree, vart): return (getattr(tree, vart) if index == -1 else getattr(tree, vart)[index])
-    elif  hasattr(tree, var ): return (getattr(tree, var ) if index == -1 else getattr(tree, var )[index])
+    elif  hasattr(tree, var ): 
+      return (getattr(tree, var ) if index == -1 else getattr(tree, var )[index])
     else:
       print 'ERROR: var %s not in tree!!'%var
       return 0

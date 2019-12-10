@@ -21,6 +21,23 @@ class AnalysisCreator:
     for l in lines:
       self.selection += '%s%s\n'%(' '*addNSpaces, l)
 
+  def AddLoopCode(self, code):
+    code = code.replace('\t', '  ')
+    lines = code.split('\n')
+    for l in lines:
+      ltemp = "%s"%l
+      lorig = "%s"%l
+      ltemp = ltemp.replace(' ', '')
+      if ltemp != '': break
+    nspaces = 0
+    while len(lorig) >0 and lorig[0] == ' ':
+      nspaces += 1
+      lorig = lorig[1:]
+    addNSpaces = 6-nspaces
+    self.loopcode = ''
+    for l in lines:
+      self.loopcode += '%s%s\n'%(' '*addNSpaces, l)
+
   def AddSyst(self, syst):
     if isinstance(syst, list): self.syst += syst
     elif syst == '': return
@@ -61,13 +78,14 @@ class AnalysisCreator:
     if write: self.fillLine.append(fillLine)
     else    : return fillLine
 
-  def AddExpr(self, ename, var, expr):
+  def AddExpr(self, ename, var, expr, goAfter = False):
     if not isinstance(var, list): var = [var]
     for v in var: 
       if v == '': continue
       st = 'fun.GetValue(t, "%s", syst)'%v
       expr = re.sub(r'\b%s\b'%v, st, expr)
     self.expr[ename] = expr
+    self.exprorder[ename] = goAfter
 
   def CraftCut(self, cut):
     return cut
@@ -133,7 +151,7 @@ class AnalysisCreator:
 
     if len(self.cuts) > 0 and len(self.syst) == 0:
       body += '\n    # Requirements\n'
-      for cut in self.cuts: body += '    if not %s: return\n'%cut
+      for cut in self.cuts: body += '    if not (%s): return\n'%cut
 
 
     hnames = self.vars.keys()
@@ -142,8 +160,10 @@ class AnalysisCreator:
       if len(self.syst) > 0: 
         body += '\n    for syst in systematics:\n'
         body += '\n      # Requirements\n'
-        for cut in self.cuts: body += '      if not %s: return\n'%cut
-      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr])
+        for cut in self.cuts: body += '      if not (%s): continue\n'%cut
+      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr]) if not self.exprorder[expr] else ''
+      if self.loopcode != '': body += self.loopcode
+      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr]) if     self.exprorder[expr] else ''
     #  for h in hnames:
     #    var = self.vars[h]
     #    cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
@@ -218,6 +238,7 @@ class AnalysisCreator:
     self.header = ''
     self.init = ''
     self.selection = ''
+    self.loopcode = ''
     self.cuts = []
     self.histos = []
     self.fillLine = []
@@ -227,6 +248,7 @@ class AnalysisCreator:
     self.histocuts = {}
     self.syst = ['']
     self.expr = {}
+    self.exprorder = {}
 
 
 def main():

@@ -848,6 +848,7 @@ class HistoManager:
     self.processList = listOfProcesses
 
   def AddToSignals(self, signals):
+    if not hasattr(self, 'signalProcess'): self.signalProcess = []
     if isinstance(signals, str):
       if ',' in signals: signals = signals.replace(' ', '').split(',')
       else             : signals = [signals]
@@ -907,7 +908,7 @@ class HistoManager:
     for syst in systCand:
       found = False
       name = "%s_%s"%(hname, syst) if syst != '' else hname
-      for pr in self.processList:
+      for pr in self.processList + self.signalProcess :
         if hname == '%s': name = "%s_%s"%(pr, syst) if syst != '' else pr
         khist = self.indic[pr].keys()
         if name in khist: found = True
@@ -1122,13 +1123,13 @@ class HistoManager:
         hStack.Add(self.indic[p][hname])
     return hStack
       
-  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}):
+  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}, signalList = []):
     self.SetProcessList(prlist)
+    self.AddToSignals(signalList)
     self.SetHistoName(hname)
     self.SetSystList(syslist)
     self.sumdic = {}
     self.systlabels = []
-    self.signalProcess = []
     self.SetProcessDic(processDic)
     self.SetSystDic(systdic)
     self.SetTopReader(path)

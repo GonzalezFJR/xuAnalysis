@@ -95,7 +95,7 @@ def main():
      for root, subdirs, files in os.walk(inFolder):
        if root in paths: continue
        paths.append(root)
-       print("Exploring ", root)
+       root += '/'
        if len(files) > 0:
          listOfFiles = getDicFiles(root)
          inFolder = root

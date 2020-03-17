@@ -69,6 +69,11 @@ class Plot:
     leg.SetNColumns(self.legNcol)
     return leg
 
+  def SetLegendName(self, process, name = ''):
+    if not hasattr(self,'legnames'): self.legnames = {}
+    if isinstance(process, dict): self.legnames = process
+    else: self.legnames[process] = name
+
   def SetLegendRatioPos(self, x0 = 0.18, y0 = 0.85, x1 = 0.60, y1 = 0.91, size = 0.065, ncol = 2):
     self.legratx0 = x0
     self.legratx1 = x1
@@ -320,6 +325,7 @@ class Plot:
     ### Legend
     self.SetLegendPos()
     self.SetLegendRatioPos()
+    self.legnames = {}
     ### Labels
     self.SetTextCMS()
     self.SetTextCMSmode()
@@ -485,7 +491,7 @@ class Stack(Plot):
   def SetColors(self, col):
     self.colors = col
     if self.HM != '':
-      self.SetStack(self.HM.GetStack(colors=self.colors))
+      self.SetStack(self.HM.GetStack(colors=self.colors, pr=self.processes))
 
   def DrawStack(self, xtit = '', ytit = ''):
     ''' Draws a stack plot '''
@@ -537,7 +543,7 @@ class Stack(Plot):
       for pr in self.processes:
         h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
         self.hleg.append(h)
-        leg.AddEntry(self.hleg[-1], pr, 'f')
+        leg.AddEntry(self.hleg[-1], pr if not pr in self.legnames.keys() else self.legnames[pr], 'f')
       for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')
       if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
       leg.Draw()
@@ -584,7 +590,7 @@ class Stack(Plot):
     self.SetMCstatUnc(HM.GetUncHist('stat'))
     self.SetMCunc(HM.GetUncHist())
     self.SetDataHisto(HM.GetDataHisto())
-    self.SetStack(HM.GetStack(colors=self.colors))
+    self.SetStack(HM.GetStack(colors=self.colors, pr=self.processes))
     self.SetRatio(HM.GetRatioHisto())
     self.SetRatioStatUnc(HM.GetRatioHistoUnc('stat'))
     self.SetRatioUnc(HM.GetRatioHistoUnc('', False))
@@ -613,8 +619,9 @@ class Stack(Plot):
   def AddOverlapHisto(self, h):
     self.overlapHistos.append(h)
 
-  def AddSignalHisto(self, h, color = 1, mode = 'overlap', ratioBkg = True):
+  def AddSignalHisto(self, hs, color = 1, mode = 'overlap', ratioBkg = True):
     ''' mode = overlap, stack, ontop '''
+    h = hs.Clone(); h.SetDirectory(0)
     h.SetLineColor(color)
     h.SetLineWidth(2)
     if mode == 'overlap' or mode == 'ontop': h.SetFillStyle(0)
@@ -704,7 +711,7 @@ class HistoUnc(HistoComp):
     self.histos = []
     self.ratioh = []
     self.SetPlotMaxScale(1.3)
-    self.AddTex(tag, 0.65, 0.88, 0.05)
+    self.AddTex(tag, 0.55, 0.88, 0.05)
     self.SetHistoPad(x0 = 0.0, y0 = 0.47, x1 = 1, y1 = 1)
     self.SetRatioPad(x0 = 0.0, y0 = 0.00, x1 = 1, y1 = 0.52)
     self.SetHistoPadMargins(top = 0.14, bottom = 0.10, right = 0.03, left = 0.10)

@@ -27,7 +27,7 @@ class looper(AnalysisCreator):
       #cfgpath = '%s/%s.cfg'%(self.outpath, self.cfgname)
       cfgpath = self.cfgname
       print 'Executing analysis \'%s\' using cfg file \'%s\' in \'%s/%s/\'...'%(self.analysisName, cfgpath, mypath+self.basepath, self.analysisName)
-      odir = run('%s/%s/%s'%(mypath+self.basepath,self.analysisName,cfgpath))
+      odir = run('%s/%s/%s'%(mypath+self.basepath,self.analysisName,cfgpath), self.sendJobs)
     if self.readOutput and self.loadDic != {}:
       for ksamp in self.loadDic.keys():
         odir[ksamp] = self.loadDic[ksamp]
@@ -45,6 +45,8 @@ class looper(AnalysisCreator):
 
   def AddSample(self, sampleName, sampleList):
     if self.readOutput:
+      #print '[readOutput = True] Looking for files in %s...'%self.outpath
+      if ' ' in sampleName: sampleName = sampleName.replace(' ', '')
       if os.path.isfile('%s/%s.root'%(self.outpath, sampleName)):
         if not sampleName in self.loadDic.keys(): self.loadDic[sampleName] = {}
         print 'Reading %s from %s...'%(sampleName, self.outpath)
@@ -59,7 +61,10 @@ class looper(AnalysisCreator):
     else:
       self.samples[sampleName] = sampleList
 
-  def __init__(self, path = '', nSlots = 1, cut = '', weight = '', nEvents = 0, year = 0, verbose = 0, options = 'merge', treeName = 'Events', processdic = {}, outpath='./.looper/', readOutput=False, basepath = './looper/'):
+  def SendJobs(self, do=True):
+    self.sendJobs = do
+
+  def __init__(self, path = '', nSlots = 1, cut = '', weight = '', nEvents = 0, year = 0, verbose = 0, options = 'merge', treeName = 'Events', processdic = {}, outpath='./.looper/', readOutput=False, basepath = './looper/', xsec = 'xsec', sendJobs = False):
     self.analysisName = self.GetAnalysisName()
     self.SetTreeName(treeName)
     self.SetCfgname('testcfg')
@@ -70,6 +75,7 @@ class looper(AnalysisCreator):
     self.SetNEvents(nEvents)
     self.SetYear(year)
     self.SetVerbose(verbose)
+    self.SetXsec(xsec)
     self.SetOptions(options)
     self.SetNSlots(nSlots)
     self.SetWeight(weight)
@@ -91,6 +97,7 @@ class looper(AnalysisCreator):
     self.expr = {}
     self.exprorder = {}
     self.sampleOptions = ''
+    self.sendJobs = sendJobs
     if cut != '': self.AddCut(cut)
     if processdic != {}:
       for pr in processdic:

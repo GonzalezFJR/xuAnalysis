@@ -463,6 +463,9 @@ class Stack(Plot):
 
   def SetMCstatUnc(self, h):
     self.MCstatUnc = h
+
+  def SetMCnormUnc(self, h):
+    self.MCnormUnc = h
  
   def SetMCunc(self, h):
     self.MCunc = h
@@ -477,6 +480,10 @@ class Stack(Plot):
 
   def SetRatioStatUnc(self, h):
     self.hRatioStatUnc = h
+
+  def SetRatioNormUnc(self, h):
+    self.hRatioNormUnc = h
+    self.SetLegendRatioPos(x0=0.18, y0=0.85, x1=0.70, y1=0.91, size=0.065, ncol = 3)
 
   def SetRatioUnc(self, h):
     self.hRatioUnc = h
@@ -507,6 +514,7 @@ class Stack(Plot):
     if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     self.hStack.Draw('hist')
     if hasattr(self, 'MCstatUnc'): self.MCstatUnc.Draw("e2,same")
+    if hasattr(self, 'MCnormUnc'): self.MCnormUnc.Draw("e2,same")
     if hasattr(self, 'MCunc'):     self.MCunc    .Draw("e2,same")
 
     # Extra histograms
@@ -534,7 +542,8 @@ class Stack(Plot):
     if self.doRatio: 
       self.SetAxisRatio(self.hRatio)
       self.SetAxisRatio(self.hRatioUnc)
-      self.SetAxisRatio(self.hRatioStatUnc)
+      if hasattr(self, 'hRatioStatUnc'): self.SetAxisRatio(self.hRatioStatUnc)
+      if hasattr(self, 'hRatioNormUnc'): self.SetAxisRatio(self.hRatioNormUnc)
    
     # Legend
     if hasattr(self, 'processes'):
@@ -558,12 +567,18 @@ class Stack(Plot):
         self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioStatUnc, 'Stat', 'f')
+      if hasattr(self, 'hRatioNormUnc'):
+        self.hRatioNormUnc.Draw('e2same')
+        self.hRatioNormUnc.SetLineWidth(0)
+        self.hRatioNormUnc.SetMaximum(self.PlotRatioMax)
+        self.hRatioNormUnc.SetMinimum(self.PlotRatioMin)
+        legr.AddEntry(self.hRatioNormUnc, 'Bkg norm', 'f')
       if hasattr(self, 'hRatioUnc'    ): 
         self.hRatioUnc.Draw('e2same')
         self.hRatioUnc.SetLineWidth(0)
         self.hRatioUnc.SetMinimum(self.PlotRatioMin)
         self.hRatioUnc.SetMaximum(self.PlotRatioMax)
-        legr.AddEntry(self.hRatioUnc, 'Stat #oplus Syst', 'f')
+        legr.AddEntry(self.hRatioUnc, 'Tot unc', 'f')#'Stat #oplus Syst', 'f')
       if hasattr(self, 'hRatio'):
         self.hRatio.Draw('pE0X0,same')
         self.hRatio.SetMaximum(self.PlotRatioMax)
@@ -579,6 +594,7 @@ class Stack(Plot):
           if hasattr(self, 'hRatio'       ): self.hRatio       .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
           if hasattr(self, 'hRatioUnc'    ): self.hRatioUnc    .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
           if hasattr(self, 'hRatioStatUnc'): self.hRatioStatUnc.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+          if hasattr(self, 'hRatioNormUnc'): self.hRatioNormUnc.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
         else:
           self.hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
 
@@ -588,25 +604,33 @@ class Stack(Plot):
     self.HM = HM
     self.SetTotMC(HM.GetSumBkg())
     self.SetMCstatUnc(HM.GetUncHist('stat'))
-    self.SetMCunc(HM.GetUncHist())
+    if HM.HasNormUnc(): self.SetMCnormUnc(HM.GetNormUnc())
+    self.SetMCunc(HM.GetUncHist('', True, True))
     self.SetDataHisto(HM.GetDataHisto())
     self.SetStack(HM.GetStack(colors=self.colors, pr=self.processes))
     self.SetRatio(HM.GetRatioHisto())
     self.SetRatioStatUnc(HM.GetRatioHistoUnc('stat'))
-    self.SetRatioUnc(HM.GetRatioHistoUnc('', False))
+    if HM.HasNormUnc(): self.SetRatioNormUnc(HM.GetRatioHistoUnc('bkgnorm', False))
+    self.SetRatioUnc(HM.GetRatioHistoUnc('', True, True))
     if defaultStyle:
       self.SetRatioUncStyle()
       self.SetRatioStatUncStyle()
       self.SetUncStyle()
       self.SetStatUncStyle()
+      if HM.HasNormUnc(): 
+        self.SetRatioNormUncStyle()
 
   def SetRatioUncStyle(self, color = kAzure+2, alpha = 0.2, fill = 1000):
     self.hRatioUnc.SetFillColorAlpha(color, alpha)
     self.hRatioUnc.SetFillStyle(fill)
 
-  def SetRatioStatUncStyle(self, color = kOrange+1, alpha = 0.8, fill = 1000):
+  def SetRatioStatUncStyle(self, color=kOrange+1, alpha = 0.8, fill = 1000):
     self.hRatioStatUnc.SetFillColorAlpha(color, alpha)
     self.hRatioStatUnc.SetFillStyle(fill)
+
+  def SetRatioNormUncStyle(self, color=kPink-4, alpha=0.3, fill=3144):
+    self.hRatioNormUnc.SetFillColorAlpha(color, alpha)
+    self.hRatioNormUnc.SetFillStyle(fill)
 
   def SetUncStyle(self, color = kGray+2, alpha = 0.9, fill = 3444):
     self.MCunc.SetFillColorAlpha(color, alpha)

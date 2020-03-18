@@ -144,6 +144,7 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   else: 
     hm = HistoManager(pr, syst, path=path, signalList = 'stop')
   hm.ReadHistosFromFile(var)
+  hm.AddNormUnc({'tt':0.06, 'Nonprompt':0.3, 'Others':0.3,'ttZ':0.3,'tW':0.15})
   #hm.GetDataHisto()
   #hm.indic['data_obs']['data_obs'] = hm.GetSumBkg()
   #if var in ['mt2', 'met', 'dnn']: del hm.indic['data_obs'] # blind
@@ -173,8 +174,25 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   s.SetYratioTitle('Ratio')
   s.DrawStack(xtit, 'Events')
 
-#PrintTableUnc(syst)
 
+'''
+process = processes
+var = 'met'
+pr = ['tt']
+hm   = HistoManager(pr, syst, path=GetPath('BS', 2016, 225, 50), signalList = 'stop')
+hm.ReadHistosFromFile(var)
+hm.AddNormUnc({'tt':0.5})
+c = TCanvas('c', 'c', 10, 10, 800, 600)
+hnorm = hm.GetNormUnc()
+hnorm2 = hm.GetNormUnc()
+hnorm.Divide(hnorm2);
+hnorm.Draw("e2");
+c.SaveAs('testnorm.png')
+'''
+StackPlot('met', 'MET')
+
+exit()
+#PrintTableUnc(syst)
 for var in titdic.keys():
   if doStack: StackPlot(var, titdic[var])
   if not doPlotSyst: continue

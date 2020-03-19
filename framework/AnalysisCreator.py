@@ -113,6 +113,9 @@ class AnalysisCreator:
   def SetOptions(self, options):
     self.options = options
 
+  def SetXsec(self, xsec):
+    self.xsec = str(xsec)
+
   def SetNEvents(self, nEvents):
     self.nEvents = nEvents
 
@@ -126,9 +129,6 @@ class AnalysisCreator:
   def SetVerbose(self, verbose = 1):
     self.verbose = verbose
 
-  def SetOptions(self, options = ''):
-    self.options = options
-
   def SetWeight(self, weight = ''):
     self.weight = weight
 
@@ -137,7 +137,8 @@ class AnalysisCreator:
 
   def GetAnalysisTemplate(self):
     body  = "'''\n Analysis %s, created by xuAnalysis\n https://github.com/GonzalezFJR/xuAnalysis\n'''\n\n"%self.analysisName
-    body += 'import os,sys\nsys.path.append(os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/")\n'
+    body += 'import os,sys\n'
+    body += 'basepath = os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/"\nsys.path.append(basepath)\n'
     body += 'from framework.analysis import analysis\nimport framework.functions as fun\nfrom ROOT import TLorentzVector\n\n'
     body += self.header
     body += '%s'%self.sampleOptions
@@ -188,6 +189,7 @@ class AnalysisCreator:
     cfg += '#options : \n' if self.options == '' else 'options : %s\n'%self.options
     cfg += '#nEvents : 1000\n' if self.nEvents == 0 else 'nEvents : %i\n'%self.nEvents
     cfg += '#year : 2016\n' if not self.year in [2016,2017,2018] else 'year : %i\n'%self.year
+    cfg += '#xsec : \n' if not self.xsec != 'xsec' else 'xsec : %s\n'%self.xsec
     cfg += 'verbose : %i\n'%self.verbose
     cfg += 'nSlots : %i\n'%self.nSlots
     cfg += 'selection : %s\n'%self.analysisName
@@ -209,6 +211,8 @@ class AnalysisCreator:
       print 'ERROR: analysis %s already exists!!!'%analysisName
       return
     os.mkdir(mpath + analysisName)
+    if not os.path.isfile(mpath + '__init__.py'): os.system('touch %s__init__.py'%mpath)
+    if not os.path.isfile(mpath + analysisName + '/__init__.py'): os.system('touch %s/__init__.py'%(mpath+analysisName))
 
     # Analysis code
     f = open('%s%s/%s.py'%(mpath,analysisName,analysisName), 'w')

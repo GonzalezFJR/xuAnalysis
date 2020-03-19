@@ -194,6 +194,10 @@ class analysis:
     ''' Sets the name of the input tree '''
     self.treeName = name
 
+  def SetAnPath(self, path = ''):
+    ''' Path of the analysis that you want to run (used to send jobs) '''
+    self.anpath = path
+
   def SetParams(self):
     ''' Once the input files are set, calculate all the needed parameters '''
     if len(self.files) == 0: return
@@ -326,14 +330,14 @@ class analysis:
       t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_8_0_26/src\neval `scramv1 runtime -sh`\n'
     if metapy != '': t += 'python %s.py\n\n'%metapy
     pycom =  'python -c \''
-    pycom += 'from ' + modulname + '.' + modulname + ' import *; '
+    pycom += 'from %s import *; '%(modulname + '.' + modulname if self.anpath == '' else modulname)
     if isinstance(filename, list):
       fname = filename [0]
       for f in filename[1:]: fname += ', %s'%f
       filename = fname
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
     pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
-    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "' + self.options + '")\''
+    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "%s"'%self.options + ',treeName="%s"'%self.treeName + ')\''
     return t + pycom
 
   def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):
@@ -373,7 +377,7 @@ class analysis:
       objs = self.multiloop(first, last)
     self.log()
     if ('merge' in self.options or 'Merge' in self.options) and (not 'nosave' in self.options and not 'noSave' in self.options): 
-      self.index = -1
+      #self.index = -1
       self.saveOutput(objs)
     return objs
 
@@ -543,6 +547,7 @@ class analysis:
     self.SetOutDir(outpath)
     self.SetNSlots(nSlots)
     self.SetParams()
+    self.SetAnPath()
     self.hRunEvents = self.CreateTH1F('RunEvents', 'RunEvents', 1, 0, 2)
     if len(eventRange) == 2: 
       n0,nf = eventRange

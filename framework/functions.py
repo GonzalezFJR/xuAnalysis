@@ -334,8 +334,12 @@ def GetLumi(year, era = 'all'):
   return lumi[year][era]
 
 def GetValue(tree, var, syst = '', index = -1):
+  if var.endswith(']') and '[' in var: 
+    index = int(var[var.index('[')+1:-1])
+    var   = var[:var.index('[')]
   if syst == '':
-    if hasattr(tree, var): return (getattr(tree, var) if index == -1 else getattr(tree, var)[index])
+    if hasattr(tree, var): 
+      return (getattr(tree, var) if index == -1 else getattr(tree, var)[index])
     else:
       print 'ERROR: var %s not in tree!!'%var
       return 0

@@ -162,7 +162,8 @@ class analysis:
   def SetOutDir(self, _outpath):
     ''' Sets the output directory '''
     self.outpath = _outpath
-    if not self.outpath[-1] == '/': self.outpath = self.outpath + '/'
+    if not self.outpath.endswith('/'): self.outpath = self.outpath + '/'
+    if self.outpath.startswith('/'): self.outpath = '.'+self.outpath
     
   def SetOutName(self, _outname):
     ''' Sets the name of the output rootfile '''
@@ -314,12 +315,12 @@ class analysis:
     modulname  = self.__class__.__name__
     path       = self.inpath
     filename   = self.fileName
-    outpath    = self.outpath
+    outpath    = self.outpath if not hasattr(self, 'includeInputs') else self.outpath+'/'+self.outpath
     xsec       = self.xsec
     nSlots     = 1  # One slot per job
     verbose    = 10 # why not
     eventRange = [n0, nF]
-    metapy = self.metapy if hasattr(self, metapy) else ''
+    metapy = self.metapy if hasattr(self, 'metapy') else ''
     t = '#!/bin/sh\n\ncd ' + localPath + '\n'
     if not metapy != '':
       if 'CMSSW' in localPath: t += 'eval `scramv1 runtime -sh` \n'
@@ -328,7 +329,7 @@ class analysis:
     else:
       # Create env
       t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_8_0_26/src\neval `scramv1 runtime -sh`\n'
-    if metapy != '': t += 'python %s.py\n\n'%metapy
+    if metapy != '': t += 'cp -r %s\n'%(metapy)
     pycom =  'python -c \''
     pycom += 'from %s import *; '%(modulname + '.' + modulname if self.anpath == '' else modulname)
     if isinstance(filename, list):
@@ -345,10 +346,11 @@ class analysis:
     if nJobs != -1: self.SetNSlots(nJobs)
     if folder != '': self.jobFolder = folder
     jm = jobManager(self.outname, self.jobFolder, queue, 1, pretend, autorm)
+    jm.SetFileOutpath(self.outpath)
     jm.SetAnalysisName(self.__class__.__name__)
     inputs = self.getInputs()
     index = 0
-    if hasattr(self, 'includeInputs'): self.metapy = jm.CreateMetapy(self.includeInputs)
+    if hasattr(self, 'includeInputs'): self.metapy = self.includeInputs
     if pretend:
       print 'Pretending...'
       exit()

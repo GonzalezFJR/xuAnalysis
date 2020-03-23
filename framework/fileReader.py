@@ -1,7 +1,9 @@
+'''
+ Use it to create a cfg file from a crab production. Example:
+ >> python2 framework/fileReader.py [path] --prod [NameOfProduction] --cfg [nameOfOutputCfgFile]
+'''
 import os, sys, argparse
 from ROOT import TFile, TTree, TH1F
-
-defaultPath = '/afs/cern.ch/work/j/jrgonzal/public/Run2017G/skim2l'
 
 def isdigit(a):
   ''' Redefinition of str.isdigit() that takes into account negative numbers '''
@@ -254,10 +256,9 @@ def addToListOfFiles(listOfFiles, name, i):
 
 def main():
  # Parsing options
- path = defaultPath
  sample = ''
  pr = argparse.ArgumentParser()
- pr.add_argument('path', help='Input folder', type = str, default = defaultPath)
+ pr.add_argument('path', help='Input folder', type = str)
  pr.add_argument('--sample', type = str, default = '')
  pr.add_argument('-i','--inspect', action='store_true', help='Print branches')
  pr.add_argument('-t','--treeName', default='Events', help='Name of the tree')

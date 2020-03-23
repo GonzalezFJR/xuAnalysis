@@ -84,10 +84,11 @@ def GetOptions(path, sample, options = ""):
   if not path.endswith('/'): path += '/'
   if not sample.endswith(".root"): sample += '.root'
   doPUweight  = 'PUweight,' if IsVarInTree(path+sample, 'puWeight') else ''
+  doPrefire   = 'Prefire,'  if IsVarInTree(path+sample, 'PrefireWeight') else ''
   doJECunc    = 'JECunc,'   if IsVarInTree(path+sample, 'Jet_pt_jesTotalUp') else ''
   doIFSR      = 'doIFSR,'   if IsVarInTree(path+sample, 'nPSWeight') and GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
   useJetPtNom = 'JetPtNom,' if IsVarInTree(path+sample, 'Jet_pt_nom') else ''
-  options += doPUweight + doJECunc + doIFSR + useJetPtNom + options
+  options += doPUweight + doPrefire + doJECunc + doIFSR + useJetPtNom + options
   if options.endswith(','): options = options[:-1]
   return options
 
@@ -162,7 +163,7 @@ def main(ocfgfile = ''):
     parser.add_argument('selection'         , default=''         , help = 'Name of the selector')
   parser.add_argument('--pretend','-p'    , action='store_true'  , help = 'Create the files but not send the jobs')
   parser.add_argument('--test','-t'       , action='store_true'  , help = 'Sends only one or two jobs, as a test')
-  parser.add_argument('--metapy'          , default=None         , help = 'Pass all code to each worker')
+  parser.add_argument('--include'         , default=None         , help = 'Pass all code to each worker')
   parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
   parser.add_argument('--verbose','-v'    , default=0            , help = 'Activate the verbosing')
   parser.add_argument('--path'            , default=''           , help = 'Path to look for nanoAOD')
@@ -202,7 +203,7 @@ def main(ocfgfile = ''):
   sendJobs    = int(args.sendJobs)
   queue       = args.queue
   treeName    = args.treeName
-  metapy      = args.metapy if not isinstance(args.metapy, str) else ([args.metapy] if not ',' in args.metapy else args.metapy.replace(' ', '').split(','))
+  metapy      = args.include
   elist       = args.elist if not(args.elist=='None') else False 
 
   aarg = sys.argv
@@ -262,7 +263,7 @@ def main(ocfgfile = ''):
         if   key == 'pretend'   : pretend   = 1
         elif key == 'verbose'   : verbose   = int(val) if val.isdigit() else 1
         elif key == 'test'      : dotest    = 1
-        elif key == 'metapy'    : metapy    = 1
+        elif key == 'include'   : metapy    = val
         elif key == 'path'      : path      = val
         elif key == 'sample'    : sample    = val
         elif key == 'options'   : options   = val

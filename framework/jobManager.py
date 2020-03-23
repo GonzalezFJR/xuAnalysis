@@ -44,6 +44,9 @@ class jobManager:
   def SetOutFileName(self, name):
     self.outfName = name
 
+  def SetFileOutpath(self, out='./temp/'):
+    self.fileOutPath = out
+
   def SetOutErrorName(self, name):
     self.errorfName = name
 
@@ -104,6 +107,12 @@ class jobManager:
     name += 'Error_' + self.date + '_' + self.jobname + '_' + str(index) + '.txt'
     return name
   
+  def GetLogName(self, index = 0):
+    ''' Returns the name of the log file (for condor jobs) '''
+    name  = self.outFolder
+    name += 'Log_' + self.date + '_' + self.jobname + '_' + str(index) + '.txt'
+    return name
+  
   def GetSubmitCommand(self, index):
     ''' Crafts the submit command '''
     queue   = self.queue
@@ -111,18 +120,19 @@ class jobManager:
     jname   = "%s_%i"%(self.jobname, index)
     errname = self.GetErrName(index)
     outname = self.GetOutName(index)
+    logname = self.GetLogName(index)
     jobfile = self.GetJobName(index) 
     if self.system == 'slurm':
       runCommand = "sbatch -p %s -c %i -J %s -e %s -o %s %s"%(queue, nSlots, jname, errname, outname, jobfile)
     elif self.system == 'condor':
-      subname = self.CreateCondorCfg(queue, nSlots, jname, errname, outname, jobfile)
+      subname = self.CreateCondorCfg(queue, nSlots, jname, errname, outname, jobfile, logname)
       runCommand = 'condor_submit %s'%(subname)
     else:
       runCommand = "bsub -J %s -o %s -e %s -q %s %s"%(jname, outFolder, errname, queue, jobfile)
     #command += '< '  + self.GetJobName(index)
     return runCommand
 
-  def CreateCondorCfg(self, queue, nSlots, jname, errname, joutname, jobfile):
+  def CreateCondorCfg(self, queue, nSlots, jname, errname, joutname, jobfile, logname):
     outname = 'jobs/condorsubmit_%s.sub'%(self.date+'_'+jname)
     sub = ''
     sub += 'Universe                = Docker\n'
@@ -137,8 +147,10 @@ class jobManager:
     sub += 'arguments               = $(ClusterId) $(ProcId)\n'
     sub += 'output                  = %s\n'%joutname
     sub += 'error                   = %s\n'%errname
-    sub += 'log                     = log_%s.log\n'%jname
-    sub += 'transfer_input_files    = metapy.py\n'%jname
+    sub += 'log                     = %s\n'%logname
+    sub += 'transfer_output_files   = CMSSW_10_2_5/src/xuAnalysis/%s/\n'%self.fileOutPath
+    sub += 'output_destination      = ./%s/\n'self.fileOutPath
+    sub += '\n'
     sub += 'queue\n'
     with open(outname, 'wr') as out: out.write(sub)
     out.close()
@@ -153,7 +165,7 @@ class jobManager:
     nout = 'jobs/metapy.py'
     f = open(nout, 'w')
     f.write('import os,sys\n')
-    for d in dirs: f.write('os.system("mkdir -t %s")\n'%d)
+    for d in dirs: f.write('os.system("mkdir -p %s")\n'%d)
     f.write('\n')
     for fname in files:
       fin = open(fname)
@@ -203,6 +215,7 @@ class jobManager:
     self.SetName(name)
     self.SetQueue(queue)
     self.SetAnalysisName(analysis)
+    self.SetFileOutpath()
 
     self.date = GetNow()
     self.pretend = pretend

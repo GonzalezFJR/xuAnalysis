@@ -329,7 +329,7 @@ class analysis:
     else:
       # Create env
       t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_10_2_5/src\neval `scramv1 runtime -sh`\n'
-    if metapy != '': t += 'cp -r %s .\n'%(metapy)
+    if metapy != '': t += 'cp -r %s .\ncd xuAnalysis\n'%(metapy)
     pycom =  'python -c \''
     pycom += 'from %s import *; '%(modulname + '.' + modulname if self.anpath == '' else modulname)
     if isinstance(filename, list):

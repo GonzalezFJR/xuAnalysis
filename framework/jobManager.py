@@ -149,7 +149,7 @@ class jobManager:
     sub += 'error                   = %s\n'%errname
     sub += 'log                     = %s\n'%logname
     sub += 'transfer_output_files   = CMSSW_10_2_5/src/xuAnalysis/%s/\n'%self.fileOutPath
-    sub += 'output_destination      = ./%s/\n'self.fileOutPath
+    sub += 'output_destination      = ./%s/\n'%self.fileOutPath
     sub += '\n'
     sub += 'queue\n'
     with open(outname, 'wr') as out: out.write(sub)

@@ -328,8 +328,8 @@ class analysis:
         t += 'source /cms/slc6_amd64_gcc530/external/gcc/5.3.0/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/dependencies-setup.sh; source /cms/slc6_amd64_gcc530/external/cmake/3.5.2/etc/profile.d/init.sh;source /opt/root6/bin/thisroot.sh\n'
     else:
       # Create env
-      t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_8_0_26/src\neval `scramv1 runtime -sh`\n'
-    if metapy != '': t += 'cp -r %s\n'%(metapy)
+      t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_10_2_5/src\neval `scramv1 runtime -sh`\n'
+    if metapy != '': t += 'cp -r %s .\n'%(metapy)
     pycom =  'python -c \''
     pycom += 'from %s import *; '%(modulname + '.' + modulname if self.anpath == '' else modulname)
     if isinstance(filename, list):

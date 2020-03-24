@@ -7,9 +7,7 @@ from framework.fileReader import GetHistoFromSetOfFiles
 from framework.functions import *
 from ROOT.TMath import Sqrt as sqrt
 from ROOT import *
-from modules.puWeightProducer import puWeight_5TeV
-from modules.PrefireCorr import PrefCorr5TeV
-from modules.GetBTagSF import BtagReader
+#from modules.GetBTagSF import BtagReader
 from MuonTrigSFPbPb import GetMuonTrigSF, GetMuonTrigEff, GetMuonEff, GetMuonEffDimuon
 
 ttnomname = 'TT'
@@ -141,22 +139,28 @@ class tt5TeV(analysis):
       self.LoadHisto('ElecTrigEEnum',    basepath+'./inputs/eleTreeEff0_PbPb_LooseWP_EE_Centr_0_100_HLTOnly_Data.root',  'Graph') # Endcap data
       self.LoadHisto('ElecTrigEEden',    basepath+'./inputs/eleTreeEff0_PbPb_LooseWP_EE_Centr_0_100_HLTOnly_MC.root',    'Graph') # Endcap MC
 
-      # Modules to have some weights in MC
-      self.PUweight = puWeight_5TeV(self.tchain, self.index <= 0)
-      self.PrefCorr = PrefCorr5TeV(self.index <= 0)
-
-    # To apply b tagging SF
-    self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Medium', 2017)
-
     # Uncertainties
     self.doSyst   = False if ('noSyst' in self.options or self.isData) else True
     self.doJECunc = True if 'JECunc'   in self.options else False
     self.doPU     = True if 'PUweight' in self.options else False
+    self.doPref   = True if 'Prefire'  in self.options else False
     self.doIFSR   = True if 'doIFSR'   in self.options and self.outname == 'TT' else False
     self.jetptvar   = 'Jet_pt_nom'   if 'JetPtNom' in self.options else 'Jet_pt'
     self.jetmassvar = 'Jet_mass_nom' if 'JetPtNom' in self.options else 'Jet_mass'
     self.metptvar   = 'MET_pt_nom'   if 'JetPtNom' in self.options else 'MET_pt'
     self.metphivar  = 'MET_phi_nom'  if 'JetPtNom' in self.options else 'MET_phi'
+
+    # Modules to have some weights in MC
+    if not self.isData:
+      if not self.doPU:   
+        from modules.puWeightProducer import puWeight_5TeV
+        self.PUweight = puWeight_5TeV(self.tchain, self.index <= 0)
+      if not self.doPref: 
+        from modules.PrefireCorr import PrefCorr5TeV
+        self.PrefCorr = PrefCorr5TeV(self.index <= 0)
+
+      # To apply b tagging SF
+      #self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Medium', 2017)
 
     if self.doPU: 
       systlabel[systematic.PUUp]   = 'PUUp'
@@ -545,7 +549,8 @@ class tt5TeV(analysis):
     for jet in jets:
       pt = jet.Pt(); eta = jet.Eta()
       tagger = jet.GetDeepCSV(); flav = jet.GetFlav() if not self.isData else -999999
-      if self.BtagSF.IsBtag(tagger, flav, pt, eta, systIndex): nbtag += 1
+      #if self.BtagSF.IsBtag(tagger, flav, pt, eta, systIndex): nbtag += 1
+      if tagger > 0.4941: nbtag += 1
     return nbtag
 
   def insideLoop(self, t):
@@ -808,18 +813,22 @@ class tt5TeV(analysis):
     ###########################################
     self.nvtx   = t.PV_npvs
     self.PUSF   = 1; self.PUUpSF = 1; self.PUDoSF = 1
-    #if not self.isData and self.doPU:
-    #  self.PUSF   = t.puWeight
-    #  self.PUUpSF = t.puWeightUp
-    #  self.PUDoSF = t.puWeightDown
-    #if not self.isData:
-    #  self.PUSF   = self.PUweight.GetWeight(t)
-    #  self.PUUpSF = self.PUweight.GetWeightUp(t)
-    #  self.PUDoSF = self.PUweight.GetWeightDown(t)
+    if not self.isData and self.doPU:
+      self.PUSF   = t.puWeight
+      self.PUUpSF = t.puWeightUp
+      self.PUDoSF = t.puWeightDown
+    elif not self.isData:
+      self.PUSF   = self.PUweight.GetWeight(t)
+      self.PUUpSF = self.PUweight.GetWeightUp(t)
+      self.PUDoSF = self.PUweight.GetWeightDown(t)
     self.obj['PUWeights'].Fill(self.PUSF)
  
     self.prefWeight = 1; self.prefWeightUp = 1; self.prefWeightDo = 1
-    if not self.isData:
+    if not self.isData and self.doPref:
+      self.prefWeight   = t.PrefireWeight
+      self.prefWeightUp = t.PrefireWeight_Up
+      self.prefWeightDo = t.PrefireWeight_Down
+    elif not self.isData:
       self.prefWeight   = self.PrefCorr.GetWeight(t)
       self.prefWeightUp = self.PrefCorr.GetWeightUp(t)
       self.prefWeightDo = self.PrefCorr.GetWeightDown(t)

@@ -1,4 +1,6 @@
 import os, sys, datetime
+basepath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
+sys.path.append(basepath)
 
 ### Dates
 ##########################################
@@ -42,6 +44,9 @@ class jobManager:
   def SetOutFileName(self, name):
     self.outfName = name
 
+  def SetFileOutpath(self, out='./temp/'):
+    self.fileOutPath = out
+
   def SetOutErrorName(self, name):
     self.errorfName = name
 
@@ -51,6 +56,9 @@ class jobManager:
   def SetName(self, name):
     self.jobname = name
 
+  def SetAnalysisName(self, an):
+    self.anName = an
+
   def SetPretend(self, pretend = True):
     self.pretend = pretend
 
@@ -59,6 +67,27 @@ class jobManager:
 
   def AddJob(self, j):
     self.joblist.append(j)
+
+  def GetDependentMod(self, anName=''):
+    if anName=='': anName = self.anName
+    directories = ['%s'%anName, 'framework']
+    files = []
+    f = open('%s/%s.py'%(anName, anName))
+    GetPythonFile = lambda x : x.replace('.','/')+'.py' if os.path.isfile(basepath+x.replace('.','/')+'.py') else ( anName+'/'+x.replace('.','/')+'.py' if os.path.isfile(basepath+anName+'/'+x.replace('.','/')+'.py') else False)
+    for l in f.readlines():
+      if not 'import' in l: continue
+      fname = False
+      if 'from' in l: 
+        fname = GetPythonFile(l[l.index('from')+5 : l.index('import')-1])
+      else:
+        mod = l[l.index('import')+1:]
+        if ' ' in mod: mod = mod[:mod.index(' ')]
+        fname = GetPythonFile(mod)
+      if fname: 
+        files.append(fname)
+        dname = fname.split('/')[0]
+        if not dname in directories: directories.append(dname)
+    return directories, files
 
   def GetJobName(self, index = 0):
     ''' Returns the job name '''
@@ -78,6 +107,12 @@ class jobManager:
     name += 'Error_' + self.date + '_' + self.jobname + '_' + str(index) + '.txt'
     return name
   
+  def GetLogName(self, index = 0):
+    ''' Returns the name of the log file (for condor jobs) '''
+    name  = self.outFolder
+    name += 'Log_' + self.date + '_' + self.jobname + '_' + str(index) + '.txt'
+    return name
+  
   def GetSubmitCommand(self, index):
     ''' Crafts the submit command '''
     queue   = self.queue
@@ -85,14 +120,60 @@ class jobManager:
     jname   = "%s_%i"%(self.jobname, index)
     errname = self.GetErrName(index)
     outname = self.GetOutName(index)
+    logname = self.GetLogName(index)
     jobfile = self.GetJobName(index) 
-    if self.isSlurm:
+    if self.system == 'slurm':
       runCommand = "sbatch -p %s -c %i -J %s -e %s -o %s %s"%(queue, nSlots, jname, errname, outname, jobfile)
+    elif self.system == 'condor':
+      subname = self.CreateCondorCfg(queue, nSlots, jname, errname, outname, jobfile, logname)
+      runCommand = 'condor_submit %s'%(subname)
     else:
       runCommand = "bsub -J %s -o %s -e %s -q %s %s"%(jname, outFolder, errname, queue, jobfile)
     #command += '< '  + self.GetJobName(index)
-
     return runCommand
+
+  def CreateCondorCfg(self, queue, nSlots, jname, errname, joutname, jobfile, logname):
+    outname = 'jobs/condorsubmit_%s.sub'%(self.date+'_'+jname)
+    sub = ''
+    sub += 'Universe                = Docker\n'
+    sub += 'use_x509userproxy       = true\n'
+    sub += 'should_transfer_files   = YES\n'
+    sub += 'when_to_transfer_output = ON_EXIT\n'
+    sub += '+WantDocker             = True\n'
+    sub += '+WantWholeNode          = True\n'
+    sub += 'docker_image            = "unlhcc/osg-wn-el7"\n'
+    sub += '\n'
+    sub += 'executable              = %s\n'%jobfile
+    sub += 'arguments               = $(ClusterId) $(ProcId)\n'
+    sub += 'output                  = %s\n'%joutname
+    sub += 'error                   = %s\n'%errname
+    sub += 'log                     = %s\n'%logname
+    sub += 'transfer_output_files   = CMSSW_10_2_5/src/xuAnalysis/%s/\n'%self.fileOutPath
+    sub += 'output_destination      = ./%s/\n'%self.fileOutPath
+    sub += '\n'
+    sub += 'queue\n'
+    with open(outname, 'wr') as out: out.write(sub)
+    out.close()
+    return outname
+
+  def CreateMetapy(self, includeInputs):
+    dirs, files = self.GetDependentMod()
+    for i in includeInputs:
+      if not os.path.isfile(i): continue
+      files.append(i)
+      if '/' in files: dirs.append(files[:-files[::-1].index('/')])
+    nout = 'jobs/metapy.py'
+    f = open(nout, 'w')
+    f.write('import os,sys\n')
+    for d in dirs: f.write('os.system("mkdir -p %s")\n'%d)
+    f.write('\n')
+    for fname in files:
+      fin = open(fname)
+      text = fin.read()
+      f.write('\nf = open("%s", "w")\nf.write("""%s""")\nf.close()\n'%(fname, text))
+      fin.close()
+    f.close()
+    return nout
 
   def CreateJobs(self):
     ''' Create the job files '''
@@ -128,18 +209,19 @@ class jobManager:
     self.SubmitJobs()
     if self.autorm: self.RemoveJobsFiles()
 
-  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False):
+  def __init__(self, name, outFolder = './jobs/', queue = '8nm', verbose = 1, pretend = False, autorm = False, analysis = ''):
     self.joblist = []
     self.SetOutFolder(outFolder)
     self.SetName(name)
     self.SetQueue(queue)
+    self.SetAnalysisName(analysis)
+    self.SetFileOutpath()
 
     self.date = GetNow()
     self.pretend = pretend
     self.verbose = verbose
     self.autorm = autorm
+    self.system = ''
     hostname = os.uname()[1]
-    isSlurm = False
-    if 'cern'   in hostname: isSlurm = False
-    if 'uniovi' in hostname: isSlurm = True
-    self.isSlurm = isSlurm
+    if 'cern'   in hostname or 't3.unl' in hostname: self.system = 'condor'
+    elif 'uniovi' in hostname: self.system = 'slurm'

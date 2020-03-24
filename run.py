@@ -102,7 +102,7 @@ def GetTStringVectorSamples(path, samples):
   v = GetTStringVector(samples)
 
 
-def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events', elistf=""):
+def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events', elistf="", pathToAnalysis = ''):
 
   if dotest:
     nEvents  = 1000
@@ -131,6 +131,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   options = GetOptions(path, sname, options)
   if nEvents != 0: evRang = [FirstEvent, nEvents]
   an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName, elistf=elistf)
+  an.SetAnPath(pathToAnalysis)
   an.SetOutDir(outpath)
   an.SetOutName(outname)
 
@@ -149,7 +150,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   return out
 
 
-def main(ocfgfile = ''): 
+def main(ocfgfile = '', doSendJobs = False): 
   selection = ocfgfile
   ################################################################################
   ### Execute
@@ -180,7 +181,8 @@ def main(ocfgfile = ''):
   parser.add_argument('--elist'           , default='None'       , help = 'Name of the folder with prefilter eventlists')
 
 
-  args = parser.parse_args()
+  #args = parser.parse_args()
+  args, unknown = parser.parse_known_args()
   if hasattr(args, 'selection'): selection   = args.selection
   if selection == '': return
   verbose     = args.verbose
@@ -201,6 +203,8 @@ def main(ocfgfile = ''):
   queue       = args.queue
   treeName    = args.treeName
   elist       = args.elist if not(args.elist=='None') else False 
+  if xsec.isdigit(): xsec = int(xsec)
+  if doSendJobs: sendJobs = True
 
   aarg = sys.argv
   ncores = nSlots
@@ -263,7 +267,7 @@ def main(ocfgfile = ''):
         elif key == 'sample'    : sample    = val
         elif key == 'options'   : options   = val
         elif key == 'selection' : selection = val
-        elif key == 'xsec'      : xsec      = val
+        elif key == 'xsec'      : xsec      = val if not val.isdigit() else int(val)
         elif key == 'prefix'    : prefix    = val
         elif key == 'outpath'   : outpath   = val
         elif key == 'queue'     : queue     = val
@@ -284,7 +288,7 @@ def main(ocfgfile = ''):
     if '--sendJobs'in aarg or '-j' in aarg : sendJobs    = args.sendJobs
     if args.path       != ''       : path        = args.path
     if args.options    != ''       : options     = args.options
-    if args.xsec       != 'xsec'   : xsec        = args.xsec
+    if args.xsec       != 'xsec'   : xsec        = args.xsec if not args.xsec.isdigit() else int(args.xsec)
     if args.year       != -1       : year        = args.year
     if args.prefix     != 'Tree'   : prefix      = args.prefix
     if args.outname    != ''       : outname     = args.outname
@@ -322,7 +326,7 @@ def main(ocfgfile = ''):
       sample  = samplefiles[sname]
       elistf  = elistfiles[sname]
       ncores  = nslots[sname]
-      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName, elistf)
+      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName, elistf, ptocfg)
   
   else: # no config file...
     out[outname] = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName)

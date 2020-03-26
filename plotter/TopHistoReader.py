@@ -1030,7 +1030,7 @@ class HistoManager:
         lsyst is a list of uncertainty names, not labels
     '''
     unc = []
-    if isinstance(lsyst, list) and (isinstance(lsyst[0], TH1F) or (isinstance(lsyst[0], list) and isinstance(lsyst[0][0], TH1F))):
+    if isinstance(lsyst, list) and (len(lsyst) > 0) and (isinstance(lsyst[0], TH1F) or (isinstance(lsyst[0], list) and ( len(lsyst[0]) > 0 and isinstance(lsyst[0][0], TH1F)) )):
       for h in lsyst:
         unc.append(self.GetDifUnc(self.sumdic[''], h))
     else:
@@ -1078,7 +1078,7 @@ class HistoManager:
     sumdic = self.sumdic.copy() # To keep the original
     hnom = sumdic[''].Clone('hnom')
     nsyst = []
-    if syst[0] == 'bkgnorm': 
+    if len(syst) > 0 and syst[0] == 'bkgnorm': 
       syst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]
     elif includeNorm:
       nsyst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]

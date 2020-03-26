@@ -321,7 +321,8 @@ class analysis:
     verbose    = 10 # why not
     eventRange = [n0, nF]
     metapy = self.metapy if hasattr(self, 'metapy') else ''
-    t = '#!/bin/sh\n\ncd ' + localPath + '\n'
+    #t = '#!/bin/sh\n\ncd ' + localPath + '\n'
+    t = '#!/bin/sh\n\ncd ' + (localPath if self.anpath == '' else self.anpath) + '\n'
     if not metapy != '':
       if 'CMSSW' in localPath: t += 'eval `scramv1 runtime -sh` \n'
       elif os.path.isfile('/opt/root6/bin/thisroot.sh'):

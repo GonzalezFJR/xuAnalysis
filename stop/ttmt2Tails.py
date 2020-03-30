@@ -121,40 +121,28 @@ processDic = {
       },
 }
 
-
-legendNames = {
-'tt' : 'Prompt t#bar{t}',
-'ttgaus' : 't#bar{t} gaussian',
-'ttnongaus' : 't#bar{t} non-gaussian',
-'stop' : 'stop',
-'Semileptonictt' : 'Semileptonic t#bar{t}',
-'ttDilepNonprompt':'t#bar{t} dilep nonprompt',
-'tWnonprompt': 'tW nonpromtp',
-'Othernonprompt' : 'Other nonprompt',
-}
-
-colors = {
-'tt' : kAzure+2,
-'ttgaus' : kAzure+3,
-'ttnongaus' : kRed-9,
-'stop' : kTeal+2,
-'Semileptonictt' : 1,
-'ttDilepNonprompt': kRed-5,
-'tWnonprompt': kOrange-2,
-'Othernonprompt': kGray,
-'tW' : kOrange+1,
-'ttZ' : kPink+2,
-'data' : 1,
-}
-
+stopcutline = lambda signal, mstop, mlsp : '   if not (mStop == %s and mLSP == %s ): return\n'%( mstop, mlsp)
+massfromsig = lambda signal : signal[4:].split('_')
+stopcuts = ''
+for sig in ['stop%i_%i'%(ms, ml)]:
+  mstop, mlsp = massfromsig(sig)
+  stopcuts += stopcutline(sig, mstop, mlsp)
 selection = '''
+ if self.outname.startswith('stop'):
+   mStop = t.Tm_stop; mLSP = t.Tm_LSP%s
  if self.outname in ['Semileptonictt', 'ttDilepNonprompt', 'tWnonprompt', 'Othernonprompt']:
    passNonprompt = (t.TStatus != 1 and t.TStatus != 22)
    if not passNonprompt: return 
  elif self.outname != 'data':
    passNonprompt = (t.TStatus == 1 or  t.TStatus == 22)
    if not passNonprompt: return 
-'''
+ if   self.outname == 'tt':
+   if t.TJERindex != 0: return 
+ elif self.outname == 'ttgaus':
+   if t.TJERindex != 1: return 
+ elif self.outname == 'ttnongaus':
+   if t.TJERindex != 2:  return 
+'''%('\n'+stopcuts+'\n')
 
 
 loopcode = '''

@@ -42,8 +42,11 @@ if args.BS: region = 'BS'
 if args.SR: region = 'SR'
 #Tm_LSP, Tm_stop
 treeName="MiniTree"
+syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, MisTag, PU, JESCor, JESUnCor, ElecES'
+if year != 2018: syst += ', Pref'
+systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
 
-GetOutPath = lambda year, region : '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop/SS/%s/%s/'%(str(year), region)
+GetOutPath = lambda year, region : '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop/SS_postFSR/%s/%s/'%(str(year), region)
 outpath = GetOutPath(year, region) 
 model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
 
@@ -52,6 +55,8 @@ vardic = {
 'mt2_4bins': 'm_{T2} (GeV)',
 'met'      : 'MET (GeV)',
 'mll'      : 'm_{e#mu} (GeV)',
+'dnn_5'    : 'DNN score',
+'dnn_10'   : 'DNN score',
 'dnn'      : 'DNN score',
 'count'    : 'Counts',
 'dileppt'  : 'p_{T}^{e#mu} (GeV)',
@@ -72,21 +77,27 @@ processDic = {
        'Chargeflips' : 'TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad',
        'PromptSS' : 'TTWJetsToLNu, TTWJetsToQQ, WZTo3LNu, ZZTo4L, TTZToLL_M_1to10, TTZToLLNuNu_M_10_a, TTZToQQ',
        'Semileptonictt' : 'TTToSemiLeptonic',
-       'Othernonprompt':'WJetsToLNu_MLM,TTTo2L2Nu, TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad, DYJetsToLL_M_10to50_MLM, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
+       'ttDilepNonprompt':'TTTo2L2Nu',
+       'tWnonprompt':'tbarW_noFullHad, tW_noFullHad',
+       'Othernonprompt':'WJetsToLNu_MLM, DYJetsToLL_M_10to50_MLM, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
        'data' : 'SingleMuon_2018, EGamma_2018, MuonEG_2018', #DoubleMuon_2018
      },
 2017 : {
        'Chargeflips' : 'TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad',
        'PromptSS' : 'TTWJetsToLNu, TTWJetsToQQ, WZTo3LNu, ZZTo4L, TTZToLL_M_1to10, TTZToLLNuNu_M_10_a, TTZToQQ',
        'Semileptonictt' : 'TTToSemiLeptonic',
-       'Othernonprompt':'WJetsToLNu_MLM,TTTo2L2Nu, TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad, DYJetsToLL_M_10to50_MLM, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
+       'ttDilepNonprompt':'TTTo2L2Nu',
+       'tWnonprompt':'tbarW_noFullHad, tW_noFullHad',
+       'Othernonprompt':'WJetsToLNu_MLM, DYJetsToLL_M_10to50_MLM, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
        'data' : 'MuonEG_2017,SingleElectron_2017,SingleMuon_2017',#,DoubleEG_2017,DoubleMuon_2017',
      },
 2016 : {
-       'Chargeflips' : 'TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad',
+       'Chargeflips' : 'TT, tbarW_noFullHad, tW_noFullHad',
        'PromptSS' : 'TTWJetsToLNu, TTWJetsToQQ, WZTo3LNu, ZZTo4L, TTZToLL_M_1to10_MLM, TTZToLLNuNu_M_10_a, TTZToQQ',
        'Semileptonictt' : 'TTToSemiLeptonic',
-       'Othernonprompt':'WJetsToLNu_MLM,TTTo2L2Nu, TTTo2L2Nu, tbarW_noFullHad, tW_noFullHad, DYJetsToLL_M_10to50, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
+       'ttDilepNonprompt':'TT',
+       'tWnonprompt':'tbarW_noFullHad, tW_noFullHad',
+       'Othernonprompt':'WJetsToLNu_MLM, DYJetsToLL_M_10to50, DYJetsToLL_M_50_a, WWTo2L2Nu, WZTo2L2Q, ZZTo2L2Nu, ZZTo2L2Q',
        'data' : 'MuonEG_2016,SingleElectron_2016,SingleMuon_2016',#,DoubleEG_2017,DoubleMuon_2017',
       },
 }
@@ -96,6 +107,8 @@ legendNames = {
 'Chargeflips' : 'Charge flips',
 'PromptSS' : 'Prompt SS',
 'Semileptonictt' : 'Semileptonic t#bar{t}',
+'ttDilepNonprompt':'Dilep t#bar{t} (np)',
+'tWnonprompt': 'tW nonpromtp',
 'Othernonprompt' : 'Other nonprompt',
 }
 
@@ -103,6 +116,8 @@ colors = {
 'Chargeflips' : kAzure+2,
 'PromptSS' : kAzure+3,
 'Semileptonictt' : kRed-9,
+'ttDilepNonprompt': kRed-5,
+'tWnonprompt': kOrange-2,
 'Othernonprompt': kGray,
 'data' : 1,
 }
@@ -117,15 +132,12 @@ prob1 = self.pd1.GetProb(values)
 
 def GetHistosFromLooper(year, ecut = '(t.TStatus == 1 or t.TStatus == 22)', processes = ['Chargeflips','PromptSS'], outfolder = '/'):
 #l = looper(path=path[year], nSlots = 6, treeName = 'MiniTree', options = 'merge', nEvents = 1000, outpath=outpath+'tempfiles/')
-  l = looper(path=path[year] if not region=='BS' else pathBS[year], nSlots = 20, treeName = 'MiniTree', options = 'merge', outpath = GetOutPath(year, region)+'/'+outfolder+'/tempfiles/', readOutput=True)
+  l = looper(path=path[year] if not region=='BS' else pathBS[year], nSlots = 4, treeName = 'MiniTree', options = 'merge', outpath = GetOutPath(year, region)+'/'+outfolder+'/tempfiles/', readOutput=True)
   l.AddHeader('from framework.mva import ModelPredict\n')
   l.AddInit('      self.pd1 = ModelPredict("%s")\n'%model)
 
   for p in processes: l.AddSample(p,  processDic[year][p])
 
-  syst = 'MuonEff, ElecEff, Trig, JES, JER, MuonES, Uncl, Btag, MisTag, PU, TopPt'
-  #if year != 2018: syst += ', Pref'
-  systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
   l.AddSyst(systlist)
   l.AddLoopCode(loopcode)
 
@@ -153,7 +165,9 @@ def GetHistosFromLooper(year, ecut = '(t.TStatus == 1 or t.TStatus == 22)', proc
   l.AddCut(ecut, [])
   cut = ''
 
-  l.AddHisto('vpd',   'dnn',  5, 0, 1,   weight = weight, cut = '')
+  l.AddHisto('vpd',   'dnn_5',  5, 0, 1,   weight = weight, cut = '')
+  l.AddHisto('vpd',   'dnn_10', 10, 0, 1,   weight = weight, cut = '')
+  l.AddHisto('vpd',   'dnn', 20, 0, 1,   weight = weight, cut = '')
   l.AddHisto('vpd',   'count',  1, 0, 2,   weight = weight, cut = '')
   l.AddHisto('TMll', 'mll', 10, 0, 300, weight = weight, cut = '')
   l.AddHisto('TMET', 'met', 10, 50, 300, weight = weight, cut = '')
@@ -177,16 +191,20 @@ def GetHistosFromLooper(year, ecut = '(t.TStatus == 1 or t.TStatus == 22)', proc
   out = l.Run()
   return out
 
+prSS = ['PromptSS', 'Chargeflips', 'Othernonprompt', 'Semileptonictt', 'ttDilepNonprompt', 'tWnonprompt']
+prOS = ['Othernonprompt', 'Semileptonictt','ttDilepNonprompt', 'tWnonprompt']
+normUncSS = {'PromptSS':0.3, 'Chargeflips':0.3, 'Othernonprompt':0.3, 'Semileptonictt':0.3, 'ttDilepNonprompt':0.3, 'tWnonprompt':0.3}
+normUncOS = {'Othernonprompt':0.3, 'Semileptonictt':0.3,'ttDilepNonprompt':0.3, 'tWnonprompt':0.3}
 if isinstance(year, str):
   promptSS = {}; nonpromptSS = {}; nonpromptOS = {}
   for y in [2016, 2017, 2018]:
     promptSS   [y] = GetHistosFromLooper(y, ecut = 't.TIsSS and (t.TStatus == 1 or  t.TStatus == 22)', processes = ['Chargeflips','PromptSS', 'data'], outfolder='promptSS')
-    nonpromptSS[y] = GetHistosFromLooper(y, ecut = 't.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = ['Semileptonictt','Othernonprompt'], outfolder='nonpromptSS')
-    nonpromptOS[y] = GetHistosFromLooper(y, ecut = 'not t.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = ['Semileptonictt','Othernonprompt'], outfolder='nonpromptOS')
+    nonpromptSS[y] = GetHistosFromLooper(y, ecut = 't.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = prOS, outfolder='nonpromptSS')
+    nonpromptOS[y] = GetHistosFromLooper(y, ecut = 'not t.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = prOS, outfolder='nonpromptOS')
 else:
   promptSS    = GetHistosFromLooper(year, ecut = 't.TIsSS and (t.TStatus == 1 or  t.TStatus == 22)', processes = ['Chargeflips','PromptSS', 'data'], outfolder='promptSS')
-  nonpromptSS = GetHistosFromLooper(year, ecut = 't.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = ['Semileptonictt','Othernonprompt'], outfolder='nonpromptSS')
-  nonpromptOS = GetHistosFromLooper(year, ecut = 'not t.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = ['Semileptonictt','Othernonprompt'], outfolder='nonpromptOS')
+  nonpromptSS = GetHistosFromLooper(year, ecut = 't.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = prOS, outfolder='nonpromptSS')
+  nonpromptOS = GetHistosFromLooper(year, ecut = 'not t.TIsSS and (t.TStatus != 1 and t.TStatus != 22)', processes = prOS, outfolder='nonpromptOS')
 if sendJobs: exit()
 
 ss = {}
@@ -208,8 +226,8 @@ def GetDDOS(year, ss, nonpromptOS):
     for ib in range(0, nb+1):
       dataSS   = ss['data'][var].GetBinContent(ib)
       promptSS = (ss['PromptSS'][var].GetBinContent(ib) + ss['Chargeflips'][var].GetBinContent(ib))*lumi
-      mcOS     = (nonpromptOS['Semileptonictt'][var].GetBinContent(ib) + nonpromptOS['Othernonprompt'][var].GetBinContent(ib))*lumi
-      mcSS     = (ss['Semileptonictt'][var].GetBinContent(ib) + ss['Othernonprompt'][var].GetBinContent(ib))*lumi
+      mcOS     = sum([nonpromptOS[x][var].GetBinContent(ib) for x in prOS])
+      mcSS     = sum([ss[x][var].GetBinContent(ib) for x in prOS])
       #mcOS     = (nonpromptOS['Semileptonictt'][var].GetBinContent(ib))*lumi
       #mcSS     = (ss['Semileptonictt'][var].GetBinContent(ib))*lumi
       ddbin    = (dataSS - promptSS)*( (mcOS/mcSS if mcSS != 0 else 1) if region != 'SR' else 4.4)
@@ -228,35 +246,35 @@ else:
   hDDOSdic = GetDDOS(year, ss, nonpromptOS) 
   nonpromptOS['DDOS'] = hDDOSdic
 
-prSS = ['PromptSS', 'Chargeflips', 'Othernonprompt', 'Semileptonictt']
 if isinstance(year, str):
-  hmSS16 = HistoManager(prSS, path = path[2016] if not region=='BS' else pathBS[2016], processDic = processDic[2016], lumi = GetLumi(2016)*1000, indic=ss[2016])
-  hmSS17 = HistoManager(prSS, path = path[2017] if not region=='BS' else pathBS[2017], processDic = processDic[2017], lumi = GetLumi(2017)*1000, indic=ss[2017])
-  hmSS   = HistoManager(prSS, path = path[2018] if not region=='BS' else pathBS[2018], processDic = processDic[2018], lumi = GetLumi(2018)*1000, indic=ss[2018])
+  hmSS16 = HistoManager(prSS, syst, path = path[2016] if not region=='BS' else pathBS[2016], processDic = processDic[2016], lumi = GetLumi(2016)*1000, indic=ss[2016])
+  hmSS17 = HistoManager(prSS, syst, path = path[2017] if not region=='BS' else pathBS[2017], processDic = processDic[2017], lumi = GetLumi(2017)*1000, indic=ss[2017])
+  hmSS   = HistoManager(prSS, syst, path = path[2018] if not region=='BS' else pathBS[2018], processDic = processDic[2018], lumi = GetLumi(2018)*1000, indic=ss[2018])
   hmSS.ScaleByLumi(); hmSS16.ScaleByLumi(); hmSS17.ScaleByLumi();
   hmSS.SetHistoName("mt2")
   hmSS.Add(hmSS17).Add(hmSS16)
 else:
-  hmSS = HistoManager(prSS, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000, indic=ss)
+  hmSS = HistoManager(prSS, syst, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000, indic=ss)
 hmSS.SetDataName('data')
+hmSS.AddNormUnc(normUncSS)
 
-prOS = ['Othernonprompt', 'Semileptonictt']
 #hmOS = HistoManager(prOS, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000, indic=ss)
 if isinstance(year, str):
-  hmOS16 = HistoManager(prOS, path = path[2016] if not region=='BS' else pathBS[2016], processDic = processDic[2016], lumi = GetLumi(2016)*1000, indic=nonpromptOS[2016])
-  hmOS17 = HistoManager(prOS, path = path[2017] if not region=='BS' else pathBS[2017], processDic = processDic[2017], lumi = GetLumi(2017)*1000, indic=nonpromptOS[2017])
-  hmOS   = HistoManager(prOS, path = path[2018] if not region=='BS' else pathBS[2018], processDic = processDic[2018], lumi = GetLumi(2018)*1000, indic=nonpromptOS[2018])
+  hmOS16 = HistoManager(prOS, syst, path = path[2016] if not region=='BS' else pathBS[2016], processDic = processDic[2016], lumi = GetLumi(2016)*1000, indic=nonpromptOS[2016])
+  hmOS17 = HistoManager(prOS, syst, path = path[2017] if not region=='BS' else pathBS[2017], processDic = processDic[2017], lumi = GetLumi(2017)*1000, indic=nonpromptOS[2017])
+  hmOS   = HistoManager(prOS, syst, path = path[2018] if not region=='BS' else pathBS[2018], processDic = processDic[2018], lumi = GetLumi(2018)*1000, indic=nonpromptOS[2018])
   hmOS.SetDataName('DDOS');  hmOS16.SetDataName('DDOS'); hmOS17.SetDataName('DDOS')
   hmOS.ScaleByLumi(); hmOS16.ScaleByLumi(); hmOS17.ScaleByLumi();
   hmOS.SetHistoName("mt2")
   hmOS.Add(hmOS17).Add(hmOS16)
 else: 
-  hmOS = HistoManager(prOS, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = 1, indic=ss)
+  hmOS = HistoManager(prOS, syst, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = 1, indic=ss)
   hmOS.SetDataName('DDOS')
+hmOS.AddNormUnc(normUncOS)
 
 def save(name, hm, processes = [''], oname = ''):
   hm.SetHisto(name)
-  opath = '/nfs/fanae/user/juanr/www/stoplegacy/SS/%s/%s/'%(year,region)
+  opath = '/nfs/fanae/user/juanr/www/stoplegacy/checksFullStatusReport/SS/%s/%s/'%(year,region)
   if not isinstance(year, str): hm.Save(outname=outpath+'/'+name, htag = '')
   s = Stack(outpath=opath+'/plots%s/'%oname)
   s.SetLegendName(legendNames)
@@ -268,7 +286,7 @@ def save(name, hm, processes = [''], oname = ''):
   s.DrawStack(vardic[name] if name in vardic.keys() else '', 'Events')
 
 def saveOSSS(hname, hOS, hSS):
-  opath = '/nfs/fanae/user/juanr/www/stoplegacy/SS/%s/%s/'%(year,region)
+  opath = '/nfs/fanae/user/juanr/www/stoplegacy/checksFullStatusReport/SS/%s/%s/'%(year,region)
   s = HistoComp(outpath=opath+'/RatioOSSS/', doNorm = False, doRatio = True)
   s.autoRatio = True
   #s.SetTextLumi('Normalized distributions', texlumiX = 0.12)
@@ -282,12 +300,17 @@ def saveOSSS(hname, hOS, hSS):
   s.SetOutName(hname)
   s.Draw()
 
-#for v in vardic.keys(): save(v, hmSS, prSS, 'SS')
+save('mt2', hmSS, prSS, 'SS')
+exit()
+for v in vardic.keys(): save(v, hmSS, prSS, 'SS')
 for v in vardic.keys(): save(v, hmOS, prOS, 'OS')
 for v in vardic.keys(): 
   hmOS.SetHisto(v)
   hmSS.SetHisto(v)
-  hOS = hmOS.GetHisto('Semileptonictt', v); hOS.Add(hmOS.GetHisto('Othernonprompt',v))
-  hSS = hmSS.GetHisto('Semileptonictt', v); hSS.Add(hmSS.GetHisto('Othernonprompt', v))
-  saveOSSS(v, hOS, hSS )
+  hOS = hmOS.GetHisto(prOS[0], v)
+  hSS = hmSS.GetHisto(prOS[0], v); 
+  for pr in prOS[1:]: 
+    hOS.Add(hmOS.GetHisto(pr,v))
+    hSS.Add(hmSS.GetHisto(pr, v))
+  #saveOSSS(v, hOS, hSS )
 #for v in vardic.keys(): saveOSSS(v, nonpromptOS['Semileptonictt'][v], ss['Semileptonictt'][v])

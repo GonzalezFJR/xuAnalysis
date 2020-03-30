@@ -7,15 +7,82 @@ from config import *
 basepath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(basepath)
 from plotter.TopHistoReader import TopHistoReader, HistoManager
-from plotter.Plotter import Stack, HistoComp
+from plotter.Plotter import Stack, HistoUnc
 from framework.looper import looper
 from ROOT.TMath import Sqrt as sqrt
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack, kSpring, kViolet, kYellow
-from ROOT import TCanvas, gROOT, TLegend, TCanvas
+from ROOT import TCanvas, gROOT, TLegend, TFile
 from numpy import arange
 gROOT.SetBatch(1)
-import argparse
 
+from math import sqrt
+def GetPDFuncHisto(nom, pdfvars, alphasvar = [], prName = 'tt'):
+  # Using PDF4LHC15_nlo_nf4_30_pdfas, 1+30+2 weights, see Table 6 in 
+  # https://arxiv.org/pdf/1510.03865.pdf
+  # Eq [20] for PDF unc:  0.01 (0.45 %)
+  # Eq [27] for alpha_S:  0.00 (0.15 %)
+  nom.SetName(prName)
+  nbins = nom.GetNbinsX()+1
+  up = nom.Clone(prName+'_PDFUp')
+  do = nom.Clone(prName+'_PDFDown')
+  unc      = [0]*nbins
+  alphaunc = [0]*nbins
+  for var in pdfvars:
+    for i in range(0, nbins):
+      n = nom.GetBinContent(i)
+      v = var.GetBinContent(i)
+      unc[i] += (n-v)*(n-v)
+  unc = [sqrt(x) for x in unc]
+
+  if len(alphasvar) == 2:
+    for i in range(0, nbins):
+      vu = alphasvar[0].GetBinContent(i)
+      vd = alphasvar[1].GetBinContent(i)
+      alphaunc[i] = (vu-vd)/2
+    unc = [sqrt(x*x+y*y) for x,y in zip(unc, alphaunc)]
+  
+  for i in range(0, nbins):
+    n = nom.GetBinContent(i)
+    up.SetBinContent(i, n+unc[i])
+    do.SetBinContent(i, n-unc[i])
+  return [nom, up, do]
+
+def GetMEuncHisto(orderedHistos, prName='tt'):
+  '''
+  [1] muF = 0.50, muR = 0.50 
+  [2] muF = 0.50, muR = 1.00 
+  [3] muF = 0.50, muR = 2.00 (unphysical)
+  [4] muF = 1.00, muR = 0.50 
+  [5] muF = 1.00, muR = 1.00 (nominal)
+  [6] muF = 1.00, muR = 2.00 
+  [7] muF = 2.00, muR = 0.50 (unphysical)
+  [8] muF = 2.00, muR = 1.00 
+  [9] muF = 2.00, muR = 2.00 
+  '''
+  nom = orderedHistos[4]
+  nom.SetName(prName)
+  nbins = nom.GetNbinsX()+1
+  up = nom.Clone(prName+'_ScaleUp')
+  do = nom.Clone(prName+'_ScaleDown')
+  uncUp  = [0]*nbins
+  uncDo  = [0]*nbins
+  hvar = [orderedHistos[0], orderedHistos[1], orderedHistos[3], orderedHistos[5], orderedHistos[7], orderedHistos[8]]
+  
+  for i in range(0, nbins):
+    n = nom.GetBinContent(i)
+    vals  = [h.GetBinContent(i) for h in hvar]
+    diffs = [n-v for v in vals]
+    uncDo[i] = min(diffs+[0])
+    uncUp[i] = max(diffs+[0])
+
+  for i in range(0, nbins):
+    n = nom.GetBinContent(i)
+    up.SetBinContent(i, n+uncUp[i])
+    do.SetBinContent(i, n+uncDo[i])
+  return [nom, up, do]
+
+
+import argparse
 parser = argparse.ArgumentParser(description='To select masses and year')
 parser.add_argument('--year',         default=2018   , help = 'Year')
 parser.add_argument('--mStop',        default=275  , help = 'Stop mass')
@@ -144,79 +211,62 @@ out = l.Run()
 if sendJobs: exit()
 
 t = TopHistoReader(outpath+'tempfiles/')
+print "Creating outputs in %s ..."%outpath
 for var in histos:
-  PDFhistosNom = t.GetNamedHisto('met_PDF0', 'tt')
+  PDFhistosNom = t.GetNamedHisto(var+'_PDF0', 'tt')
   PDFhistos = [t.GetNamedHisto(var+'_PDF%i'%i, 'tt') for i in range(1, nPDFweights-2 if year != 2016 else nPDFweights)]
-  AlphaShistos = [t.GetNamedHisto(var+'_PDF%i'%(nPDFweights-2), 'tt'), t.GetNamedHisto('met_PDF%i'%(nPDFweights-1), 'tt')] if year != 2016 else []
-  pdfUp, pdfDown = GetPDFuncHisto(PDFhistosNom, PDFhistos, AlphaShistos, prName = 'tt')
+  AlphaShistos = [t.GetNamedHisto(var+'_PDF%i'%(nPDFweights-2), 'tt'), t.GetNamedHisto(var+'_PDF%i'%(nPDFweights-1), 'tt')] if year != 2016 else []
+  pdfNom, pdfUp, pdfDown = GetPDFuncHisto(PDFhistosNom, PDFhistos, AlphaShistos, prName = 'tt')
 
-  MEhistos = [t.GetNamedHisto(var+'_ME%i') for i in range(nMEweights)]
-  meUp, meDown = GetMEuncHisto(MEhistos)
-  fout = TFile.Open(outpath+var+'.root')
-  pdfUp.Write(); pdfDown.Write();
-  meUp.Write(); meDown.Write();
+  fout = TFile.Open(outpath+'/PDF/'+var+'.root', 'RECREATE')
+  pdfNom.Write(); pdfUp.Write(); pdfDown.Write();
   fout.Close()
 
-from math import sqrt
-def GetPDFuncHisto(nom, pdfvars, alphasvar = [], prName = 'tt'):
-  # Using PDF4LHC15_nlo_nf4_30_pdfas, 1+30+2 weights, see Table 6 in 
-  # https://arxiv.org/pdf/1510.03865.pdf
-  # Eq [20] for PDF unc:  0.01 (0.45 %)
-  # Eq [27] for alpha_S:  0.00 (0.15 %)
-  nbins = nom.GetNbinsX()+1
-  up = nom.Clone(prName+'_PDFUp')
-  do = noo.Clone(prName+'_PDFDown')
-  unc      = [0]*nbins
-  alphaunc = [0]*nbins
-  for var in pdfvars:
-    for i in range(0, nbins):
-      n = nom.GetBinContent(i)
-      v = var.GetBinContent(i)
-      unc[i] += (n-v)*(n-v)
-  unc = [sqrt(x) for x in unc]
+  MEhistos = [t.GetNamedHisto(var+'_ME%i'%i) for i in range(nMEweights)]
+  meNom, meUp, meDown = GetMEuncHisto(MEhistos)
 
-  if len(alphasvar) == 2:
-    for i in range(0, nbins):
-      vu = alphasvar[0].GetBinContent(i)
-      vd = alphasvar[1].GetBinContent(i)
-      alphaunc[i] = (vu-vd)/2
-    unc = [sqrt(x*x+y*y) for x,y in zip(unc, alphaunc)]
-  
-  for i in range(0, nbins):
-    n = nom.GetBinContent(i)
-    up.SetBinContent(i, n+unc[i])
-    do.SetBinContent(i, n-unc[i])
-  return [up, do]
+  fout = TFile.Open(outpath+'/Scale/'+var+'.root', 'RECREATE')
+  meNom.Write(); meUp.Write(); meDown.Write();
+  fout.Close()
 
-def GetMEuncHisto(orderedHistos):
-  '''
-  [1] muF = 0.50, muR = 0.50 
-  [2] muF = 0.50, muR = 1.00 
-  [3] muF = 0.50, muR = 2.00 (unphysical)
-  [4] muF = 1.00, muR = 0.50 
-  [5] muF = 1.00, muR = 1.00 (nominal)
-  [6] muF = 1.00, muR = 2.00 
-  [7] muF = 2.00, muR = 0.50 (unphysical)
-  [8] muF = 2.00, muR = 1.00 
-  [9] muF = 2.00, muR = 2.00 
-  '''
-  nom = orderedHistos[4]
-  nbins = nom.GetNbinsX()+1
-  up = nom.Clone(prName+'_ScaleUp')
-  do = noo.Clone(prName+'_ScaleDown')
-  uncUp  = [0]*nbins
-  uncDo  = [0]*nbins
-  hvar = [orderedHistos[0], orderedHistos[1], orderedHistos[3], orderedHistos[5], orderedHistos[7], orderedHistos[8]]
-  
-  for i in range(0, nbins):
-    n = nom.GetBinContent(i)
-    vals  = [h.GetBinContent(i) for h in hvar]
-    diffs = [x-v for v in vals]
-    uncDo[i] = min(diffs+[0])
-    uncUp[i] = max(diffs+[0])
 
-  for i in range(0, nbins):
-    n = nom.GetBinContent(i)
-    up.SetBinContent(i, n+uncUp[i])
-    do.SetBinContent(i, n+uncDo[i])
-  return [up, do]
+######################################################################
+### Plotting
+
+titdic = {
+  'mt2' : 'm_{T2} (GeV)',
+  'met' : 'MET (GeV)',
+  'dnn' : 'DNN score',
+  'mll' : 'm_{e#mu} (GeV)',
+  'deltaeta' : '#Delta#eta(e#mu)',
+  'deltaphi' : '#Delta#phi(e#mu) (rad/#pi)',
+  'ht' : 'H_{T} (GeV)',
+  'jet0pt' : 'Leading jet p_{T} (GeV)',
+  'jet1pt' : 'Subeading jet p_{T} (GeV)',
+  'lep0pt' : 'Leading lepton p_{T} (GeV)',
+  'lep1pt' : 'Subleading lepton p_{T} (GeV)',
+  'lep0eta': 'Leading lepton #eta',
+  'lep1eta': 'Subleading lepton #eta',
+  'jet0eta': 'Leading jet #eta',
+  'jet1eta': 'Subleading jet #eta',
+  'njets'  : 'Jet multiplicity',
+  'nbtags' : 'b tag multiplicity',
+  'dileppt': 'p_{T}(e#mu) (GeV)',
+}
+
+
+out = '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/29mar/%i/'%year
+def SavePlots(s, var = 'mt2', sampName = 'tt', tag = 'PDF uncertainty'):
+  tr = TopHistoReader(outpath+s)
+  a = HistoUnc(out+'/PDF%s/'%sampName, var+sampName+s, tag=tag, xtit = titdic[var] if var in titdic.keys() else '')
+  a.SetLumi(GetLumi(year))
+  a.AddHistoNom( tr.GetNamedHisto(sampName, var))
+  a.AddHistoUp(  tr.GetNamedHisto(sampName+'_'+s+'Up', var))
+  a.AddHistoDown(tr.GetNamedHisto(sampName+'_'+s+'Down', var))
+  a.Draw()
+
+for var in titdic.keys():
+  SavePlots('PDF',   var=var, tag='PDF uncertainty')
+  SavePlots('Scale', var=var, tag='#mu_{R} and #mu_{F} scales uncertainty')
+
+

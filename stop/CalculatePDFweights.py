@@ -15,8 +15,10 @@ from ROOT import TCanvas, gROOT, TLegend, TFile
 from numpy import arange
 gROOT.SetBatch(1)
 
+doPlots = False
+
 from math import sqrt
-def GetPDFuncHisto(nom, pdfvars, alphasvar = [], prName = 'tt'):
+def GetPDFuncHisto(nom, pdfvars, alphasvar=[], prName='tt', year=2018):
   # Using PDF4LHC15_nlo_nf4_30_pdfas, 1+30+2 weights, see Table 6 in 
   # https://arxiv.org/pdf/1510.03865.pdf
   # Eq [20] for PDF unc:  0.01 (0.45 %)
@@ -32,7 +34,7 @@ def GetPDFuncHisto(nom, pdfvars, alphasvar = [], prName = 'tt'):
       n = nom.GetBinContent(i)
       v = var.GetBinContent(i)
       unc[i] += (n-v)*(n-v)
-  unc = [sqrt(x) for x in unc]
+  unc = [sqrt((x if year != 2016 else x/100) ) for x in unc]
 
   if len(alphasvar) == 2:
     for i in range(0, nbins):
@@ -110,11 +112,11 @@ if args.BS: region = 'BS'
 if args.SR: region = 'SR'
 
 # Set constants
-outpath = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop_v629Mar/Unc/%s_PDFunc/%i/mass%i_%i/'%(region, year, ms, ml)
+outpath = baseoutpath+'/PDFunc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
 os.system("mkdir -p %s"%outpath)
-model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
+
 # Create the looper, set readOutput to true to read previous temporary rootfiles created for each sample
-pathToFiles = '/nfs/fanae/user/juanr/test/PAFnanoAOD/PDFminitree/'#path[year]
+pathToFiles = path[year]
 l = looper(path=pathToFiles if region=='SR' else pathBS[year], nSlots=nSlots, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)#, sendJobs=sendJobs)
 
 # Add processes
@@ -216,8 +218,9 @@ for var in histos:
   PDFhistosNom = t.GetNamedHisto(var+'_PDF0', 'tt')
   PDFhistos = [t.GetNamedHisto(var+'_PDF%i'%i, 'tt') for i in range(1, nPDFweights-2 if year != 2016 else nPDFweights)]
   AlphaShistos = [t.GetNamedHisto(var+'_PDF%i'%(nPDFweights-2), 'tt'), t.GetNamedHisto(var+'_PDF%i'%(nPDFweights-1), 'tt')] if year != 2016 else []
-  pdfNom, pdfUp, pdfDown = GetPDFuncHisto(PDFhistosNom, PDFhistos, AlphaShistos, prName = 'tt')
+  pdfNom, pdfUp, pdfDown = GetPDFuncHisto(PDFhistosNom, PDFhistos, AlphaShistos, prName = 'tt', year=year)
 
+  if not os.path.isdir(outpath+'/PDF/'): os.system('mkdir -p %s'%(outpath+'/PDF/'))
   fout = TFile.Open(outpath+'/PDF/'+var+'.root', 'RECREATE')
   pdfNom.Write(); pdfUp.Write(); pdfDown.Write();
   fout.Close()
@@ -225,6 +228,7 @@ for var in histos:
   MEhistos = [t.GetNamedHisto(var+'_ME%i'%i) for i in range(nMEweights)]
   meNom, meUp, meDown = GetMEuncHisto(MEhistos)
 
+  if not os.path.isdir(outpath+'/Scale/'): os.system('mkdir -p %s'%(outpath+'/Scale/'))
   fout = TFile.Open(outpath+'/Scale/'+var+'.root', 'RECREATE')
   meNom.Write(); meUp.Write(); meDown.Write();
   fout.Close()
@@ -255,7 +259,7 @@ titdic = {
 }
 
 
-out = '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/29mar/%i/'%year
+out = webpath+'/%i/'%year
 def SavePlots(s, var = 'mt2', sampName = 'tt', tag = 'PDF uncertainty'):
   tr = TopHistoReader(outpath+s)
   a = HistoUnc(out+'/PDF%s/'%sampName, var+sampName+s, tag=tag, xtit = titdic[var] if var in titdic.keys() else '')
@@ -265,8 +269,9 @@ def SavePlots(s, var = 'mt2', sampName = 'tt', tag = 'PDF uncertainty'):
   a.AddHistoDown(tr.GetNamedHisto(sampName+'_'+s+'Down', var))
   a.Draw()
 
-for var in titdic.keys():
-  SavePlots('PDF',   var=var, tag='PDF uncertainty')
-  SavePlots('Scale', var=var, tag='#mu_{R} and #mu_{F} scales uncertainty')
+if doPlots:
+  for var in titdic.keys():
+    SavePlots('PDF',   var=var, tag='PDF uncertainty')
+    SavePlots('Scale', var=var, tag='#mu_{R} and #mu_{F} scales uncertainty')
 
 

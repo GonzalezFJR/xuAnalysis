@@ -23,9 +23,6 @@ parser.add_argument('--mLSP',         default=100  , help = 'Neutralino mass')
 parser.add_argument('--BS',          action='store_true'  , help = 'Do BS region')
 parser.add_argument('--SR',          action='store_true'  , help = 'Do signal region')
 parser.add_argument('--region',       default='SR'  , help = 'Select the region')
-#parser.add_argument('--verbose', '-v'    , default=0     , help = 'Activate the verbosing')
-#parser.add_argument('--process', '-p'    , default=''    , help = 'Run a given process')
-#parser.add_argument('--nSlots','-n'      , default=1           , help = 'Number of slots')
 parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
  
 #args = parser.parse_args()
@@ -52,16 +49,10 @@ if args.BS: region = 'BS'
 if args.SR: region = 'SR'
 
 # Set constants
-outpath = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop_v617Feb/Unc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
-#outpath = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop_v6NewSyst/Unc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
+outpath = baseoutpath+'/Unc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
 os.system("mkdir -p %s"%outpath)
-model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
-
-# Set year
-#year = 2018
 
 # Create the looper, set readOutput to true to read previous temporary rootfiles created for each sample
-#l = looper(path=path[year], nSlots = 6, treeName = 'MiniTree', options = 'merge', nEvents = 1000, outpath='tempfiles/')
 l = looper(path=path[year] if region=='SR' else pathBS[year], nSlots=nSlots, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)#, sendJobs=sendJobs)
 
 # Add processes
@@ -70,14 +61,17 @@ if argprocess != '': processes = argprocess
 for p in processes: l.AddSample(p,  processDic[year][p])
 
 # Systematic uncertainties
-syst = 'MuonEff, ElecEff, Trig, JESCor, JESUnCor, JER, MuonES, Uncl, Btag, MisTag, PU, TopPt, FSR, ISR, UE, hdamp, mtop' # PDF, ME
+syst = 'MuonEff, ElecEff, Trig, JESCor, JESUnCor, JER, MuonES, ElecES, Uncl, Btag, MisTag, PU, TopPt, UE, hdamp, mtop'
+
 if year != 2018: syst += ', Pref'
+if year != 2016: syst += ', ISR, FSR'
+# PDF, ME, nongauss
 systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
 
 # Lines below to read the DNN values
 l.AddHeader('from framework.mva import ModelPredict\n')
 l.AddInit('      self.pd1 = ModelPredict("%s")\n'%model)
-l.AddInit("      if self.outname in ['tt_hdampUp', 'tt_hdampDown', 'tt_UEUp', 'tt_UEDown', 'tt_mtopUp', 'tt_mtopDowm', 'data', 'data_obs', 'Data']: self.systematics = ['']\n")
+l.AddInit("      if self.outname in ['ttnongauss', 'tt_hdampUp', 'tt_hdampDown', 'tt_UEUp', 'tt_UEDown', 'tt_mtopUp', 'tt_mtopDowm', 'data', 'data_obs', 'Data']: self.systematics = ['']\n")
 l.AddSyst(systlist)
 loopcode = '''
 values = [%i,  %i, t.TDilep_Pt, t.TDeltaPhi, t.TDeltaEta, t.TLep0Pt, t.TLep0Eta, t.TLep1Pt, vmet, t.TLep1Eta, vmll, vmt2, vht]
@@ -92,11 +86,26 @@ stopcuts = ''
 for sig in ['stop%i_%i'%(ms, ml)]:
   mstop, mlsp = massfromsig(sig)
   stopcuts += stopcutline(sig, mstop, mlsp)
+
+hemsel = '''
+ if self.outname == 'ttnoHEM':
+   if t.TIsHEM: return
+'''
 selection = '''
  if self.outname.startswith('stop'):
    mStop = t.Tm_stop; mLSP = t.Tm_LSP%s
-'''%('\n'+stopcuts+'\n')
+ elif self.outname == 'Nonprompt':
+   passNonprompt = (t.TStatus != 1 and t.TStatus != 22)
+   if not passNonprompt: return 
+ elif self.outname != 'data':
+   passNonprompt = (t.TStatus == 1 or  t.TStatus == 22)
+   if not passNonprompt: return 
+ if self.outname == 'ttnongauss':
+   if t.TJERindex != 2:  return
+%s 
+'''%('\n'+stopcuts+'\n', hemsel if year == 2018 else '')
 l.AddSelection(selection)
+
 
 # Define expresions, including varibles with syst variations
 l.AddExpr('deltaphi', 'TDeltaPhi', 'abs(TDeltaPhi)/3.141592')
@@ -120,7 +129,7 @@ elif region == 'ttMET' or region == 'ttmet':
 elif region == 'ttMT2' or region == 'ttmt2':
   l.AddCut('TMET < 50', 'TMET')
 elif region == 'CR':
-  l.AddCut('(TMET < 50 or TMT2 < 80)', ['TMET', 'TMT2'])
+  l.AddCut('(TMET < 50 and TMT2 < 80)', ['TMET', 'TMT2'])
 l.AddCut('TNJets >= 2', 'TNJets')
 l.AddCut('TNBtags >= 1', 'TNBtags')
 
@@ -128,8 +137,10 @@ l.AddCut('TNBtags >= 1', 'TNBtags')
 cut = ''
 weight = 'exprW'
 l.AddHisto('vpd',  'dnn',  20, 0, 1,   weight = weight, cut = '')
-#l.AddHisto('vpd',  'dnn_5bins',  5, 0, 1,   weight = weight, cut = '')
-#l.AddHisto('vpd',  'dnn_4bins',  4, 0, 1,   weight = weight, cut = '')
+l.AddHisto('vpd',  'dnn_10bins',  10, 0, 1,   weight = weight, cut = '')
+l.AddHisto('vpd',  'dnn_30bins',  30, 0, 1,   weight = weight, cut = '')
+l.AddHisto('vpd',  'dnn_40bins',  40, 0, 1,   weight = weight, cut = '')
+l.AddHisto('vpd',  'dnn_5bins',  5, 0, 1,   weight = weight, cut = '')
 l.AddHisto('TMll', 'mll', 30, 0, 300, weight = weight, cut = '')
 if region == 'SR':
   l.AddHisto('TMET', 'met', 25, 50, 300, weight = weight, cut = '')
@@ -156,7 +167,9 @@ l.AddHisto('THT', 'ht', 40, 0, 800, weight = weight, cut = '')
 l.AddHisto('TNJets', 'njets', 6, 1.5, 7.5, weight = weight, cut = '')
 l.AddHisto('TNBtags', 'nbtags', 3, 0.5, 3.5, weight = weight, cut = '')
 histos  = ['mt2',  'met',  'mll',  'dnn',  'dileppt',  'deltaphi',  'deltaeta',  'ht',  'lep0pt',  'lep1pt',  'lep0eta',  'lep1eta', 'njets', 'nbtags', 'jet0pt', 'jet1pt', 'jet0eta', 'jet1eta'] 
-#histos += ['mt2_4bins', 'mt2_3bins', 'mt2_2bins', 'met_5bins', 'dnn_5bins', 'dnn_4bins']
+histos += ['dnn_5bins', 'dnn_10bins', 'dnn_30bins', 'dnn_40bins']
+
+'''
 # Scan in MET
 for val in arange(50, 300, 10):
   hname = 'metScanstop%i_%i_%1.0f'%(ms,ml,val*100)
@@ -167,13 +180,14 @@ for val in arange(0.5, 1, 0.05):
   hname = 'dnnScanstop%i_%i_%1.0f'%(ms,ml,val*100)
   histos.append(hname)
   l.AddHisto('weight1', hname,  1, -1, 20,   weight = weight, cut = 'vpd > %1.2f'%val)
+'''
  
-# Let's rock
 out = l.Run()
 
 if sendJobs: exit()
 # Create HistoManager with the out dictionary from the looper
 processes.pop(processes.index('data'))
+print 'processes: ', processes
 hm = HistoManager(processes, path = path[year] if region == 'SR' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000,indic = out)
 
 # Function to save the histograms into combine rootfiles

@@ -12,31 +12,23 @@ gROOT.SetBatch(1)
 
 doStack = True
 doPlotSyst = False
-year = 'comb'#2016
+year = 2018#'comb'#2016
 ms = 225
-ml = 50
-region = 'CR' #'ttmt2'
-syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, TopPt, hdamp, UE, PU, JESCor, JESUnCor, mtop, ISR, FSR' # MisTag, Pref
-process = 'tt, stop'#, tW, ttZ, Others'
+ml =  50
+region = 'BS' #'ttmt2'
+syst = 'ElecES, MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, TopPt, hdamp, UE, PU, JESCor, JESUnCor, mtop, ISR, FSR, MisTag, nongauss, PDF, Scale'#, ISR, FSR' # MisTag, Pref
+if region == 'BS': 
+  syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, TopPt, PU, JESCor, JESUnCor, MisTag'#, ISR, FSR' # MisTag, Pref
+  if year != 2016 and year != 'comb': syst += ',ISR, FSR'
+if year != 2018 and year != 'comb': syst += ', Pref'
+process = 'tt, tW, ttZ, Others, Nonprompt'
 #path = '../stop_v6testPU/Unc/%s/%i/mass%i_%i/'%(region,year, ms, ml)
 #path = '../stop_v6Mod/Unc/%s/%i/mass%i_%i/'%(region,year, ms, ml)
-#outpath = '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/unc/mass%i_%i/%s/%i/'%(ms, ml, region,year)
-GetPath = lambda region, year, ms, ml : '../stop_v617Feb/Unc/%s/%s/mass%i_%i/'%(region, str(year), ms, ml) # v611Feb NewSyst
-GetOutpath = lambda region, year, ms, ml : '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/18feb/mass%i_%i/%s/%s/'%(ms, ml, region,str(year))
+GetPath = lambda region, year, ms, ml : baseoutpath+'/Unc/%s/%s/mass%i_%i/'%(region, str(year), ms, ml) # v611Feb NewSyst
+GetOutpath = lambda region, year, ms, ml : webpath+'/mass%i_%i/%s/%s/'%(ms, ml, region,str(year))
 path    = GetPath(region,year, ms, ml)
 outpath = GetOutpath(region,year, ms, ml)
-#outpath = '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/testMod/mass%i_%i/%s/%i/'%(ms, ml, region,year)
 
-
-#for pr in process.replace(' ', '').split(','):
-#  print '%s : %1.2f'%(pr, hm.GetCYield(pr))
-#print 'y = ', hm.GetCYield('tt', syst)
-#for s in syst.replace(' ', '').split(','):
-#  n = hm.GetCYield('tt')
-#  v = hm.GetCYield('tt', s)
-#  print '%s : %1.2f'%(s, abs(n-v)/n*100)
-
-#print 'y = ', hm.GetCYield('tt')
 
 sysdic = {
 'MuonEff' : 'Muon efficiency',
@@ -48,6 +40,7 @@ sysdic = {
 'JESCor'  : 'JES (correlated)',
 'JER'     : 'Jet energy resolution',
 'MuonES'  : 'Muon energy scale',
+'ElecES'  : 'Electron energy scale',
 'Uncl'    : 'Unclustered energy',
 'Btag'    : 'b-tag efficiency',
 'MisTag'  : 'MisTag efficiency',
@@ -58,6 +51,9 @@ sysdic = {
 'ISR'     : 'Initial state radiation',
 'FSR'     : 'Final state radiation',
 'mtop'    : 'Top quark mass',
+'PDF'     : 'PDF + #alpha_{S}',
+'Scale'   : '#mu_{F} and #mu_{R} scales',
+'nongauss': 'Non-gaussian JER tails',
 }
 
 titdic = {
@@ -145,9 +141,10 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
     hm = HistoManager(pr, syst, path=path, signalList = 'stop')
   hm.ReadHistosFromFile(var)
   hm.AddNormUnc({'tt':0.06, 'Nonprompt':0.3, 'Others':0.3,'ttZ':0.3,'tW':0.15})
-  #hm.GetDataHisto()
-  #hm.indic['data_obs']['data_obs'] = hm.GetSumBkg()
-  #if var in ['mt2', 'met', 'dnn']: del hm.indic['data_obs'] # blind
+  hm.GetDataHisto()
+  if var in ['mt2', 'met', 'dnn'] and region != 'CR':
+    #del hm.indic['data_obs'] # blind
+    hm.indic['data_obs']['data_obs'] = hm.GetSumBkg()
   outdir = GetOutpath(region, year, ms, ml)
   s = Stack(outpath=outdir+'/stackplots/')
   s.SetColors(colors)
@@ -155,7 +152,7 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   s.SetLumi(GetLumi(year) if isinstance(year, int) else (GetLumi(2016) + GetLumi(2017) + GetLumi(2018)) )
   s.SetOutName('stack_'+var)
   s.SetHistosFromMH(hm)
-  if (not var in ['mt2', 'met', 'dnn']) or (region != 'SR'): s.SetDataHisto(hm.indic['data_obs']['data_obs'])
+  if (not var in ['mt2', 'met', 'dnn']) or (region == 'CR'): s.SetDataHisto(hm.indic['data_obs']['data_obs'])
   else                               : 
     #hData  = hm.GetSumBkg().Clone("Asimov")
     hData  = s.TotMC.Clone("Asimov")
@@ -165,39 +162,31 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
     s.SetDataHisto(hData)
     s.SetRatio(hData2)
   s.AddSignalHisto(hm.indic['stop']['stop'], color = kTeal+2, mode = 'ontop', ratioBkg = True)
-  if   region == 'SR': s.SetTextChan('SR: BS + p_{T}^{miss} > 50, m_{T2} > 80')
+  if   region == 'SR': s.SetTextChan('SR: BS + p_{T}^{miss} #geq 50, m_{T2} #geq 80')
   elif region == 'BS': s.SetTextChan('BS: e#mu, #geq 2 jets, #geq 1 btag')
+  elif region == 'CR': s.SetTextChan('BS + met < 50, m_{T2} < 80 ')
   elif region == 'ttmt2': s.SetTextChan('BS + met < 50')
   elif region == 'ttmet': s.SetTextChan('BS + m_{T2} < 80')
   s.SetRatioMin(0.5); s.SetRatioMax(1.5)
   #s.SetYratioTitle('S/(S+B)')
   s.SetYratioTitle('Ratio')
+  s.SetPlotMaxScale(1.6)
+  s.DrawStack(xtit, 'Events')
+  s.SetLogY()
+  s.SetOutName('stack_log_'+var)
+  s.SetPlotMinimum(0.1)
+  s.SetPlotMaxScale(1200)
   s.DrawStack(xtit, 'Events')
 
 
-'''
-process = processes
-var = 'met'
-pr = ['tt']
-hm   = HistoManager(pr, syst, path=GetPath('BS', 2016, 225, 50), signalList = 'stop')
-hm.ReadHistosFromFile(var)
-hm.AddNormUnc({'tt':0.5})
-c = TCanvas('c', 'c', 10, 10, 800, 600)
-hnorm = hm.GetNormUnc()
-hnorm2 = hm.GetNormUnc()
-hnorm.Divide(hnorm2);
-hnorm.Draw("e2");
-c.SaveAs('testnorm.png')
-'''
-StackPlot('met', 'MET')
-
-exit()
-#PrintTableUnc(syst)
+#PrintTableUnc(syst, 'tt')
+#exit()
 for var in titdic.keys():
+  print 'Drawing plots for variable: ', var
   if doStack: StackPlot(var, titdic[var])
-  if not doPlotSyst: continue
+  if not doPlotSyst or year=='comb': continue
   for s in sysdic.keys(): 
-    if s == 'Pref': continue # and year == 2018: continue
-    #for samp in ['tt']: SavePlots(s,var, samp)
-    for samp in ['tt', 'stop']: SavePlots(s,var, samp)
+    #if s == 'Pref': continue # and year == 2018: continue
+    for samp in ['tt']: SavePlots(s,var, samp)
+    #for samp in ['tt', 'stop']: SavePlots(s,var, samp)
 

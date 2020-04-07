@@ -1,6 +1,6 @@
 import os, sys
 #from config import *
-from config import GetLumi, path, pathBS
+from config import GetLumi, path, pathBS, baseoutpath, webpath, model
 basepath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(basepath)
 from plotter.TopHistoReader import TopHistoReader, HistoManager
@@ -14,13 +14,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description='To select masses and year')
 parser.add_argument('--year',         default=2018   , help = 'Year')
-parser.add_argument('--mStop',        default=275  , help = 'Stop mass')
-parser.add_argument('--mLSP',         default=100  , help = 'Neutralino mass')
+parser.add_argument('--mStop',        default=225  , help = 'Stop mass')
+parser.add_argument('--mLSP',         default= 50  , help = 'Neutralino mass')
 parser.add_argument('--BS',          action='store_true'  , help = 'Do BS region')
 parser.add_argument('--SR',          action='store_true'  , help = 'Do signal region')
-#parser.add_argument('--verbose', '-v'    , default=0     , help = 'Activate the verbosing')
-#parser.add_argument('--process', '-p'    , default=''    , help = 'Run a given process')
-#parser.add_argument('--nSlots','-n'      , default=1           , help = 'Number of slots')
 parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
  
 #args = parser.parse_args()
@@ -46,9 +43,8 @@ syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, MisTag, PU, JESCor, JES
 if year != 2018: syst += ', Pref'
 systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
 
-GetOutPath = lambda year, region : '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/stop/SS_postFSR/%s/%s/'%(str(year), region)
+GetOutPath = lambda year, region : baseoutpath+'/SS_postFSR/%s/%s/'%(str(year), region)
 outpath = GetOutPath(year, region) 
-model = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/TopPlots/DrawMiniTrees/NNtotal_model2.h5'
 
 vardic = {
 'mt2'      : 'm_{T2} (GeV)',
@@ -263,18 +259,18 @@ if isinstance(year, str):
   hmOS16 = HistoManager(prOS, syst, path = path[2016] if not region=='BS' else pathBS[2016], processDic = processDic[2016], lumi = GetLumi(2016)*1000, indic=nonpromptOS[2016])
   hmOS17 = HistoManager(prOS, syst, path = path[2017] if not region=='BS' else pathBS[2017], processDic = processDic[2017], lumi = GetLumi(2017)*1000, indic=nonpromptOS[2017])
   hmOS   = HistoManager(prOS, syst, path = path[2018] if not region=='BS' else pathBS[2018], processDic = processDic[2018], lumi = GetLumi(2018)*1000, indic=nonpromptOS[2018])
-  hmOS.SetDataName('DDOS');  hmOS16.SetDataName('DDOS'); hmOS17.SetDataName('DDOS')
+  #hmOS.SetDataName('DDOS');  hmOS16.SetDataName('DDOS'); hmOS17.SetDataName('DDOS')
   hmOS.ScaleByLumi(); hmOS16.ScaleByLumi(); hmOS17.ScaleByLumi();
   hmOS.SetHistoName("mt2")
   hmOS.Add(hmOS17).Add(hmOS16)
 else: 
   hmOS = HistoManager(prOS, syst, path = path[year] if not region=='BS' else pathBS[year], processDic = processDic[year], lumi = 1, indic=ss)
-  hmOS.SetDataName('DDOS')
+  #hmOS.SetDataName('DDOS')
 hmOS.AddNormUnc(normUncOS)
 
 def save(name, hm, processes = [''], oname = ''):
   hm.SetHisto(name)
-  opath = '/nfs/fanae/user/juanr/www/stoplegacy/checksFullStatusReport/SS/%s/%s/'%(year,region)
+  opath = webpath+'/SS/%s/%s/'%(year,region)
   if not isinstance(year, str): hm.Save(outname=outpath+'/'+name, htag = '')
   s = Stack(outpath=opath+'/plots%s/'%oname)
   s.SetLegendName(legendNames)
@@ -283,10 +279,11 @@ def save(name, hm, processes = [''], oname = ''):
   s.SetLumi(GetLumi(year) if not isinstance(year, str) else GetLumi(2016)+GetLumi(2017)+GetLumi(2018))
   s.SetOutName(name)
   s.SetHistosFromMH(hm)
+  s.SetRatioMin(0.); s.SetRatioMax(2)
   s.DrawStack(vardic[name] if name in vardic.keys() else '', 'Events')
 
 def saveOSSS(hname, hOS, hSS):
-  opath = '/nfs/fanae/user/juanr/www/stoplegacy/checksFullStatusReport/SS/%s/%s/'%(year,region)
+  opath = webpath+'/SS/%s/%s/'%(year,region)
   s = HistoComp(outpath=opath+'/RatioOSSS/', doNorm = False, doRatio = True)
   s.autoRatio = True
   #s.SetTextLumi('Normalized distributions', texlumiX = 0.12)
@@ -300,8 +297,6 @@ def saveOSSS(hname, hOS, hSS):
   s.SetOutName(hname)
   s.Draw()
 
-save('mt2', hmSS, prSS, 'SS')
-exit()
 for v in vardic.keys(): save(v, hmSS, prSS, 'SS')
 for v in vardic.keys(): save(v, hmOS, prOS, 'OS')
 for v in vardic.keys(): 

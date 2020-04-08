@@ -103,6 +103,9 @@ class analysis:
     sferr = self.inputs[name].GetBinError(ibin)
     return sf, sferr
 
+  def SetInputsForMetapy(self, inp):
+    self.includeInputs = inp
+
   def GetSFfromTGraph(self, name, var):
     ''' Reads a TGraphAsymmetricErrors and returs value '''
     if ',' in name: return self.GetSFfromTGraph([x.replace(' ', '') for x in name.split(',')], var)
@@ -159,7 +162,8 @@ class analysis:
   def SetOutDir(self, _outpath):
     ''' Sets the output directory '''
     self.outpath = _outpath
-    if not self.outpath[-1] == '/': self.outpath = self.outpath + '/'
+    if not self.outpath.endswith('/'): self.outpath = self.outpath + '/'
+    if self.outpath.startswith('/'): self.outpath = '.'+self.outpath
     
   def SetOutName(self, _outname):
     ''' Sets the name of the output rootfile '''
@@ -190,6 +194,10 @@ class analysis:
   def SetTreeName(self, name):
     ''' Sets the name of the input tree '''
     self.treeName = name
+
+  def SetAnPath(self, path = ''):
+    ''' Path of the analysis that you want to run (used to send jobs) '''
+    self.anpath = path
 
   def SetParams(self):
     ''' Once the input files are set, calculate all the needed parameters '''
@@ -222,7 +230,7 @@ class analysis:
     nevents = self.nRunEvents
     i0 = self.firstEvent
     if int(i) % int(self.nEventsPrintOut) == 0:
-      if   self.index == -1: print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
+      if self.index == -1: print 'Processing... %i / %i (%1.2f'%(i,nevents, (float(i)-i0)/nevents*100) + '%)'
       elif self.index == 0:  print 'Processing... %1.2f'%((float(i)-i0)/nevents*100) + ' %'
 
   def getInputs(self,first = -1, last = -1):
@@ -307,24 +315,31 @@ class analysis:
     modulname  = self.__class__.__name__
     path       = self.inpath
     filename   = self.fileName
-    outpath    = self.outpath
+    outpath    = self.outpath if not hasattr(self, 'includeInputs') else self.outpath+'/'+self.outpath
     xsec       = self.xsec
     nSlots     = 1  # One slot per job
     verbose    = 10 # why not
     eventRange = [n0, nF]
-    t = '#!/bin/sh\n\ncd ' + localPath + '\n'
-    if 'CMSSW' in localPath: t += 'eval `scramv1 runtime -sh` \n'
-    elif os.path.isfile('/opt/root6/bin/thisroot.sh'):
-      t += 'source /cms/slc6_amd64_gcc530/external/gcc/5.3.0/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/dependencies-setup.sh; source /cms/slc6_amd64_gcc530/external/cmake/3.5.2/etc/profile.d/init.sh;source /opt/root6/bin/thisroot.sh\n'
+    metapy = self.metapy if hasattr(self, 'metapy') else ''
+    #t = '#!/bin/sh\n\ncd ' + localPath + '\n'
+    t = '#!/bin/sh\n\ncd ' + (localPath if self.anpath == '' else self.anpath) + '\n'
+    if not metapy != '':
+      if 'CMSSW' in localPath: t += 'eval `scramv1 runtime -sh` \n'
+      elif os.path.isfile('/opt/root6/bin/thisroot.sh'):
+        t += 'source /cms/slc6_amd64_gcc530/external/gcc/5.3.0/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/init.sh; source /cms/slc6_amd64_gcc530/external/python/2.7.11-giojec2/etc/profile.d/dependencies-setup.sh; source /cms/slc6_amd64_gcc530/external/cmake/3.5.2/etc/profile.d/init.sh;source /opt/root6/bin/thisroot.sh\n'
+    else:
+      # Create env
+      t += 'source /cvmfs/cms.cern.ch/cmsset_default.sh\nexport SCRAM_ARCH=slc6_amd64_gcc480\nscramv1 project CMSSW CMSSW_10_2_5\ncd CMSSW_10_2_5/src\neval `scramv1 runtime -sh`\n'
+    if metapy != '': t += 'cp -r %s .\ncd xuAnalysis\n'%(metapy)
     pycom =  'python -c \''
-    pycom += 'from ' + modulname + '.' + modulname + ' import *; '
+    pycom += 'from %s import *; '%(modulname + '.' + modulname if self.anpath == '' else modulname)
     if isinstance(filename, list):
       fname = filename [0]
       for f in filename[1:]: fname += ', %s'%f
       filename = fname
     pycom += modulname + '(' + '"' + path + '", "' + filename + '", xsec = ' + str(xsec) + ', '
     pycom += 'outpath = "' + outpath + '", nSlots = ' + str(nSlots) + ', eventRange = [' + '%7i,%7i'%(n0,nF) + '], '
-    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "' + self.options + '")\''
+    pycom += 'run = True, verbose = ' + str(verbose) + ', index = ' + str(index) + ', outname="' + self.outname + '", options = "%s"'%self.options + ',treeName="%s"'%self.treeName + ')\''
     return t + pycom
 
   def sendJobs(self, nJobs = -1, folder = '', queue = '8nm', pretend = False, autorm = False):
@@ -332,8 +347,14 @@ class analysis:
     if nJobs != -1: self.SetNSlots(nJobs)
     if folder != '': self.jobFolder = folder
     jm = jobManager(self.outname, self.jobFolder, queue, 1, pretend, autorm)
+    jm.SetFileOutpath(self.outpath)
+    jm.SetAnalysisName(self.__class__.__name__)
     inputs = self.getInputs()
     index = 0
+    if hasattr(self, 'includeInputs'): self.metapy = self.includeInputs
+    if pretend:
+      print 'Pretending...'
+      exit()
     for i in inputs:
       a,z = i
       jm.AddJob(self.craftJob(a,z,index))
@@ -359,7 +380,7 @@ class analysis:
       objs = self.multiloop(first, last)
     self.log()
     if ('merge' in self.options or 'Merge' in self.options) and (not 'nosave' in self.options and not 'noSave' in self.options): 
-      self.index = -1
+      #self.index = -1
       self.saveOutput(objs)
     return objs
 
@@ -368,6 +389,18 @@ class analysis:
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.manageOutput()
     self.tchain = TChain(self.treeName,self.treeName)
     for f in self.files: self.tchain.Add(f)
+
+    evlistmode = None
+    if self.elistf:
+        if not (self.elistf == ""):
+            evlistf = TFile(self.elistf,"READ")
+            evlist  = evlistf.Get("evlist")
+            evlistmode = "READING"
+        else:
+            evlistf = TFile("./"+ self.fileName + "_evlist.root","RECREATE")
+            evlist  = TEventList("evlist","evlist")
+            evlistmode = "RECORDING"
+
     self.init()
     self.createHistos()
     if self.index <= 0:
@@ -383,17 +416,46 @@ class analysis:
     if self.verbose >= 1: 
       print '[INFO] Loaded %i inputs'%len(self.inputs)
       print '[INFO] Created %i outputs'%len(self.obj)
-    for iEv in range(first, last):
-      #if self.verbose > 0: 
-      self.printprocess(iEv)
-      self.tchain.GetEntry(iEv)
-      self.hRunEvents.Fill(1)
-      if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
-      else: self.EventWeight = 1
 
-      ### Start the analysis here!
-      self.insideLoop(self.tchain)
+    if self.elistf:
+      if evlistmode == "RECORDING":
+        for iEv in range(first, last):
+          #if self.verbose > 0: 
+          self.printprocess(iEv)
+          self.tchain.GetEntry(iEv)
+          self.hRunEvents.Fill(1)
+          if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+          else: self.EventWeight = 1
+          ### Start the analysis here!
+          passing = self.insideLoop(self.tchain)
+          if passing: evlist.Enter(iEv)
+        evlistf.cd()
+        evlist.Write()
+        evlistf.Close()
 
+      elif evlistmode == "READING":
+        print "Will apply reduced event list of length %i"%evlist.GetN()
+        for iiEv in range(1,evlist.GetN()+1):
+          #if self.verbose > 0: 
+          iEv = evlist.GetEntry(iiEv)
+          if iEv >= last or iEv < first: continue #To filter out in multicore
+          self.printprocess(iEv)
+          self.tchain.GetEntry(iEv)
+          self.hRunEvents.Fill(1)
+          if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights
+          else: self.EventWeight = 1
+          ### Start the analysis here!
+          self.insideLoop(self.tchain)
+    else:
+      for iEv in range(first, last): 
+        self.printprocess(iEv) 
+        self.tchain.GetEntry(iEv) 
+        self.hRunEvents.Fill(1) 
+        if not self.isData: self.EventWeight = self.xsec*self.tchain.genWeight/self.nSumOfWeights 
+        else: self.EventWeight = 1 
+        ### Start the analysis here! 
+        self.insideLoop(self.tchain)
+ 
     if not 'merge' in self.options and not 'noSave' in self.options and not 'nosave' in self.options: self.saveOutput()
     return self.obj
 
@@ -422,7 +484,7 @@ class analysis:
     if self.verbose >= 0: print ' >> Saving output in: ' + out
     self.outNormal = out
     pout = './' if not '/' in out else out[:out.rfind('/')+1]
-    if not os.path.isdir(pout): os.mkdir(pout)
+    if not os.path.isdir(pout): os.system("mkdir -p %s"%pout)
     fout = TFile.Open(out, "recreate")
     if objlist == None: objlist = self.obj
     for element in objlist: objlist[element].Write()
@@ -454,7 +516,7 @@ class analysis:
   #############################################################################################
   ### Init method
 
-  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events',outname = ''):
+  def __init__(self,fname, fileName = '', xsec = 1, outpath = './temp/', nSlots = 1, eventRange = [], run = False, sendJobs = False, verbose = 1, index = -1, options = '', chooseFile = -1, treeName = 'Events',outname = '', elistf=""):
     # Default values:
     self.inpath = fname
     self.out = ''
@@ -473,7 +535,7 @@ class analysis:
     self.tree = 0
     self.firstEvent = 0
     self.nRunEvents = 0
-    self.nEventsPrintOut = 10000
+    self.nEventsPrintOut = 100
     self.verbose = 1
     self.onTheFly = 'onTheFly' in options
     self.treeName = treeName
@@ -481,12 +543,14 @@ class analysis:
     self.fileName = fileName
     self.inputs = {}
     self.SetOptions(options)
+    self.elistf = elistf
     if fileName != '': self.SetFiles(fname, fileName, chooseFile)
     else:              self.SetFiles(fname)
     self.SetXsec(xsec)
     self.SetOutDir(outpath)
     self.SetNSlots(nSlots)
     self.SetParams()
+    self.SetAnPath()
     self.hRunEvents = self.CreateTH1F('RunEvents', 'RunEvents', 1, 0, 2)
     if len(eventRange) == 2: 
       n0,nf = eventRange

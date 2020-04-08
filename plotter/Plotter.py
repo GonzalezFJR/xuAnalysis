@@ -69,6 +69,11 @@ class Plot:
     leg.SetNColumns(self.legNcol)
     return leg
 
+  def SetLegendName(self, process, name = ''):
+    if not hasattr(self,'legnames'): self.legnames = {}
+    if isinstance(process, dict): self.legnames = process
+    else: self.legnames[process] = name
+
   def SetLegendRatioPos(self, x0 = 0.18, y0 = 0.85, x1 = 0.60, y1 = 0.91, size = 0.065, ncol = 2):
     self.legratx0 = x0
     self.legratx1 = x1
@@ -320,6 +325,7 @@ class Plot:
     ### Legend
     self.SetLegendPos()
     self.SetLegendRatioPos()
+    self.legnames = {}
     ### Labels
     self.SetTextCMS()
     self.SetTextCMSmode()
@@ -363,11 +369,12 @@ class HistoComp(Plot):
       cp.Draw()
   '''
 
-  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = ''):
+  def AddHisto(self, h, drawOpt = 'hist', drawErr = 0, addToLeng = 0, color = '', lineStyle = 1):
     if self.doNorm: h.Scale(1/h.Integral())
     h.SetStats(0); h.SetLineWidth(2); h.SetTitle('')
     if isinstance(color, int):
       h.SetLineColor(color)
+      h.SetLineStyle(lineStyle)
       #h.SetFillColor(color)
     self.histos.append([h, drawOpt, drawErr, addToLeng])
 
@@ -397,7 +404,7 @@ class HistoComp(Plot):
     self.SetAxisPlot(self.histos[0][0])
     dmax = max(dmax)
     dmin = min(dmin)
-    self.legend.Draw()
+    if self.legend.GetNRows() > 0: self.legend.Draw()
 
     # Set maximum and minimum
     if isinstance(self.PlotMaximum, float): self.histos[0][0].SetMaximum(self.PlotMaximum)
@@ -424,8 +431,12 @@ class HistoComp(Plot):
         self.ratioh[0][0].SetMaximum(self.PlotRatioMax)
         self.ratioh[0][0].SetMinimum(self.PlotRatioMin)
         for h in self.ratioh: 
+          h[0].SetFillStyle(0)
           h[0].Draw(h[1] + ',same')
-          if h[2] != 0 and h[2] != '': h[0].Draw('same,'+h[2])
+          if h[2] != 0 and h[2] != '': 
+            hrat = h[0].Clone()
+            hrat.SetFillStyle(3244)
+            hrat.Draw('same,'+h[2])
         
     # Save
     gPad.SetTickx();
@@ -452,6 +463,9 @@ class Stack(Plot):
 
   def SetMCstatUnc(self, h):
     self.MCstatUnc = h
+
+  def SetMCnormUnc(self, h):
+    self.MCnormUnc = h
  
   def SetMCunc(self, h):
     self.MCunc = h
@@ -467,6 +481,10 @@ class Stack(Plot):
   def SetRatioStatUnc(self, h):
     self.hRatioStatUnc = h
 
+  def SetRatioNormUnc(self, h):
+    self.hRatioNormUnc = h
+    self.SetLegendRatioPos(x0=0.18, y0=0.85, x1=0.70, y1=0.91, size=0.065, ncol = 3)
+
   def SetRatioUnc(self, h):
     self.hRatioUnc = h
 
@@ -480,7 +498,7 @@ class Stack(Plot):
   def SetColors(self, col):
     self.colors = col
     if self.HM != '':
-      self.SetStack(self.HM.GetStack(colors=self.colors))
+      self.SetStack(self.HM.GetStack(colors=self.colors, pr=self.processes))
 
   def DrawStack(self, xtit = '', ytit = ''):
     ''' Draws a stack plot '''
@@ -496,6 +514,7 @@ class Stack(Plot):
     if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     self.hStack.Draw('hist')
     if hasattr(self, 'MCstatUnc'): self.MCstatUnc.Draw("e2,same")
+    if hasattr(self, 'MCnormUnc'): self.MCnormUnc.Draw("e2,same")
     if hasattr(self, 'MCunc'):     self.MCunc    .Draw("e2,same")
 
     # Extra histograms
@@ -523,7 +542,8 @@ class Stack(Plot):
     if self.doRatio: 
       self.SetAxisRatio(self.hRatio)
       self.SetAxisRatio(self.hRatioUnc)
-      self.SetAxisRatio(self.hRatioStatUnc)
+      if hasattr(self, 'hRatioStatUnc'): self.SetAxisRatio(self.hRatioStatUnc)
+      if hasattr(self, 'hRatioNormUnc'): self.SetAxisRatio(self.hRatioNormUnc)
    
     # Legend
     if hasattr(self, 'processes'):
@@ -532,7 +552,7 @@ class Stack(Plot):
       for pr in self.processes:
         h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
         self.hleg.append(h)
-        leg.AddEntry(self.hleg[-1], pr, 'f')
+        leg.AddEntry(self.hleg[-1], pr if not pr in self.legnames.keys() else self.legnames[pr], 'f')
       for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')
       if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
       leg.Draw()
@@ -547,12 +567,18 @@ class Stack(Plot):
         self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioStatUnc, 'Stat', 'f')
+      if hasattr(self, 'hRatioNormUnc'):
+        self.hRatioNormUnc.Draw('e2same')
+        self.hRatioNormUnc.SetLineWidth(0)
+        self.hRatioNormUnc.SetMaximum(self.PlotRatioMax)
+        self.hRatioNormUnc.SetMinimum(self.PlotRatioMin)
+        legr.AddEntry(self.hRatioNormUnc, 'Bkg norm', 'f')
       if hasattr(self, 'hRatioUnc'    ): 
         self.hRatioUnc.Draw('e2same')
         self.hRatioUnc.SetLineWidth(0)
         self.hRatioUnc.SetMinimum(self.PlotRatioMin)
         self.hRatioUnc.SetMaximum(self.PlotRatioMax)
-        legr.AddEntry(self.hRatioUnc, 'Stat #oplus Syst', 'f')
+        legr.AddEntry(self.hRatioUnc, 'Tot unc', 'f')#'Stat #oplus Syst', 'f')
       if hasattr(self, 'hRatio'):
         self.hRatio.Draw('pE0X0,same')
         self.hRatio.SetMaximum(self.PlotRatioMax)
@@ -568,6 +594,7 @@ class Stack(Plot):
           if hasattr(self, 'hRatio'       ): self.hRatio       .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
           if hasattr(self, 'hRatioUnc'    ): self.hRatioUnc    .GetXaxis().SetBinLabel(i+1,self.binLabels[i])
           if hasattr(self, 'hRatioStatUnc'): self.hRatioStatUnc.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+          if hasattr(self, 'hRatioNormUnc'): self.hRatioNormUnc.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
         else:
           self.hStack.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
 
@@ -577,25 +604,33 @@ class Stack(Plot):
     self.HM = HM
     self.SetTotMC(HM.GetSumBkg())
     self.SetMCstatUnc(HM.GetUncHist('stat'))
-    self.SetMCunc(HM.GetUncHist())
+    if HM.HasNormUnc(): self.SetMCnormUnc(HM.GetNormUnc())
+    self.SetMCunc(HM.GetUncHist('', True, True))
     self.SetDataHisto(HM.GetDataHisto())
-    self.SetStack(HM.GetStack(colors=self.colors))
+    self.SetStack(HM.GetStack(colors=self.colors, pr=self.processes))
     self.SetRatio(HM.GetRatioHisto())
     self.SetRatioStatUnc(HM.GetRatioHistoUnc('stat'))
-    self.SetRatioUnc(HM.GetRatioHistoUnc('', False))
+    if HM.HasNormUnc(): self.SetRatioNormUnc(HM.GetRatioHistoUnc('bkgnorm', False))
+    self.SetRatioUnc(HM.GetRatioHistoUnc('', True, True))
     if defaultStyle:
       self.SetRatioUncStyle()
       self.SetRatioStatUncStyle()
       self.SetUncStyle()
       self.SetStatUncStyle()
+      if HM.HasNormUnc(): 
+        self.SetRatioNormUncStyle()
 
   def SetRatioUncStyle(self, color = kAzure+2, alpha = 0.2, fill = 1000):
     self.hRatioUnc.SetFillColorAlpha(color, alpha)
     self.hRatioUnc.SetFillStyle(fill)
 
-  def SetRatioStatUncStyle(self, color = kOrange+1, alpha = 0.8, fill = 1000):
+  def SetRatioStatUncStyle(self, color=kOrange+1, alpha = 0.8, fill = 1000):
     self.hRatioStatUnc.SetFillColorAlpha(color, alpha)
     self.hRatioStatUnc.SetFillStyle(fill)
+
+  def SetRatioNormUncStyle(self, color=kPink-4, alpha=0.3, fill=3144):
+    self.hRatioNormUnc.SetFillColorAlpha(color, alpha)
+    self.hRatioNormUnc.SetFillStyle(fill)
 
   def SetUncStyle(self, color = kGray+2, alpha = 0.9, fill = 3444):
     self.MCunc.SetFillColorAlpha(color, alpha)
@@ -608,8 +643,9 @@ class Stack(Plot):
   def AddOverlapHisto(self, h):
     self.overlapHistos.append(h)
 
-  def AddSignalHisto(self, h, color = 1, mode = 'overlap', ratioBkg = True):
+  def AddSignalHisto(self, hs, color = 1, mode = 'overlap', ratioBkg = True):
     ''' mode = overlap, stack, ontop '''
+    h = hs.Clone(); h.SetDirectory(0)
     h.SetLineColor(color)
     h.SetLineWidth(2)
     if mode == 'overlap' or mode == 'ontop': h.SetFillStyle(0)
@@ -630,3 +666,83 @@ class Stack(Plot):
     self.overlapHistos = []
     self.extraRatio = []
     if HM!= '': self.SetHistosFromMH(HM)
+
+
+
+class HistoUnc(HistoComp):
+  ''' Example:
+      cp = HistoUnc('./temp/', doRatio = True, doNorm = True)
+      cp.AddHisto(hdata, 'pe', 'e2', 'Data')
+      cp.AddHisto(hMC,   'hist', '', 'MC')
+      cp.autoRatio = True
+      cp.Draw()
+  '''
+
+  def AddHistoNom(self, h):
+    self.hNo = h
+    self.AddHisto(h, 'hist', 0, 0, 1, 1)
+    self.rnom = self.hNo.Clone('rnom')
+    for b in range(0, self.rnom.GetNbinsX()+2): 
+      bc = self.rnom.GetBinContent(b)
+      berr = self.rnom.GetBinError(b) / bc if bc != 0 else 0
+      self.rnom.SetBinError(b, berr)
+      self.rnom.SetBinContent(b, 1.)
+      #print 'berr: ', berr
+    self.rnom.SetLineStyle(2)
+    self.rnom.SetLineWidth(2)
+    self.rnom.SetLineColor(kGray+1)
+    self.rnom.SetFillColor(kTeal-9)
+    self.rnom.SetFillStyle(1000)
+    self.AddRatioHisto(self.rnom, 'hist', 'e2')
+
+  def AddHistoUp(self, h):
+    self.hUp = h
+    self.hUp.SetLineWidth(2); self.hUp.SetTitle('');
+    self.hUp.SetStats(0); self.hUp.SetLineColor(kAzure+2)
+    self.AddHisto(self.hUp, 'hist', 0, 0, kAzure+2, 2)
+    self.rUp = self.hUp.Clone('hUp')
+    #self.rUp.Divide(self.hNo)
+    for b in range(0, self.rUp.GetNbinsX()+1):
+      bc = self.rUp.GetBinContent(b)
+      d  = self.hNo.GetBinContent(b)
+      self.rUp.SetBinContent(b, 1 if (bc==0 or d==0) else bc/d)
+    self.AddRatioHisto(self.rUp, 'hist', 0)
+    if self.rUp.GetMinimum()*0.80 < self.PlotRatioMin: self.SetRatioMin(self.rUp.GetMinimum()*0.80)
+    if self.rUp.GetMaximum()*1.20 > self.PlotRatioMax: self.SetRatioMax(self.rUp.GetMaximum()*1.2)
+    self.rUp.SetLineStyle(1)
+
+  def AddHistoDown(self, h):
+    self.hDo = h
+    self.hDo.SetLineWidth(2); self.hDo.SetTitle('');
+    self.hDo.SetStats(0); self.hDo.SetLineColor(kRed+1)
+    self.AddHisto(self.hDo, 'hist', 0, 0, kRed+1, 2)
+    self.rDo = self.hDo.Clone('hDo')
+    #self.rDo.Divide(self.hNo)
+    for b in range(0, self.rDo.GetNbinsX()+1):
+      bc = self.rDo.GetBinContent(b)
+      d  = self.hNo.GetBinContent(b)
+      self.rDo.SetBinContent(b, 1 if (bc==0 or d==0) else bc/d)
+    self.rDo.SetLineStyle(1)
+    if self.rDo.GetMinimum()*0.80 < self.PlotRatioMin: self.SetRatioMin(self.rDo.GetMinimum()*0.80)
+    if self.rDo.GetMaximum()*1.20 > self.PlotRatioMax: self.SetRatioMax(self.rDo.GetMaximum()*1.2)
+    self.AddRatioHisto(self.rDo, 'hist', 0)
+
+  def __init__(self, outpath = './', outname = 'temp', tag = '', doNorm = False, drawStatErr = True, xtit = '', ytit = 'Events'):
+    self.Initialize(outpath, outname, True)
+    self.doNorm = doNorm
+    self.DrawStatUnc = drawStatErr
+    self.autoRatio = False
+    self.histos = []
+    self.ratioh = []
+    self.SetPlotMaxScale(1.3)
+    self.AddTex(tag, 0.55, 0.88, 0.05)
+    self.SetHistoPad(x0 = 0.0, y0 = 0.47, x1 = 1, y1 = 1)
+    self.SetRatioPad(x0 = 0.0, y0 = 0.00, x1 = 1, y1 = 0.52)
+    self.SetHistoPadMargins(top = 0.14, bottom = 0.10, right = 0.03, left = 0.10)
+    self.SetRatioPadMargins(top = 0.08, bottom = 0.25, right = 0.03, left = 0.10)
+    self.SetYratioTitle('Unc./Nom.', 0.10, 0.4, labSize = 0.08)
+    self.SetXtitle(xtit, 0.12, 0.8, labSize = 0.09)
+    self.SetYtitle(ytit, 0.12, 0.42, labSize = 0.08)
+    self.SetTextLumi(texlumi = '%2.1f fb^{-1} (13 TeV)' if not doNorm else '', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05)
+    self.SetRatioMin(0.95); self.SetRatioMax(1.05)
+

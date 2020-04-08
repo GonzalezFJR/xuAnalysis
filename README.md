@@ -2,11 +2,11 @@
 
 Download the code from github:
 
-    git clone https://github.com/GonzalezFJR/xuAnalysis.git
+    git clone https://github.com/Oviedo-PAF/xuAnalysis.git
 
 or using ssh:
 
-    git clone git@github.com:GonzalezFJR/xuAnalysis.git
+    git clone git@github.com:Oviedo-PAF/xuAnalysis.git
 
 
 ## Create an analysis

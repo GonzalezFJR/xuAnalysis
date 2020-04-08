@@ -301,6 +301,7 @@ class TopHistoReader:
    processes = processDic.keys()
    for pr in processes:
      h = TH1F()
+     if hname == "%s": hname = hname%pr
      h = self.GetNamedHisto(hname, processDic[pr], rebin=self.rebin)
      self.AddToHistoDic(h, pr, hname)
      for syst in systlist:
@@ -843,10 +844,11 @@ class HistoSaver:
 
 class HistoManager:
   def SetProcessList(self, listOfProcesses):
-    if isinstance(listOfProcesses, str): listOfProcesses = listOfProcesses.split(',')
+    if isinstance(listOfProcesses, str): listOfProcesses = listOfProcesses.replace(' ', '').split(',')
     self.processList = listOfProcesses
 
   def AddToSignals(self, signals):
+    if not hasattr(self, 'signalProcess'): self.signalProcess = []
     if isinstance(signals, str):
       if ',' in signals: signals = signals.replace(' ', '').split(',')
       else             : signals = [signals]
@@ -854,7 +856,6 @@ class HistoManager:
       return
     else: self.signalProcess += signals
                      
-
   def SetHistoName(self, hname, rebin = 1):
     self.histoname = hname
     self.rebin = 1
@@ -868,6 +869,9 @@ class HistoManager:
     for s in self.systname:
       #histoname = self.histoname[0] if isinstance(self.histoname, list) else self.histoname
       self.SearchSystHisto(self.histoname, s)
+
+  def SetDataName(self, dname = 'data'):
+    self.dataname = dname
 
   def SetProcessDic(self, pd):
     self.processDic = pd
@@ -888,7 +892,9 @@ class HistoManager:
     self.rebin = rebin
 
   def SetInputDicFromReader(self):
-    self.indic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname, self.systdic)
+    hdic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname, self.systdic)
+    self.indic = hdic
+    return hdic
 
   def GetHistoName(self):
     return self.histoname
@@ -902,7 +908,8 @@ class HistoManager:
     for syst in systCand:
       found = False
       name = "%s_%s"%(hname, syst) if syst != '' else hname
-      for pr in self.processList:
+      for pr in self.processList + self.signalProcess :
+        if hname == '%s': name = "%s_%s"%(pr, syst) if syst != '' else pr
         khist = self.indic[pr].keys()
         if name in khist: found = True
       if found: self.systlabels.append(syst)
@@ -919,30 +926,35 @@ class HistoManager:
         for hname in self.histoname[1:]:
           h.Add(self.indic[self.processList[0]][hname])
       else: 
-          h = self.indic[self.processList[0]][self.histoname].Clone("sum0")
+          hnam = self.histoname if self.histoname != '%s' else self.processList[0]
+          h = self.indic[self.processList[0]][hnam].Clone("sum0")
       h.SetDirectory(0)
       if len(self.processList) > 1:
         for pr in self.processList[1:]: 
+          hnam = self.histoname if self.histoname != '%s' else pr
           if isinstance(self.histoname, list):
             for hname in self.histoname:
               h.Add(self.indic[pr][hname])
-          else: h.Add(self.indic[pr][self.histoname])
+          else: h.Add(self.indic[pr][hnam])
       self.sumdic[syst] = h
     else:
       for s in self.GetListOfCandNames(syst):
         if not s in self.systlabels: continue
         pr0 = self.processList[0]
         hname = self.histoname if not isinstance(self.histoname, list) else self.histoname[0]
-        hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr0].keys() else hname
+        hnam  = hname if hname != "%s" else pr0
+        hs = "%s_%s"%(hnam, s) if "%s_%s"%(hnam, s) in self.indic[pr0].keys() else hnam
         h = self.indic[pr0][hs].Clone("sum_%s"%s)
         if len(self.processList) > 1:
           for pr in self.processList[1:]:
-            hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr].keys() else hname
+            hnam  = hname if hname != "%s" else pr
+            hs = "%s_%s"%(hnam, s) if "%s_%s"%(hnam, s) in self.indic[pr].keys() else hnam
             h.Add(self.indic[pr][hs])
         if isinstance(self.histoname, list):
           for hname in self.histoname[1:]:
             for pr in self.processList:
-              hs = "%s_%s"%(hname, s) if "%s_%s"%(hname, s) in self.indic[pr].keys() else hname
+              hnam  = hname if hname != "%s" else pr
+              hs = "%s_%s"%(hnam, s) if "%s_%s"%(hnam, s) in self.indic[pr].keys() else hnam
               h.Add(self.indic[pr][hs])
         self.sumdic[s] = h
 
@@ -980,6 +992,32 @@ class HistoManager:
       hnom.SetBinContent(i, nv)
     return hnom
 
+  def GetNormHisto(self, direc = 'Up', pr = ''):
+    if pr not in self.normUnc: return self.sumdic[''].Clone("norm"+pr)
+    fact = self.normUnc[pr]
+    if isinstance(self.histoname, list):
+      print("GetNormHisto] : WARNING - norm histo not implemented for list of histos")
+      return self.sumdic[''].Clone("norm"+pr)
+    hnam = self.histoname if self.histoname != '%s' else self.processList[0]
+    h = self.indic[self.processList[0]][hnam].Clone("norm"+self.processList[0])
+    if pr == self.processList[0]:
+      if direc in ['Up', 'up']: h.Scale(1+fact)
+      else                    : h.Scale(1-fact)
+    h.SetDirectory(0)
+    if len(self.processList) > 1:
+      for proc in self.processList[1:]:
+        hnam = self.histoname if self.histoname != '%s' else proc
+        hpr = self.indic[proc][hnam].Clone("norm"+proc)
+        if proc == pr:
+          if direc in ['Up', 'up']: hpr.Scale(1+fact)
+          else                    : hpr.Scale(1-fact)
+        h.Add(hpr)
+    return  h
+    #self.sumdic["norm"] = h
+
+  def HasNormUnc(self):
+    return len(self.normUnc) > 0
+
   def GetStatUnc(self):
     ''' List with stat unc from nominal histo '''
     hnom = self.sumdic['']
@@ -987,26 +1025,33 @@ class HistoManager:
     statunc = [hnom.GetBinError(i) for i in range(0, nb+2)]
     return statunc
 
-  def GetSum2Unc(self, lsyst = '', includeStat = True):
+  def GetSum2Unc(self, lsyst = '', includeStat = True, nsyst=[]):
     ''' From a list of uncertainties, get a list of per-bin unc w.r.t. nominal histo 
         lsyst is a list of uncertainty names, not labels
     '''
-    if   lsyst == '': lsyst = self.systname[:]
-    elif isinstance(lsyst, str) and ',' in lsyst: lsyst = lsyst.replace(' ', '').split(',')
-    elif not isinstance(lsyst, list): lsyst = [syst]
-    if includeStat and not 'stat' in lsyst: lsyst.append('stat') #sum2.append(self.GetStatUnc())
     unc = []
-    systExist = lambda x : x in self.systlabels
-    for s in lsyst:
-      listOfGoodSyst = filter(systExist, self.GetListOfCandNames(s))
-      if s == 'stat':
-        listOfHistos = [self.GetStatHisto()]
-      elif len(listOfGoodSyst) == 0:
-        print 'WARNING: no systematic found for label %s!'%s
-        continue
-      else: 
-        listOfHistos = [self.sumdic[s] for s in listOfGoodSyst]
-      unc.append(self.GetDifUnc(self.sumdic[''], listOfHistos))
+    if isinstance(lsyst, list) and (len(lsyst) > 0) and (isinstance(lsyst[0], TH1F) or (isinstance(lsyst[0], list) and ( len(lsyst[0]) > 0 and isinstance(lsyst[0][0], TH1F)) )):
+      for h in lsyst:
+        unc.append(self.GetDifUnc(self.sumdic[''], h))
+    else:
+      if   lsyst == '': lsyst = self.systname[:]
+      elif isinstance(lsyst, str) and ',' in lsyst: lsyst = lsyst.replace(' ', '').split(',')
+      elif not isinstance(lsyst, list): lsyst = [syst]
+      if includeStat and not 'stat' in lsyst: lsyst.append('stat') #sum2.append(self.GetStatUnc())
+  
+      systExist = lambda x : x in self.systlabels
+      for s in lsyst:
+        listOfGoodSyst = filter(systExist, self.GetListOfCandNames(s))
+        if s == 'stat':
+          listOfHistos = [self.GetStatHisto()]
+        elif len(listOfGoodSyst) == 0:
+          print 'WARNING: no systematic found for label %s!'%s
+          continue
+        else: 
+          listOfHistos = [self.sumdic[s] for s in listOfGoodSyst]
+        unc.append(self.GetDifUnc(self.sumdic[''], listOfHistos))
+    for h in nsyst:
+      unc.append(self.GetDifUnc(self.sumdic[''], h))
     sum2 = []
     nlen = len(unc[0])
     for i in range(nlen):
@@ -1025,14 +1070,19 @@ class HistoManager:
         self.indic[pr][h].Scale(self.lumi)
     self.IsScaled = True
 
-  def GetUncHist(self, syst = '', includeStat = True):
+  def GetUncHist(self, syst = '', includeStat = True, includeNorm=False):
     ''' syst is a name, not a label... returns nominal histo with nice uncertainties '''
     if   syst == '': syst = self.systname
     elif isinstance(syst, str) and ',' in syst: syst = syst.replace(' ', '').split(',')
     elif not isinstance(syst, list): syst = [syst]
     sumdic = self.sumdic.copy() # To keep the original
     hnom = sumdic[''].Clone('hnom')
-    unc = self.GetSum2Unc(syst, includeStat)
+    nsyst = []
+    if len(syst) > 0 and syst[0] == 'bkgnorm': 
+      syst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]
+    elif includeNorm:
+      nsyst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]
+    unc = self.GetSum2Unc(syst, includeStat, nsyst)
     nbins = hnom.GetNbinsX()
     for i in range(0,nbins+2): hnom.SetBinError(i, unc[i])
     hnom.SetDirectory(0)
@@ -1040,17 +1090,22 @@ class HistoManager:
     hnom.SetFillColor(kGray+2)
     return hnom
 
+  def GetNormUnc(self):
+    ''' Histogram with normalization uncertainties for bkgs '''
+    return self.GetUncHist('bkgnorm', False)
+
   def GetDataHisto(self):
-    if not 'data' in self.indic.keys():
+    if not self.dataname in self.indic.keys():
       #print 'WARNING: data histogram not found...'
       return None
     hname = self.histoname if not isinstance(self.histoname, list) else self.histoname[0]
-    h = self.indic['data'][hname].Clone("hdata")
+    hnam  = hname if hname != '%s' else self.dataname
+    h = self.indic[self.dataname][hnam].Clone("hdata")
     h.SetMarkerSize(1.2)
     h.SetMarkerStyle(20)
     h.SetDirectory(0)
     if isinstance(self.histoname, list):
-      for hname in self.histoname[1:]: h.Add(self.indic['data'][hname])
+      for hname in self.histoname[1:]: h.Add(self.indic[self.dataname][hname])
     return h
 
   def GetSumBkg(self):
@@ -1059,7 +1114,7 @@ class HistoManager:
   def GetRatioHisto(self):
     # Data / All bkg
     hbkg  = self.GetSumBkg()
-    h     = self.GetDataHisto().Clone("hratio") if 'data' in self.indic.keys() else self.GetSumBkg().Clone("hratio")
+    h     = self.GetDataHisto().Clone("hratio") if self.dataname in self.indic.keys() else self.GetSumBkg().Clone("hratio")
     h.SetDirectory(0)
     h.Divide(hbkg)
     #hdata = self.GetDataHisto()
@@ -1069,18 +1124,18 @@ class HistoManager:
     #  b = hbkg. GetBinContent(i)
     return h
      
-  def GetRatioHistoUnc(self, syst = '', includeStat = True): # syst = stat for stat unc
+  def GetRatioHistoUnc(self, syst = '', includeStat=True, includeNorm=False, color=kAzure+2, style=1000): # syst = stat for stat unc
     hRatio = self.GetRatioHisto()
     hdata  = self.GetDataHisto()
-    hUnc   = self.GetUncHist(syst, includeStat)
+    hUnc   = self.GetUncHist(syst, includeStat, includeNorm)
     nb     = hUnc.GetNbinsX()
     for i in range(0, nb+2):
       b    = hUnc.GetBinContent(i)
       bu   = hUnc.GetBinError(i)
       hUnc.SetBinContent(i, 1)
       hUnc.SetBinError(i, bu/b if b > 0 else 0)
-    hUnc.SetFillColorAlpha(kAzure+2, 0.5)
-    hUnc.SetFillStyle(1000)
+    hUnc.SetFillColorAlpha(color, 0.5)
+    hUnc.SetFillStyle(style)
     return hUnc
 
   def GetStack(self, colors = '', pr = ''):
@@ -1101,21 +1156,22 @@ class HistoManager:
           self.indic[p][hname].SetLineWidth(0)
           hStack.Add(self.indic[p][hname])
       else:
-        self.indic[p][self.histoname].SetFillColor(col)
-        self.indic[p][self.histoname].SetFillStyle(1000)
-        self.indic[p][self.histoname].SetLineColor(0)
-        self.indic[p][self.histoname].SetLineStyle(0)
-        self.indic[p][self.histoname].SetLineWidth(0)
-        hStack.Add(self.indic[p][self.histoname])
+        hname = self.histoname if not self.histoname == '%s' else p
+        self.indic[p][hname].SetFillColor(col)
+        self.indic[p][hname].SetFillStyle(1000)
+        self.indic[p][hname].SetLineColor(0)
+        self.indic[p][hname].SetLineStyle(0)
+        self.indic[p][hname].SetLineWidth(0)
+        hStack.Add(self.indic[p][hname])
     return hStack
       
-  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}):
+  def __init__(self, prlist = [], syslist = [], hname = '', path = '', processDic = {}, systdic = {}, lumi = 1, rebin = 1, indic = {}, signalList = []):
     self.SetProcessList(prlist)
+    self.AddToSignals(signalList)
     self.SetHistoName(hname)
     self.SetSystList(syslist)
     self.sumdic = {}
     self.systlabels = []
-    self.signalProcess = []
     self.SetProcessDic(processDic)
     self.SetSystDic(systdic)
     self.SetTopReader(path)
@@ -1124,9 +1180,14 @@ class HistoManager:
     self.lumi = lumi
     self.readFromTrees = False
     self.IsScaled = False
+    self.SetDataName()
+    self.normUnc = {}
     if(indic == {} and path != '' and processDic != {}): self.readFromTrees = True
     if self.readFromTrees and hname != '':
       self.SetHisto(hname, rebin)
+
+  def AddNormUnc(self, ndic):
+    self.normUnc = ndic
 
   def Add(self, HM):
     if isinstance(HM, list):
@@ -1158,8 +1219,36 @@ class HistoManager:
   def Clear(self):
     self.indic = {}
 
-  def GetHisto(self, sname, hname):
-    return self.indic[sname][hname]
+  def GetHisto(self, sname, hname, syst = ''):
+    key = hname if syst == '' else hname + '_' + syst
+    h = self.indic[sname][key] if key in self.indic[sname].keys() else self.indic[sname][hname]
+    return h
+
+  def GetYield(self, sname, hname, syst = ''):
+    y = 0
+    if isinstance(sname, str) and ',' in sname: sname = sname.replace(' ', '').split(',')
+    if isinstance(syst,  str) and ',' in syst : syst  = syst .replace(' ', '').split(',')
+    if isinstance(sname, list):
+      for s in sname: y += self.GetYield(s, hname, syst)
+      return y
+    if isinstance(syst, list):
+      nom = self.GetYield(sname, hname)
+      m = 0
+      for s in syst: 
+        u = abs(self.GetYield(sname, hname, s) - nom)
+        m += u*u
+      return nom + sqrt(m)
+    if syst != '' and not syst.endswith('Up') and not syst.endswith('Down'):
+      nom = self.GetYield(sname, hname)
+      up  = self.GetYield(sname, hname, syst+'Up')
+      do  = self.GetYield(sname, hname, syst+'Down')
+      return up if abs(nom-up) > abs(nom-do) else do
+    h = self.GetHisto(sname, hname, syst)
+    y = h.Integral() + h.GetBinContent(h.GetNbinsX()+2)  # Yields including overflow
+    return y
+
+  def GetCYield(self, pr, syst = ''):
+    return self.GetYield(pr, pr, syst)
 
   def Save(self, outname = 'htemp', htag = ''):
     if not outname.endswith('.root'): outname+='.root'
@@ -1187,7 +1276,24 @@ class HistoManager:
     hdata.Write()
     fout.Close()
           
-    
+  def ReadHistosFromFile(self, fname, path = 0, dataname = 'data_obs', rebin = 1):
+    if path != 0:  self.SetTopReader(path)
+    self.IsScaled = True
+    self.readFromTrees = True
+    self.SetRebin(rebin)
+    self.SetHistoName('%s')
+    self.SetDataName(dataname)
+    for pr in self.processList+self.signalProcess:
+      self.processDic = {}
+      self.processDic[pr] = fname
+      self.SetInputDicFromReader()
+    if dataname != '': 
+      self.processDic = {}
+      self.processDic[dataname] = fname
+      self.SetInputDicFromReader()
+    self.LookForSystLabels()
+    self.SumHistos()
+
 
 
 class SampleSums:

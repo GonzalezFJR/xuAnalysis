@@ -49,7 +49,7 @@ class Datacard{
     void SetRateProcess(TString p, Float_t v = 0);
     void SetNormUnc(TString p, Float_t v = 1);
     void SetRateSignal(Float_t v){ SetRateProcess(signalName, v);} 
-    void SetRateData(Int_t v){ dataRate = v;}
+    void SetRateData(Float_t v){ dataRate = v;}
     void SetNHistoBins(Int_t n){ nHistoBins = n;}
     void SetLumiUnc(Float_t l){ lumiUnc = l;}
 
@@ -57,7 +57,7 @@ class Datacard{
     Int_t GetNNuisances(){ return nNuisances;}
     Int_t GetNHistoBins(){ return nHistoBins;}
     TString GetBinName(){ return binName;}
-    Int_t GetDataRate(){ return dataRate;}
+    Float_t GetDataRate(){ return dataRate;}
     Float_t GetLumiUnc(){ return lumiUnc;}
     TString GetProcessName(Int_t i){ return processes.at(i);}
     TString GetNuisName(Int_t i){ return nuisName.at(i);}
@@ -87,7 +87,7 @@ class Datacard{
     Bool_t  *doLumi;
     Bool_t  *doStat;
     Float_t **doNuis;
-    Int_t dataRate;
+    Float_t dataRate;
     Float_t lumiUnc;
 
     Int_t   nProcesses;

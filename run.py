@@ -84,10 +84,11 @@ def GetOptions(path, sample, options = ""):
   if not path.endswith('/'): path += '/'
   if not sample.endswith(".root"): sample += '.root'
   doPUweight  = 'PUweight,' if IsVarInTree(path+sample, 'puWeight') else ''
+  doPrefire   = 'Prefire,'  if IsVarInTree(path+sample, 'PrefireWeight') else ''
   doJECunc    = 'JECunc,'   if IsVarInTree(path+sample, 'Jet_pt_jesTotalUp') else ''
   doIFSR      = 'doIFSR,'   if IsVarInTree(path+sample, 'nPSWeight') and GetValOfVarInTree(path+sample, 'nPSWeight') == 4 else ''
   useJetPtNom = 'JetPtNom,' if IsVarInTree(path+sample, 'Jet_pt_nom') else ''
-  options += doPUweight + doJECunc + doIFSR + useJetPtNom + options
+  options += doPUweight + doPrefire + doJECunc + doIFSR + useJetPtNom + options
   if options.endswith(','): options = options[:-1]
   return options
 
@@ -102,17 +103,19 @@ def GetTStringVectorSamples(path, samples):
   v = GetTStringVector(samples)
 
 
-def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events'):
+def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outname = '', outpath = '', options = '', nEvents = 0, FirstEvent = 0, prefix = 'Tree', verbose = 0, pretend = False, dotest = False, sendJobs = False, queue = 'batch', treeName = 'Events', elistf="", pathToAnalysis='', metapy=None):
 
   if dotest:
     nEvents  = 1000
     nSlots   = 1
     sendJobs = False
   if isinstance(sample, str) and ',' in sample: sample = sample.replace(' ','').split(',')
-  sap = sample if not isinstance(sample, list) else sample[0]
-  gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root', path + sap + '.root', path + sap + '_1.root', path + 'Tree_' + sap + '_1.root'])
-  if len(gs) == 0: print 'ERROR: file %s not found in %s'%(sap, path)
-  isData = GuessIsData(gs[0])
+  samples = GetFiles(path, sample)
+  #sap = sample if not isinstance(sample, list) else sample[0]
+  #gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root', path + sap + '.root'])
+  #if len(gs) == 0: print 'ERROR: file %s not found in %s'%(sap, path)
+  #isData = GuessIsData(gs[0])
+  isData = GuessIsData(samples[0])
   
   xsec = GetXsec(xsec, outname, verbose, isData) if not dotest else 1
 
@@ -126,19 +129,19 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   except:
     analysis = getattr(selecModul, selection)
   evRang = []
-  samples = GetFiles(path, sample)
+  getPath = lambda p : p[:-p[::-1].index('/')]
   sname = samples[0].split('/')[-1]
-  options = GetOptions(path, sname, options)
+  fpath = getPath(samples[0])
+  options = GetOptions(fpath, sname, options)
   if nEvents != 0: evRang = [FirstEvent, nEvents]
-  an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName)
+  an = analysis(path, sample, eventRange = evRang, xsec = xsec, nSlots = nSlots, options = options, verbose=verbose, treeName = treeName, elistf=elistf)
+  an.SetAnPath(pathToAnalysis)
   an.SetOutDir(outpath)
   an.SetOutName(outname)
 
   if sendJobs: 
+    if metapy != None: an.SetInputsForMetapy(metapy)
     print '>> Sending jobs...'
-    if pretend:
-      print 'Pretending...'
-      return
     out = an.sendJobs(queue=queue, pretend=pretend)
   else:
     print ' >> Running sample %s...'%sample
@@ -149,7 +152,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
   return out
 
 
-def main(ocfgfile = ''): 
+def main(ocfgfile = '', doSendJobs = False): 
   selection = ocfgfile
   ################################################################################
   ### Execute
@@ -161,6 +164,7 @@ def main(ocfgfile = ''):
     parser.add_argument('selection'         , default=''         , help = 'Name of the selector')
   parser.add_argument('--pretend','-p'    , action='store_true'  , help = 'Create the files but not send the jobs')
   parser.add_argument('--test','-t'       , action='store_true'  , help = 'Sends only one or two jobs, as a test')
+  parser.add_argument('--include'         , default=None         , help = 'Pass all code to each worker')
   parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
   parser.add_argument('--verbose','-v'    , default=0            , help = 'Activate the verbosing')
   parser.add_argument('--path'            , default=''           , help = 'Path to look for nanoAOD')
@@ -177,8 +181,11 @@ def main(ocfgfile = ''):
   parser.add_argument('--nEvents'         , default=0            , help = 'Number of events')
   parser.add_argument('--nSlots','-n'     , default=-1           , help = 'Number of slots')
   parser.add_argument('--treeName'        , default='Events'     , help = 'Name of the tree')
+  parser.add_argument('--elist'           , default='None'       , help = 'Name of the folder with prefilter eventlists')
 
-  args = parser.parse_args()
+
+  #args = parser.parse_args()
+  args, unknown = parser.parse_known_args()
   if hasattr(args, 'selection'): selection   = args.selection
   if selection == '': return
   verbose     = args.verbose
@@ -198,6 +205,10 @@ def main(ocfgfile = ''):
   sendJobs    = int(args.sendJobs)
   queue       = args.queue
   treeName    = args.treeName
+  metapy      = args.include
+  elist       = args.elist if not(args.elist=='None') else False 
+  if xsec.isdigit(): xsec = int(xsec)
+  if doSendJobs: sendJobs = True
 
   aarg = sys.argv
   ncores = nSlots
@@ -220,6 +231,7 @@ def main(ocfgfile = ''):
     selection = ''
     spl = []
     samplefiles = {}
+    elistfiles  = {}
     nslots = {}
     f = open(fname)
     lines = f.readlines()
@@ -234,11 +246,21 @@ def main(ocfgfile = ''):
         #if   l == 'verbose': verbose = 1
         if   l == 'pretend': pretend = 1
         elif l == 'test'   : dotest  = 1
-        elif l in ['path', 'sample', 'options', 'selection', 'xsec', 'prefix', 'outpath', 'year', 'nSlots', 'nEvents', 'firstEvent', 'queue']: continue
+        elif l in ['path', 'sample', 'options', 'selection', 'xsec', 'prefix', 'outpath', 'year', 'nSlots', 'nEvents', 'firstEvent', 'queue', 'include']: continue
         else:
           spl.append(l)
           samplefiles[l]=l
           nslots[l]=nSlots
+          if elist:
+            if not os.path.isfile(elist+ "/" + l + "_evlist.root"): 
+              print "Warning: no elist find found in %s , will not apply event prefiltering but I will generate them for you"%(elist+ "/" + l + "_evlist.root")
+              elistfiles[l] = ""
+
+            else: 
+              print "Loaded elistfile from %s, remember to check that this makes sense or you might be screwed"%(elist+ "/" + l + "_evlist.root")
+              elistfiles[l] = elist+ "/" + l + "_evlist.root"
+          else:
+            elistfiles[l] = False
       else:
         lst = l.split(':')
         key = lst[0]
@@ -246,11 +268,12 @@ def main(ocfgfile = ''):
         if   key == 'pretend'   : pretend   = 1
         elif key == 'verbose'   : verbose   = int(val) if val.isdigit() else 1
         elif key == 'test'      : dotest    = 1
+        elif key == 'include'   : metapy    = val
         elif key == 'path'      : path      = val
         elif key == 'sample'    : sample    = val
         elif key == 'options'   : options   = val
         elif key == 'selection' : selection = val
-        elif key == 'xsec'      : xsec      = val
+        elif key == 'xsec'      : xsec      = val if not val.isdigit() else int(val)
         elif key == 'prefix'    : prefix    = val
         elif key == 'outpath'   : outpath   = val
         elif key == 'queue'     : queue     = val
@@ -259,19 +282,22 @@ def main(ocfgfile = ''):
         elif key == 'nEvents'   : nEvents   = int(val)
         elif key == 'firstEvent': FirstEvent= int(val)
         elif key == 'treeName'  : treeName  = val
+        elif (key == 'metapy' or key == 'include'): 
+          if metapy == None: metapy = []
+          metapy += [val] if not ',' in val else val.replace(' ', '').split(',')
         else:
           ncor = nSlots if len(lst) < 3 else int(lst[2])
           spl.append(key)
           samplefiles[key] = val
           nslots[key] = ncor
-  
+          elistfiles[key] = False
     # Re-assign arguments...
     if '--pretend' in aarg or '-p' in aarg : pretend     = args.pretend
     if '--test'    in aarg or '-t' in aarg : dotest      = args.test
     if '--sendJobs'in aarg or '-j' in aarg : sendJobs    = args.sendJobs
     if args.path       != ''       : path        = args.path
     if args.options    != ''       : options     = args.options
-    if args.xsec       != 'xsec'   : xsec        = args.xsec
+    if args.xsec       != 'xsec'   : xsec        = args.xsec if not args.xsec.isdigit() else int(args.xsec)
     if args.year       != -1       : year        = args.year
     if args.prefix     != 'Tree'   : prefix      = args.prefix
     if args.outname    != ''       : outname     = args.outname
@@ -281,7 +307,6 @@ def main(ocfgfile = ''):
     if args.queue      != 0        : queue       = args.queue
     if args.treeName   != 'Events' : treeName    = args.treeName
     if args.verbose    != 0        : verbose     = int(args.verbose)
-  
     if args.nSlots     != -1: 
       nSlots      = int(args.nSlots)
       for k in nslots.keys(): nslots[k] = nSlots
@@ -303,15 +328,16 @@ def main(ocfgfile = ''):
       nslots[spl[0]] = 1
       #samplefiles[spl[0]] = [samplefiles[spl[0]][0]]
       outname = 'test'
-  
+    
     for sname in spl:
       outname = sname
       sample  = samplefiles[sname]
+      elistf  = elistfiles[sname]
       ncores  = nslots[sname]
-      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName)
+      out[outname] = RunSample(selection, path, sample, year, xsec, ncores, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName, elistf, ptocfg, metapy)
   
   else: # no config file...
-    out[outname] = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName)
+    out[outname] = RunSample(selection, path, sample, year, xsec, nSlots, outname, outpath, options, nEvents, FirstEvent, prefix, verbose, pretend, dotest, sendJobs, queue, treeName, "", ptocfg, metapy)
   return out
 
 if __name__ == '__main__':

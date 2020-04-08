@@ -1,6 +1,7 @@
 import os,sys, re
 mypath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(mypath)
+import functions as fun
 
 class AnalysisCreator:
   def AddSelection(self, selection):
@@ -20,19 +21,43 @@ class AnalysisCreator:
     for l in lines:
       self.selection += '%s%s\n'%(' '*addNSpaces, l)
 
+  def AddLoopCode(self, code):
+    code = code.replace('\t', '  ')
+    lines = code.split('\n')
+    for l in lines:
+      ltemp = "%s"%l
+      lorig = "%s"%l
+      ltemp = ltemp.replace(' ', '')
+      if ltemp != '': break
+    nspaces = 0
+    while len(lorig) >0 and lorig[0] == ' ':
+      nspaces += 1
+      lorig = lorig[1:]
+    addNSpaces = 6-nspaces
+    self.loopcode = ''
+    for l in lines:
+      self.loopcode += '%s%s\n'%(' '*addNSpaces, l)
+
   def AddSyst(self, syst):
     if isinstance(syst, list): self.syst += syst
+    elif syst == '': return
     elif ',' in syst: self.AddSyst(syst.replace(' ', '').split(','))
     else: self.syst.append(syst)
 
   def AddHeader(self, h):
     self.header += h
 
+  def AddSampleOptions(self, h):
+    self.sampleOptions += h
+    if not self.sampleOptions.endswith('\n'): self.sampleOptions += '\n'
+
   def AddInit(self, t):
     self.init += t
 
-  def AddCut(self, cut):
-    cut = self.CraftCut(cut)
+  def AddCut(self, cut, variables = ''):
+    if not isinstance(variables, list): variables = [variables]
+    for v in variables: cut = fun.replaceWords(cut, v, 'fun.GetValue(t, "%s",syst)'%v)
+    #cut = self.CraftCut(cut)
     self.cuts.append(cut)
 
   def AddHisto(self, var, hname, nbins, b0 = 0, bN = 0, bins = [], weight = '', sys = '', cut = '', tit = '', write = True):
@@ -53,17 +78,18 @@ class AnalysisCreator:
     if   weight == ''              : weistring = ''
     elif weight in self.expr.keys(): weistring = ', ' + weight
     else                           : weistring = ', fun.GetValue(t, "%s",syst)'%weight
-    fillLine = '   %s self.obj[\'%s\'].Fill(%s%s)\n'%(cut, hname, varstring, weistring)
+    fillLine = '   %s self.obj[%s].Fill(%s%s)\n'%(cut, "'"+hname+"' + '_%s'%syst if syst != '' else '"+hname+"'", varstring, weistring)
     if write: self.fillLine.append(fillLine)
     else    : return fillLine
 
-  def AddExpr(self, ename, var, expr):
+  def AddExpr(self, ename, var, expr, goAfter = False):
     if not isinstance(var, list): var = [var]
     for v in var: 
       if v == '': continue
       st = 'fun.GetValue(t, "%s", syst)'%v
       expr = re.sub(r'\b%s\b'%v, st, expr)
     self.expr[ename] = expr
+    self.exprorder[ename] = goAfter
 
   def CraftCut(self, cut):
     return cut
@@ -87,6 +113,9 @@ class AnalysisCreator:
   def SetOptions(self, options):
     self.options = options
 
+  def SetXsec(self, xsec):
+    self.xsec = str(xsec)
+
   def SetNEvents(self, nEvents):
     self.nEvents = nEvents
 
@@ -100,9 +129,6 @@ class AnalysisCreator:
   def SetVerbose(self, verbose = 1):
     self.verbose = verbose
 
-  def SetOptions(self, options = ''):
-    self.options = options
-
   def SetWeight(self, weight = ''):
     self.weight = weight
 
@@ -111,32 +137,39 @@ class AnalysisCreator:
 
   def GetAnalysisTemplate(self):
     body  = "'''\n Analysis %s, created by xuAnalysis\n https://github.com/GonzalezFJR/xuAnalysis\n'''\n\n"%self.analysisName
-    body += 'import os,sys\nsys.path.append(os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/")\n'
+    body += 'import os,sys\n'
+    body += 'basepath = os.path.abspath(__file__).rsplit("/xuAnalysis/",1)[0]+"/xuAnalysis/"\nsys.path.append(basepath)\n'
     body += 'from framework.analysis import analysis\nimport framework.functions as fun\nfrom ROOT import TLorentzVector\n\n'
     body += self.header
-    body += '\nsystematics = ' + str(self.syst) + '\n'
+    body += '%s'%self.sampleOptions
     body += 'class %s(analysis):\n'%self.analysisName
     body += '  def init(self):\n'
+    body += '      self.systematics = ' + str(self.syst) + '\n'
     body += self.init
     body +='    # Create your histograms here\n'
     #if len(self.syst) > 0: body +='    for syst in systematics:\n'     
-    for line in self.histos: body += '    %s%s\n'%('  ' if len(self.syst) > 0 else '', line)
+    for line in self.histos: body += '    %s%s'%('  ' if len(self.syst) > 0 else '', line)
     body += '\n  def insideLoop(self,t):\n    # WRITE YOU ANALYSIS HERE\n\n'
 
     if self.selection != '': 
       body += '\n    # Selection\n'
       body += self.selection
 
-    if len(self.cuts) > 0:
+    if len(self.cuts) > 0 and len(self.syst) == 0:
       body += '\n    # Requirements\n'
-      for cut in self.cuts: body += '    if not %s: return\n'%cut
+      for cut in self.cuts: body += '    if not (%s): return\n'%cut
 
 
     hnames = self.vars.keys()
     if len(hnames) > 0:
       body += '\n    # Filling the histograms\n'
-      if len(self.syst) > 0: body += '\n    for syst in systematics:\n'
-      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr])
+      if len(self.syst) > 0: 
+        body += '\n    for syst in self.systematics:\n'
+        body += '\n      # Requirements\n'
+        for cut in self.cuts: body += '      if not (%s): continue\n'%cut
+      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr]) if not self.exprorder[expr] else ''
+      if self.loopcode != '': body += self.loopcode
+      for expr in self.expr.keys(): body += '      %s = %s\n'%(expr, self.expr[expr]) if     self.exprorder[expr] else ''
     #  for h in hnames:
     #    var = self.vars[h]
     #    cut = ' ' if self.histocuts[h] == '' else ' if %s:'%self.histocuts[h]
@@ -156,6 +189,7 @@ class AnalysisCreator:
     cfg += '#options : \n' if self.options == '' else 'options : %s\n'%self.options
     cfg += '#nEvents : 1000\n' if self.nEvents == 0 else 'nEvents : %i\n'%self.nEvents
     cfg += '#year : 2016\n' if not self.year in [2016,2017,2018] else 'year : %i\n'%self.year
+    cfg += '#xsec : \n' if not self.xsec != 'xsec' else 'xsec : %s\n'%self.xsec
     cfg += 'verbose : %i\n'%self.verbose
     cfg += 'nSlots : %i\n'%self.nSlots
     cfg += 'selection : %s\n'%self.analysisName
@@ -177,6 +211,8 @@ class AnalysisCreator:
       print 'ERROR: analysis %s already exists!!!'%analysisName
       return
     os.mkdir(mpath + analysisName)
+    if not os.path.isfile(mpath + '__init__.py'): os.system('touch %s__init__.py'%mpath)
+    if not os.path.isfile(mpath + analysisName + '/__init__.py'): os.system('touch %s/__init__.py'%(mpath+analysisName))
 
     # Analysis code
     f = open('%s%s/%s.py'%(mpath,analysisName,analysisName), 'w')
@@ -211,6 +247,7 @@ class AnalysisCreator:
     self.header = ''
     self.init = ''
     self.selection = ''
+    self.loopcode = ''
     self.cuts = []
     self.histos = []
     self.fillLine = []
@@ -219,7 +256,9 @@ class AnalysisCreator:
     self.weights = {}
     self.histocuts = {}
     self.syst = ['']
+    self.sampleOptions = ''
     self.expr = {}
+    self.exprorder = {}
 
 
 def main():

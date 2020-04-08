@@ -263,7 +263,7 @@ void DataLine::SetElementsFromArray(Float_t *f){
   for(Int_t i = 0; i < dim; i++){
     if     (f[i] == 0) c = doZeros? "0" : "-";
     else if(f[i] == 1) c = "1";
-    else               c = TString(Form("%1.2f",f[i]));
+    else               c = TString(Form("%1.5f",f[i]));
     pos[i] = c;
   }
 }
@@ -317,7 +317,7 @@ TextDatacard::TextDatacard(Datacard *datacard){
   doBeestonBarlow = datacard->doBeestonBarlow;
   shapes = datacard->GetFileString();
   obs_bin.SetElement(    0, datacard->GetBinName());
-  observation.SetElement(0, TString(Form("%i",datacard->GetDataRate())));
+  observation.SetElement(0, TString(Form("%1.5f",datacard->GetDataRate())));
   for(Int_t i = 0; i < nProcesses; i++) pro_bin.SetElement(i, datacard->GetBinName());
   pro_name.SetElementsFromVectorTString(datacard->GetVectorProcesses());
   for(Int_t i = 0; i < nProcesses-1; i++) pro_num.SetElement(i, TString(Form("%i",i+1)));

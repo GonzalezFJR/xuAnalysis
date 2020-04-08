@@ -110,7 +110,7 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
     sendJobs = False
   if isinstance(sample, str) and ',' in sample: sample = sample.replace(' ','').split(',')
   sap = sample if not isinstance(sample, list) else sample[0]
-  gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root', path + sap + '.root'])
+  gs = filter(lambda x : os.path.isfile(x), [path + sap + '_0.root', path + 'Tree_' + sap + '_0.root', path + sap + '.root', path + sap + '_1.root', path + 'Tree_' + sap + '_1.root'])
   if len(gs) == 0: print 'ERROR: file %s not found in %s'%(sap, path)
   isData = GuessIsData(gs[0])
   
@@ -211,6 +211,7 @@ def main(ocfgfile = ''):
       fname = l[0] + '.' + l[1]
   print '>> fname = ', fname
   if os.path.isfile(fname):
+    # Reading cfg file
     if verbose: print ' >> Using config file \'%s\'...'%fname
     ptocfg = './'
     if '/' in fname: ptocfg = fname[0:fname.rfind('/')+1]

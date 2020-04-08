@@ -10,8 +10,9 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 ### Input and output
 #path = '../temp5TeV/sep17/'
 #path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep22/'
-path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/nov21v2/'
-outpath = '/nfs/fanae/user/juanr/www/tt5TeV/metCheck/'
+path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/6apr/'
+outpath = '/nfs/fanae/user/juanr/www/tt5TeV/5apr/'
+
 
 ### Definition of the processes
 processDic = {

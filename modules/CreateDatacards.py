@@ -28,7 +28,7 @@ parser.add_argument('filename'          , default=''           , help = 'Name of
 parser.add_argument('--path', '-p'      , default='./'         , help = 'Path to look rootfile')
 parser.add_argument('--verbose','-v'    , default=0            , help = 'Activate the verbosing')
 parser.add_argument('--bkg','-b'        , default='ttZ,  Nonprompt, Other, tW, tt'     , help = 'Background processes')
-parser.add_argument('--unc','-u'        , default='MuonEff, ElecEff, TrigEff'              , help = 'Uncertainty on backgrounds')
+parser.add_argument('--unc','-u'        , default='MuonEff, ElecEff, TrigEff'              , help = 'Systematic uncertainties')
 parser.add_argument('--norm','-n'       , default='1.30, 1.30, 1.30, 1.15, 1.06, 1.08'     , help = 'Uncertainty on backgrounds')
 parser.add_argument('--signal','-s'     , default='stop'     , help = 'Signal process')
 parser.add_argument('--lumiSyst','-l'   , default=0.025     , help = 'Uncertainty on luminosity')

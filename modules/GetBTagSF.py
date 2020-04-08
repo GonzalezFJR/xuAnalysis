@@ -6,7 +6,7 @@ import framework.functions as fun
 from ROOT import TLorentzVector, gSystem, gROOT
 from array import array
 
-# Load mt2
+# Load btagging
 pathtolib = "%s/src/BTagSFUtil/"%basepath
 if os.path.isfile(pathtolib + 'BTagSFUtil_cc.so'):
   gSystem.Load(pathtolib+ 'BTagSFUtil_cc.so')

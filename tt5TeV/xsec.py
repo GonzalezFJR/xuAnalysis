@@ -12,7 +12,7 @@ datasamples = processDic['data']
 def xsec(chan = 'ElMu', lev = '2jets', doDD = False):
   x = CrossSection(outpath, chan, lev)
   x.SetTextFormat("tex")
-  x.SetPathToTrees('/pool/ciencias/userstorage/juanr/nanoAODv4/5TeV/5TeV_5sept/')
+  x.SetPathToTrees('/pool/ciencias/nanoAODv4/5TeV/5TeV_21nov2019/')
   bkg = []
   bkg.append(['tW',            process['tW'],   0.30])
   bkg.append(['Nonprompt lep', process['Nonprompt'], 0.50])
@@ -22,7 +22,7 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = False):
   signal   = ['tt',            process['tt']]
   data     = process['data']
   expunc = "MuonEff, ElecEff, TrigEff, Prefire, JES"#, JES, JER, TrigEff, Prefire" # JER
-  modunc = "pdf, scale, isr, fsr"
+  modunc = "pdf, scale"#, isr, fsr"
 
   x.ReadHistos(path, chan, lev, bkg = bkg, signal = signal, data = data, expUnc = expunc, modUnc = modunc)
   x.SetLumi(296.1)

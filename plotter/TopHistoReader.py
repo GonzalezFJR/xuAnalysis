@@ -1064,6 +1064,7 @@ class HistoManager:
   def ScaleByLumi(self):
     if self.IsScaled: return
     for pr in self.processList + self.signalProcess:
+      if pr in ['Data', 'data']: continue
       for h in self.indic[pr]: 
         self.indic[pr][h].SetStats(0)
         self.indic[pr][h].SetTitle('')

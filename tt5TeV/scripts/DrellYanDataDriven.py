@@ -1,8 +1,10 @@
 import os,sys
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis_all/',1)[0]+'/xuAnalysis_all/')
 from plotter.TopHistoReader import TopHistoReader, OutText
+from plotter.Plotter import Stack
 
 from ROOT.TMath import Sqrt as sqrt
+from ROOT import THStack, TH1F, kGray, kAzure
 square  = lambda x : x*x
 SumSquare = lambda x : sqrt(sum([square(i) for i in x]))
 
@@ -209,39 +211,79 @@ class DYDD:
      err = SF*SumSquare([er/e if e!= 0 else 0, mr/m if m != 0 else 0])
    return SF,err
 
+ def DrawHisto(self, doSF = False, name = '', chan = '', level = '', rebin = 1):
+   self.SetChanAndLevel('', level)
+   self.SetMode('SF' if doSF else 'OF')
+   if name == '': name = 'DYDD_%s_%s'%('SF' if doSF else 'OF',self.GetLevel())
+   hData = self.GetDYhisto(chan, level, True)
+   hMC   = self.GetDYhisto(chan, level, False)
+   hemu  = self.GetDYhisto('ElMu', level, True)
+   hData.SetMarkerStyle(20); hData.SetMarkerColor(1); hData.SetLineColor(1); hData.SetMarkerSize(1.3)
+   hMC.SetFillStyle(1000); hMC.SetLineColor(kAzure-8); hMC.SetFillColor(kAzure-8);
+   hemu.SetFillStyle(1000); hemu.SetLineColor(kGray+2); hemu.SetFillColor(kGray+2)
+   hData.Rebin(rebin); hemu.Rebin(rebin); hMC.Rebin(rebin)
+   ke, kee   = self.GetKfactor(elname)
+   km, kme   = self.GetKfactor(muname)
+   hemu.Scale(0.5 * (ke if chan == 'ElE' else km))
+   hs = THStack()
+   hs.Add(hemu)
+   hs.Add(hMC)
+   lab = 'e^{#pm}e^{#mp}' if chan == 'ElEl' else '#mu^{#pm}#mu^{#mp}'
+   rlab = 'ee' if chan == 'ElEl' else '#mu#mu'
+   processes = ['Z/#gamma*#rightarrow %s'%(lab), '0.5 k_{%s} #times Data(e#mu)'%rlab]
+   colors = {processes[0] : kAzure-9, processes[1] : kGray}
+   s = Stack(doRatio=False)
+   s.SetXtitle(size = 0.06, offset = 0.8, nDiv = 510, labSize = 0.05)
+   s.SetTextCMS(cmstex = 'CMS', x = 0.13, y = 0.88, s = 0.06)
+   s.SetTextCMSmode(texcmsMode = 'Preliminary', x = 0.225, y = 0.875, s = 0.052)
+   s.SetLumi(296.1)
+   s.SetTextLumi(texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.68, texlumiY = 0.95, texlumiS = 0.045)
+   s.SetDataHisto(hData)
+   s.SetColors(colors)
+   s.SetStack(hs)
+   s.SetOutName('DYestimate_%s%s'%(chan, level))
+   s.SetOutPath(self.outpath)
+   s.SetLogY(True)
+   s.SetPlotMaxScale(10)
+   s.SetPlotMinimum(0.5)
+   s.processes = processes
+   s.SetLegendPos(x0=0.60, y0=0.55, x1=0.93, y1=0.91, size=0.042, ncol=1)
+   s.DrawStack('m_{%s} (GeV)'%rlab)
+
  def PrintDYestimate(self, doSF = False, name = '', level = ''):
    self.SetChanAndLevel('', level)
    self.SetMode('SF' if doSF else 'OF')
    if name == '': name = 'DYDD_%s_%s'%('SF' if doSF else 'OF',self.GetLevel())
-   t = OutText(self.GetOutPath(), name)
+   t = OutText(self.GetOutPath(), name, textformat='tex')
+   t.SetTexAlign("l c c c")
    t.SetSeparatorLength(20+(3+22)*3)
    t.SetDefaultFixOption(False)
-   t.line('Drell-Yan estimate for %s and level \'%s\''%('SF channels' if doSF else 'all channels (no MET cut) ',self.GetLevel()))
+   t.line('%'+'Drell-Yan estimate for %s and level \'%s\''%('SF channels' if doSF else 'all channels (no MET cut) ',self.GetLevel()))
    t.bar()
    s = lambda tit,vee,vmm,vem : t.line(t.fix(tit,20) + t.vsep() + t.fix(vee,22,'c') + t.vsep()+ t.fix(vmm,22,'c') + t.vsep() + t.fix(vem,22,'c'))
    v = lambda val, err : '%1.3f'%val + t.pm() + '%1.3f'%err
    d = lambda val, err : '%1.0f'%val + t.pm() + '%1.2f'%err
-   s('',elname,muname,'ElMu')
+   s('','ee','$\mu\mu$','e$\mu$')
    t.sep()
    mie, miee = self.GetMCin( elname)
    moe, moee = self.GetMCout(elname)
    mim, mime = self.GetMCin( muname)
    mom, mome = self.GetMCout(muname)
-   s(' N_in        (MC)',v(mie,miee),v(mim,mime),'')
-   s(' N_out       (MC)',v(moe,moee),v(mom,mome),'')
+   s(' $N_{in}$        (MC)',v(mie,miee),v(mim,mime),'')
+   s(' $N_{out}$       (MC)',v(moe,moee),v(mom,mome),'')
 
    re, ree   = self.GetRoutin(elname)
    rm, rme   = self.GetRoutin(muname)
-   s(' R_(out/in)  (MC)',v(re,ree),v(rm,rme),'')
+   s(' $R_{out/in}$  (MC)',v(re,ree),v(rm,rme),'')
 
    ke, kee   = self.GetKfactor(elname)
    km, kme   = self.GetKfactor(muname)
-   s(' k_ll            ',v(ke,kee),v(km,kme),'')
+   s(' $k_{ll}$            ',v(ke,kee),v(km,kme),'')
 
    ie, ier   = self.GetDataIn(elname)
    im, imr   = self.GetDataIn(muname)
    iem, iemr = self.GetDataIn('ElMu')
-   s(' N_in      (Data)',d(ie,ier),d(im,imr),d(iem,iemr))
+   s(' $N_{in}$      (Data)',d(ie,ier),d(im,imr),d(iem,iemr))
    t.sep()
    dde, ddee = self.GetDYDD(elname)
    ddm, ddme = self.GetDYDD(muname)
@@ -292,7 +334,7 @@ class DYDD:
    t.bar()
    t.write()
 
- def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', lumi = 308.54, massRange = [91-15, 91+15], mode = '', histonameprefix = 'H', hname = 'DY_InvMass'):
+ def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', lumi = 296.1, massRange = [91-15, 91+15], mode = '', histonameprefix = 'H', hname = 'DY_InvMass'):
    self.SetPath(path)
    self.SetOutPath(outpath)
    self.t = TopHistoReader(path)

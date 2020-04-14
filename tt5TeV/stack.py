@@ -22,8 +22,8 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
   hm.IsScaled = False
   name = GetName(var, ch, lev)
   hm.SetHisto(name, rebin)
+  for pr in processes: print '%s : %1.2f'%(pr, hm.indic[pr][name].Integral())
   s.SetHistosFromMH(hm)
-  s.SetOutName(name)
   s.SetTextChan('')
   s.SetRatioMin(2-maxscale)
   s.SetRatioMax(maxscale)
@@ -37,8 +37,11 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
   tch=''
   s.SetLogY(setLogY)
   s.SetPlotMaxScale(maxscale)
+  s.SetOutName(name+('_log' if setLogY else ''))
   s.DrawStack(xtit, ytit)
 
+#Draw('NJets', 'ElMu', '2jets', 2, 'Lep #eta', 'Events', False, maxscale = 1.9)
+#exit()
 lev = 'dilepton'
 for chan in ['ElEl', 'MuMu']: 
   Draw('Jet0Pt', chan, lev, 2, 'Leading jet p_{T} (GeV)', 'Events', False, maxscale = 1.6 )
@@ -62,6 +65,7 @@ for chan in ['ElEl', 'MuMu']:
   Draw('MET', chan, '2jetsnomet', 2, 'MET (GeV)', 'Events', False, maxscale = 1.6)
 for chan in ['ElEl', 'MuMu', 'ElMu']:
   Draw('NJets',  chan, 'dilepton', 1, 'Jet multiplicity', 'Events', True)
+  Draw('NJets',  chan, 'dilepton', 1, 'Jet multiplicity', 'Events', True, setLogY=True)
   Draw('Yields', chan, '', 1, 'Level', 'Events', False, maxscale = 1.2)
   Draw('YieldsSS', chan, '', 1, 'Level', 'Events', False, maxscale = 1.2)
   for lev in ['dilepton', '2jets']:

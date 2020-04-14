@@ -190,7 +190,7 @@ class WeightReader:
 
  def GetRelUncPDF(self, i):
    ''' Returns the relative unc for a given PDF set i '''
-   return abs(self.GetPDFyield(i)-self.GetPDFnom())/self.GetPDFnom()
+   return abs(self.GetPDFyield(i)-self.GetPDFnom())/ ( self.GetPDFnom() if self.GetPDFnom()!=0 else 1)
 
  def GetMaxRelUncScale(self):
    ''' Returns the max scale unc (avoiding unphysical variations) '''
@@ -229,7 +229,7 @@ class WeightReader:
    if self.nPDFweights == 33:
      alphaDo = self.GetPDFyield(32)
      alphaUp = self.GetPDFyield(33)
-     return abs(alphaUp - alphaDo)/2/self.GetPDFnom()
+     return abs(alphaUp - alphaDo)/2/ (self.GetPDFnom() if self.GetPDFnom()!=0 else 1)
    elif self.nPDFweights == 100:
      print 'WARNING: no LHE weights for alpha_s!!'
      return 0

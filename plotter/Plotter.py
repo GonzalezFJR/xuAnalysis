@@ -550,7 +550,8 @@ class Stack(Plot):
       self.hleg = []
       leg = self.SetLegend()
       for pr in self.processes:
-        h = self.TotMC.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
+        htot = self.TotMC if hasattr(self, 'TotMC') else self.hStack.GetStack().Last()
+        h = htot.Clone('leg%s'%pr); h.SetFillStyle(1000); h.SetLineColor(0); h.SetLineWidth(0); h.SetFillColor(self.colors[pr])
         self.hleg.append(h)
         leg.AddEntry(self.hleg[-1], pr if not pr in self.legnames.keys() else self.legnames[pr], 'f')
       for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')

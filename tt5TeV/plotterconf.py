@@ -10,8 +10,10 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 ### Input and output
 #path = '../temp5TeV/sep17/'
 #path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep22/'
-path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/6apr/'
-outpath = '/nfs/fanae/user/juanr/www/tt5TeV/5apr/'
+#folder = '6apr/met40pt2020/'
+folder = '6apr/lepmva2010met40jet25/'
+path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/'+folder
+outpath = '/nfs/fanae/user/juanr/www/tt5TeV/'+folder
 
 
 ### Definition of the processes
@@ -22,6 +24,10 @@ processDic = {
 #'DY'  : 'DYJetsToLL_MLL50',
 'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
 'tt'  : 'TT',
+'tt_hdampDown' : 'TT_hdampDOWN',
+'tt_hdampUp' :  'TT_hdampUP',
+'tt_UEDown' : 'TT_TuneCP5down',
+'tt_UEUp' : 'TT_TuneCP5up',
 'data': 'HighEGJet, SingleMuon'}##SingleMuon
 processes = ['VV', 'Nonprompt', 'DY', 'tW', 'tt']
 
@@ -34,7 +40,7 @@ colors ={
 'tt'  : kRed+1,
 'data': 1}
 
-systematics = 'MuonEff, ElecEff, TrigEff, JES, JER'#, Prefire, ISR, FSR'
+systematics = 'MuonEff, ElecEff, TrigEff, JES, JER, PU, Prefire'#, Prefire, ISR, FSR'
 
 Lumi = 296.1 #294.24 #296.1
 

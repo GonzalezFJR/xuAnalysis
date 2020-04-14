@@ -59,6 +59,15 @@ class OutText:
     if self.outformat == "tex": return ' {$\pm$} '
     else: return ' +/- '
 
+  def GetTextFromOutFile(self, form = None):
+    if form!=None: self.outformat = form
+    filename = self.path + self.outname + '.' + self.outformat
+    if not os.path.isfile(filename): return ''
+    f = open(filename, 'r')
+    lines = f.read()
+    f.close()
+    return lines
+
   def write(self):
     ''' Opens the file '''
     filename = self.path + self.outname + '.' + self.outformat
@@ -66,7 +75,7 @@ class OutText:
     if os.path.isfile(filename) and (self.mode == 'new' or self.mode == 'w'):
       print '[INFO] %s exists!! moving to .bak...'%filename
       os.rename(filename, filename+'.bak')
-    if self.mode == 'r' or self.mode == 'w':
+    if self.mode in ['r', 'w', 'w+', 'a', 'a+']:
       self.f = open(filename, self.mode)
     self.line()
     text  = ''
@@ -82,6 +91,11 @@ class OutText:
     else: text = self.t
     self.f.write(text)
     self.f.close()
+    if self.outformat == 'tex': # Compile
+      os.system('pdflatex %s'%filename)
+      os.remove('%s.aux' %self.outname)
+      os.remove('%s.log' %self.outname)
+      os.system('mv %s.pdf %s' %(self.outname, self.path))
 
   def GetText(self):
     ''' Returns all the text '''

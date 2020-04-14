@@ -221,7 +221,9 @@ class CrossSection:
     ''' Returns the xsec syst unc on cross section '''
     effunc = self.GetEffUnc()
     accunc = self.GetAccUnc()
-    return sqrt(effunc*effunc + accunc*accunc)
+    bkgunc2 = 0
+    for b in [x.GetName() for x in self.bkg]: bkgunc2 = self.GetXsecBkgRelUnc(b)*self.GetXsecBkgRelUnc(b)
+    return sqrt(effunc*effunc + accunc*accunc + bkgunc2)
  
   def GetXsecLumiUnc(self):
     ''' Returns the xsec lumi uncertainty on cross section '''
@@ -295,20 +297,38 @@ class CrossSection:
       stat = self.GetXsecStatUnc()
       syst = self.GetEffUnc()
       lumi = self.GetXsecLumiUnc()
-      t.line(t.fix(' Fiducial cross section', 26, 'r') + t.vsep() + t.fix("%1.3f"%xsec,6))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
-      t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
+      #t.line(t.fix(' Fiducial cross section', 26, 'r') + t.vsep() + t.fix("%1.3f"%xsec,6))
+      #t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
+      #t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
+      #t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
     t.sep()
     xsec = self.GetXsec()
     stat = self.GetXsecStatUnc()
     syst = self.GetXsecSystUnc()
     lumi = self.GetXsecLumiUnc()
     t.line(t.fix(' Inclusive cross section', 26, 'r') + t.vsep() + t.fix("%1.3f"%xsec,6))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' %) (stat)',20, 'l'))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' %) (syst)',20, 'l'))
-    t.line(t.fix(' +\- ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' %) (lumi)',20, 'l'))
+    t.line(t.fix(' $\pm$ ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(stat*xsec,stat*100) + ' \%) (stat)',20, 'l') + t.vsep())
+    t.line(t.fix(' $\pm$ ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(syst*xsec,syst*100) + ' \%) (syst)',20, 'l') + t.vsep())
+    t.line(t.fix(' $\pm$ ', 26, 'r')            + '   ' + t.fix('%1.3f (%1.3f'%(lumi*xsec,lumi*100) + ' \%) (lumi)',20, 'l') + t.vsep())
     t.bar()
+    t.write()
+
+  def AddToTxt(self, name = 'xsec', lab='e#mu'):
+    t = OutText(self.outpath, name, "new", textformat = self.textformat)
+    text = t.GetTextFromOutFile(form = 'txt')
+    xsec = self.GetXsec()
+    stat = self.GetXsecStatUnc()*xsec
+    syst = self.GetXsecSystUnc()*xsec
+    lum  = self.GetXsecLumiUnc()*xsec
+    isthere = False
+    for l in text.splitlines():
+      if l == '' or l.replace(' ', '') == '': continue
+      if l.startswith(lab):
+        isthere = True
+        t.line('%s %1.3f %1.3f %1.3f %1.3f'%(lab, xsec, stat, syst, lum))
+      else: t.line(l)
+    if not isthere:
+      t.line('%s %1.3f %1.3f %1.3f %1.3f'%(lab, xsec, stat, syst, lum))
     t.write()
 
   def PrintSystTable(self, name = 'uncertainties'):
@@ -324,7 +344,7 @@ class CrossSection:
     syst = self.GetXsecSystUnc()
     xsec = self.GetXsec()
     t.bar()
-    t.line(t.fix(' Source', 18, 'l') + t.vsep() + fix("value (%)", 6))
+    t.line(t.fix(' Source', 18, 'l') + t.vsep() + fix("value (\%)", 6))
     t.sep()
     for b in [x.GetName() for x in self.bkg]: t.line(fix(' '+b,18,'r') + t.vsep() + fix('%1.3f'%(self.GetXsecBkgRelUnc(b)*100), 6))
     t.sep()
@@ -359,7 +379,7 @@ class CrossSection:
     files = GetFiles(self.pathToTrees, self.motherfname)
     for f in files: self.treesow.Add(f)
 
-  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 308.54, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = [], histoPrefix = ''):
+  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 296.1, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = [], histoPrefix = ''):
     ''' Set the xsec from histos '''
     if isinstance(expUnc, str): expUnc = expUnc.replace(' ', '').split(',')
     if isinstance(modUnc, str): modUnc = modUnc.replace(' ', '').split(',')
@@ -397,7 +417,7 @@ class CrossSection:
       motherfname = self.motherfname #'TT_TuneCP5_PSweights_5p02TeV'
       w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=296.1, histoprefix=histoPrefix)
       #w.SetSampleName(signalName)
-      if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF + alpha_S',w.GetPDFandAlphaSunc())
+      if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())
     if 'ISR' in modUnc or 'isr' in modUnc: self.AddModUnc('ISR', self.t.GetUnc(signalSample, chan, level, 'ISR'))
     if 'FSR' in modUnc or 'fsr' in modUnc: self.AddModUnc('FSR', self.t.GetUnc(signalSample, chan, level, 'FSR'))

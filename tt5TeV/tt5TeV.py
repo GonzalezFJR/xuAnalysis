@@ -129,6 +129,8 @@ class tt5TeV(analysis):
     # Load SF files
     if not self.isData:
       # Lepton and trigger SF
+      self.LoadHisto('LepMVA_elec', basepath+'inputs/SFLepMVA/electight.root', 'EGamma_SF2D') #
+      self.LoadHisto('LepMVA_muon', basepath+'inputs/SFLepMVA/muontight.root', 'EGamma_SF2D') #
       #self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, abseta
       #self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, abseta
       #self.LoadHisto('RecoEB',    basepath+'./inputs/ElecReco_EB_30_100.root',  'g_scalefactors') # Barrel
@@ -174,7 +176,8 @@ class tt5TeV(analysis):
     self.doJECunc = True if 'JECunc'   in self.options else False
     self.doPU     = True if 'PUweight' in self.options else False
     self.doPref   = True if 'Prefire'  in self.options else False
-    self.doIFSR   = True if 'doIFSR'   in self.options and self.outname == 'TT' else False
+    self.doIFSR   = True if 'doIFSR'   in self.options and self.outname.startswith('TT') else False
+    print 'doIFSR = ', self.doIFSR
     self.jetptvar   = 'Jet_pt_nom'   if 'JetPtNom' in self.options else 'Jet_pt'
     self.jetmassvar = 'Jet_mass_nom' if 'JetPtNom' in self.options else 'Jet_mass'
     self.metptvar   = 'MET_pt_nom'   if 'JetPtNom' in self.options else 'MET_pt'
@@ -248,9 +251,10 @@ class tt5TeV(analysis):
 
     # Jet and lep pT
     self.JetPtCut  = 25
-    self.LepPtCut  = 12
+    self.LepPtCut  = 10
     self.Lep0PtCut = 20
-    self.metcut    = 30
+    self.metcut    = 40
+    self.doLepMVA  = True
 
   def resetObjects(self):
     self.selLeptons = []
@@ -335,7 +339,7 @@ class tt5TeV(analysis):
         for key_syst in systlabel.keys():
           if key_syst != systematic.nom and self.isData: continue
           if not self.doSyst and key_syst != systematic.nom: continue
-          if key_syst in [systematic.PUUp, systematic.PUDo, systematic.PrefireUp, systematic.PrefireDo, systematic.ISRUp, systematic.ISRDo, systematic.FSRUp, systematic.FSRDo, systematic.BtagDo, systematic.BtagUp]: continue
+          #if key_syst in [systematic.PUUp, systematic.PUDo, systematic.PrefireUp, systematic.PrefireDo, systematic.ISRUp, systematic.ISRDo, systematic.FSRUp, systematic.FSRDo, systematic.BtagDo, systematic.BtagUp]: continue
             
           isyst = systlabel[key_syst]
           # Event
@@ -494,6 +498,8 @@ class tt5TeV(analysis):
     self.SetWeight(isyst)
     if not self.SS: self.GetHisto('Yields',   ich, '', isyst).Fill(ilev, self.weight)
     else          : self.GetHisto('YieldsSS', ich, '', isyst).Fill(ilev, self.weight)
+    if not self.SS and ich == ch.ElMu and ilev == lev.jets2 and isyst == systematic.nom:
+      print '%i    %i'%(self.run, self.event)
 
   def FillDYHistos(self, leptons, ich, ilev):
     ''' Fill DY histos used for the R_out/in method for DY estimate '''
@@ -512,8 +518,8 @@ class tt5TeV(analysis):
   def FillAll(self, ich, ilev, isyst, leps, jets, pmet):
     ''' Fill histograms for a given variation, channel and level '''
     self.FillYieldsHistos(ich, ilev, isyst)
-    if isyst not in [systematic.PUUp, systematic.PUDo, systematic.PrefireUp, systematic.PrefireDo, systematic.ISRUp, systematic.ISRDo, systematic.FSRUp, systematic.FSRDo, systematic.BtagDo, systematic.BtagUp]:
-      self.FillHistograms(leps, jets, pmet, ich, ilev, isyst)
+    #if isyst not in [systematic.PUUp, systematic.PUDo, systematic.PrefireUp, systematic.PrefireDo, systematic.ISRUp, systematic.ISRDo, systematic.FSRUp, systematic.FSRDo, systematic.BtagDo, systematic.BtagUp]:
+    self.FillHistograms(leps, jets, pmet, ich, ilev, isyst)
 
   def FillLHEweights(self, t, ich, ilev):
     weight = self.weight
@@ -585,6 +591,8 @@ class tt5TeV(analysis):
 
   def insideLoop(self, t):
     self.resetObjects()
+    self.event = t.event
+    self.run = t.run
 
     ### Lepton selection
     ###########################################
@@ -650,75 +658,78 @@ class tt5TeV(analysis):
       charge = t.Muon_charge[i]
       dxy = abs(t.Muon_dxy[i])
       dz  = abs(t.Muon_dz[i] )
+      passLepMVAID = True
 
-      # Tight ID
-      if not t.Muon_tightId[i]: continue
-      #if not t.Muon_mediumId[i]: continue
-      # Tight ISO, RelIso04 < 0.15
-      if not t.Muon_pfRelIso04_all[i] < 0.15: continue
-      # IP
-      if dxy > 0.2 or dz > 0.5: continue
+      if not self.doLepMVA:
+        # Tight ID
+        if not t.Muon_tightId[i]              : continue #if not t.Muon_mediumId[i]: continue
+        if not t.Muon_pfRelIso04_all[i] < 0.15: continue # Tight ISO, RelIso04 < 0.15
+        if dxy > 0.2 or dz > 0.5              : continue # IP
 
-      '''
-      pasBtag = True
-      ### Loose from WZ
-      if not t.Muon_mediumPromptId[i]: continue
-      if not(t.Muon_miniPFRelIso_all[i] < 0.4): continue
-      if not t.Muon_sip3d[i] < 5: continue
-      if dxy > 0.05 or dz > 0.1: continue
-      #if t.Muon_jetIdx[i] >= 0:
-      #  if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522: passbtag = False
-      '''
+      else:
+        if not int(t.Muon_mediumPromptId[i])    : continue
+        if t.Muon_sip3d[i] > 8                  : continue
+        if dxy > 0.05 or dz > 0.1               : continue
+        if t.Muon_jetIdx[i] >= 0:
+          if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522: passLepMVAID = False
+        if t.Muon_miniPFRelIso_all[i] > 0.325 : passLepMVAID = False
+        if t.Muon_mvaTTH[i] < 0.55            : passLepMVAID = False
+        #if t.Muon_miniIsoId[i] < 4: passLepMVAID = False
 
       # pT < 12 GeV, |eta| < 2.4
       if p.Pt() < self.LepPtCut or abs(p.Eta()) > 2.4: continue
-      self.selLeptons.append(lepton(p, charge, 13))
+      if (self.doLepMVA and passLepMVAID) or not self.doLepMVA:
+        self.selLeptons.append(lepton(p, charge, 13))
        
     ##### Electrons
     for i in range(t.nElectron):
-      p = TLorentzVector()
-      pt  = t.Electron_pt[i]
-      eta = t.Electron_eta[i]
-      ecorr = t.Electron_eCorr[i] if not self.isData else 1
+      p      = TLorentzVector()
+      pt     = t.Electron_pt[i]
+      eta    = t.Electron_eta[i]
+      ecorr  = t.Electron_eCorr[i] if not self.isData else 1
       ptcorr = GetElecPt(pt, eta, ecorr, self.isData)
       ptcorr = GetElecPtSmear(ptcorr, eta, self.isData)
       p.SetPtEtaPhiM(ptcorr, eta, t.Electron_phi[i], t.Electron_mass[i])
-      charge = t.Electron_charge[i]
+      charge   = t.Electron_charge[i]
       etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
       convVeto = t.Electron_convVeto[i]
       R9       = t.Electron_r9[i]
-      dxy = abs(t.Electron_dxy[i])
-      dz  = abs(t.Electron_dz[i] )
+      dxy      = abs(t.Electron_dxy[i])
+      dz       = abs(t.Electron_dz[i] )
+      passLepMVAID =  True
 
-      # Tight cut-based Id
-      if not t.Electron_cutBased[i] >= 3: continue # 4 Tightcut-based Id
-      if not convVeto: continue
-      if ord(t.Electron_lostHits[i]) > 1: continue
-      # Isolation (RelIso03) tight --> Included in nanoAOD cutbased bit!!
-      relIso03 = t.Electron_pfRelIso03_all[i]
-      #if   etaSC <= 1.479 and relIso03 > 0.0361: continue
-      #elif etaSC >  1.479 and relIso03 > 0.094:  continue
-      # Tight IP
-      if   etaSC <= 1.479 and (dxy > 0.05 or dz > 0.1): continue 
-      elif etaSC >  1.479 and (dxy > 0.10 or dz > 0.2): continue 
-      #if dxy > 0.02 or dz > 0.05: continue
-      '''
-      # Loose from WZ
-      if ord(t.Electron_lostHits[i]) > 0: continue
-      if not(t.Electron_mvaFall17V2Iso_WPL[i]): continue
-      if not(t.Electron_miniPFRelIso_all[i] < 0.4): continue
-      if not(t.Electron_convVeto[i]): continue
-      '''
+      if not self.doLepMVA:
+        if not t.Electron_cutBased[i] >= 3: continue # 4 Tightcut-based Id
+        if ord(t.Electron_lostHits[i]) > 1: continue
+        relIso03 = t.Electron_pfRelIso03_all[i]
+        #if   etaSC <= 1.479 and relIso03 > 0.0361: continue
+        #elif etaSC >  1.479 and relIso03 > 0.094:  continue
+        if   etaSC <= 1.479 and (dxy > 0.05 or dz > 0.1): continue 
+        elif etaSC >  1.479 and (dxy > 0.10 or dz > 0.2): continue 
+
+      else: # LepMVA
+        if ord(t.Electron_lostHits[i]) > 0: continue
+        #if not(t.Electron_mvaFall17V2Iso_WPL[i]): continue
+        if (t.Electron_sip3d[i] > 8):                   passLepMVAID = False
+        if dxy > 0.05 or dz > 0.1:                   passLepMVAID = False
+        if (t.Electron_mvaTTH[i] < 0.125):           passLepMVAID = False
+        if (t.Electron_miniPFRelIso_all[i] > 0.085): passLepMVAID = False
+        if t.Electron_jetIdx[i] >= 0:
+          if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.1522: passLepMVAID = False
 
       # pT > 12 GeV, |eta| < 2.4
+      if not convVeto: continue
       if p.Pt() < self.LepPtCut or abs(p.Eta()) > 2.5: continue
-      self.selLeptons.append(lepton(p, charge, 11))
+      if (self.doLepMVA and passLepMVAID) or (not self.doLepMVA):
+        self.selLeptons.append(lepton(p, charge, 11))
+
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
     self.selLeptons.reverse()
 
+      
     # Lepton SF
     self.SFelec = 1; self.SFmuon = 1; self.SFelecErr = 0; self. SFmuonErr = 0
     self.TrigSF = 1; self.TrigSFerr = 0; self.TrigSFUp = 1; self.TrigSFDo = 1;
@@ -726,17 +737,35 @@ class tt5TeV(analysis):
     if not self.isData:
       for lep in self.selLeptons:
         if lep.IsMuon():
-          self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',   0)
-          self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso',  0)
-          self.SFmuonUp *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',   1)
-          self.SFmuonUp *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso',  1)
-          self.SFmuonDo *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',  -1)
-          self.SFmuonDo *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso', -1)
+          if self.doLepMVA:
+            eta = abs(lep.Eta()); pt = lep.Pt();
+            if eta >= 2.4: eta = 2.39;
+            if pt  >= 120: pt = 119;
+            sf, err = self.GetSFandErr('LepMVA_muon', eta, pt)
+            self.SFmuon   *= sf
+            self.SFmuonUp *= (sf+err)
+            self.SFmuonDo *= (sf-err)
+          else:
+            self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',   0)
+            self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso',  0)
+            self.SFmuonUp *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',   1)
+            self.SFmuonUp *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso',  1)
+            self.SFmuonDo *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',  -1)
+            self.SFmuonDo *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso', -1)
         else:
-          #sf, err = self.GetSFandErr('ElecSF', lep.Eta(), lep.Pt())
-          self.SFelec    *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  0)
-          self.SFelecUp  *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  1)
-          self.SFelecDo  *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff', -1)
+          if self.doLepMVA:
+            eta = abs(lep.Eta()); pt = lep.Pt();
+            if eta >= 2.4: eta = 2.39;
+            if pt  >= 120: pt = 119;
+            sf, err = self.GetSFandErr('LepMVA_elec', eta, pt)
+            self.SFelec   *= sf
+            self.SFelecUp *= (sf+err)
+            self.SFelecDo *= (sf-err)
+          else:
+            #sf, err = self.GetSFandErr('ElecSF', lep.Eta(), lep.Pt())
+            self.SFelec    *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  0)
+            self.SFelecUp  *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  1)
+            self.SFelecDo  *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff', -1)
       #self.SFmuonErr = sqrt(self.SFmuonErr)
       #self.SFmuon = 1
 

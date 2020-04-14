@@ -13,11 +13,13 @@ datasamples = processDic['data']
 
 def DrawDYDD(lev = '2jets', doSF = False):
   if not doSF and lev == 'MET': return 
-  d = DYDD(path,outpath,'ElMu',lev, DYsamples=DYsamples, DataSamples=datasamples, lumi=Lumi, histonameprefix='')  #, hname = 'DYHistoElMu' if not doSF else 'DYHisto')
+  d = DYDD(path,outpath+'/DYDD/','ElMu',lev, DYsamples=DYsamples, DataSamples=datasamples, lumi=Lumi, histonameprefix='')  #, hname = 'DYHistoElMu' if not doSF else 'DYHisto')
   d.SetHistoNameOF('DYHistoElMu')
   d.SetHistoNameSF('DYHisto')
   lab = 'SF' if doSF else 'OF'
   d.PrintDYestimate(doSF,  'DYDD_'+lev+'_'+lab)
+  d.DrawHisto(doSF, 'DYDD_'+lev+'_'+lab, 'ElEl', lev, 4)
+  d.DrawHisto(doSF, 'DYDD_'+lev+'_'+lab, 'MuMu', lev, 4)
 
 def DrawDYDDnjets(lev='2jets'):
   d = DYDD(path,outpath,lev)
@@ -29,10 +31,14 @@ def DrawNonprompt(lev = '2jets', ch = 'ElMu'):
   for chan in ['ElEl', 'MuMu', 'ElMu']:
     d.PrintNonpromptEstimate('NonpromptDD_'+lev+'_'+chan, chan, lev)
 
+
+
 # DY
 #for ilev in ['dilepton','2jets']:
+DrawDYDD('dilepton')
+#DrawDYDD('dilepton',True)
 DrawDYDD('2jets')
-DrawDYDD('2jets',True)
+#DrawDYDD('2jets',True)
 
 # Nonprompt 
 #for ilev in ['2jets']: #['dilepton','MET','1btag','2jets', 'ZVeto']:

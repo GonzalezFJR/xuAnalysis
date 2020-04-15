@@ -349,7 +349,7 @@ class tt5TeV(analysis):
           self.NewHisto('Btags',ichan,ilevel,isyst, 4 ,-0.5, 3.5)
           self.NewHisto('Vtx',  ichan,ilevel,isyst, 10, -0.5, 9.5)
           self.NewHisto('NBtagNJets', ichan,ilevel,isyst, 7, -0.5, 6.5)
-
+          self.NewHisto('NBtagNJets_3bins', ichan,ilevel,isyst, 3, -0.5, 2.5)
           # Leptons
           self.NewHisto('Lep0Pt', ichan,ilevel,isyst, 24, 0, 120)
           self.NewHisto('Lep1Pt', ichan,ilevel,isyst, 24, 0, 120)
@@ -386,7 +386,27 @@ class tt5TeV(analysis):
           self.NewHisto('Jet0DCsv',   ichan,ilevel,isyst, 40, 0, 1)
           self.NewHisto('Jet1DCsv',   ichan,ilevel,isyst, 40, 0, 1)
           #self.NewHisto('JetAllDCsv', ichan,ilevel,isyst, 40, 0, 1)
-
+          
+          #para tW
+          self.NewHisto('Jet0Pt1j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0Eta1j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet0Pt2j2b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0Eta2j2b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet1Pt2j2b',   ichan,ilevel,isyst, 50, 0, 250)
+          self.NewHisto('Jet1Eta2j2b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet0Pt2j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0Eta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet1Pt2j1b',   ichan,ilevel,isyst, 50, 0, 250)
+          self.NewHisto('Jet1Eta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet0BPt2j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0BEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet1BPt2j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet1BEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet0noBPt2j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0noBEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          self.NewHisto('Jet1noBPt2j1b',   ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet1noBEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
+          
   def FillHistograms(self, leptons, jets, pmet, ich, ilev, isys):
     ''' Fill all the histograms. Take the inputs from lepton list, jet list, pmet '''
     if self.SS: return               # Do not fill histograms for same-sign events
@@ -447,7 +467,13 @@ class tt5TeV(analysis):
     elif njet == 2: nbtagnjetsnum = nbtag + 3
     else          : nbtagnjetsnum = 6
     self.GetHisto('NBtagNJets', ich, ilev,isys).Fill(nbtagnjetsnum, self.weight)
-
+    
+    if ((njet == 1 and nbtag==1) or (njet == 2 and nbtag==1) or (njet == 2 and nbtag==2)):
+      if (njet == 1 and nbtag==1): nbtagnjetsnum2 = 0
+      elif (njet == 2 and nbtag==1): nbtagnjetsnum2 = 1
+      elif (njet == 2 and nbtag==2): nbtagnjetsnum2 = 2
+      self.GetHisto('NBtagNJets_3bins', ich, ilev,isys).Fill(nbtagnjetsnum2, self.weight)
+    
     # Leptons
     self.GetHisto('Lep0Pt', ich,ilev,isys).Fill(l0pt, self.weight)
     self.GetHisto('Lep1Pt', ich,ilev,isys).Fill(l1pt, self.weight)
@@ -492,6 +518,32 @@ class tt5TeV(analysis):
     #  self.GetHisto('JetAllEta', ich,ilev,isys).Fill(ijet.Eta(), self.weight)
     #  self.GetHisto('JetAllCsv', ich,ilev,isys).Fill(ijet.GetCSVv2(), self.weight)
     #  self.GetHisto('JetAllDCsv', ich,ilev,isys).Fill(ijet.GetDeepCSV(), self.weight)
+    
+    #tW
+    if (njet==1 and nbtag ==1):
+	  self.GetHisto('Jet0Pt1j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	  self.GetHisto('Jet0Eta1j1b',   ich,ilev,isys).Fill(j0eta, self.weight)
+    
+    if (njet==2 and nbtag==2):
+	  self.GetHisto('Jet0Pt2j2b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	  self.GetHisto('Jet0Eta2j2b',   ich,ilev,isys).Fill(j0eta, self.weight)
+	  self.GetHisto('Jet1Pt2j2b',   ich,ilev,isys).Fill(j1pt, self.weight)
+	  self.GetHisto('Jet1Eta2j2b',   ich,ilev,isys).Fill(j1eta, self.weight) 
+    if (njet==2 and nbtag==1): 
+	  self.GetHisto('Jet0Pt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	  self.GetHisto('Jet0Eta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)
+	  self.GetHisto('Jet1Pt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+	  self.GetHisto('Jet1Eta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
+	  if (j0deepcsv > 0.4941):
+	    self.GetHisto('Jet0BPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	    self.GetHisto('Jet0BEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)		
+	    self.GetHisto('Jet1noBPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+	    self.GetHisto('Jet1noBEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
+	  elif (j1deepcsv > 0.4941):
+	    self.GetHisto('Jet1BPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+	    self.GetHisto('Jet1BEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)		
+	    self.GetHisto('Jet0noBPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	    self.GetHisto('Jet0noBEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight) 
 
   def FillYieldsHistos(self, ich, ilev, isyst):
     ''' Fill histograms for yields. Also for SS events for the nonprompt estimate '''

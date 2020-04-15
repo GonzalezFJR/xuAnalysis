@@ -121,8 +121,10 @@ def RunSample(selection, path, sample, year = 2018, xsec = 1, nSlots = 1, outnam
 
   try:
     selecModul = __import__('%s.%s'%(selection,selection))
+
   except:
     selecModul = __import__('%s'%selection)
+  
   try:
     modul = getattr(selecModul, selection)
     analysis = getattr(modul, selection)

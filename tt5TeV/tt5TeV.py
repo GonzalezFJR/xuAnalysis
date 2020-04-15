@@ -132,8 +132,8 @@ class tt5TeV(analysis):
       # Lepton and trigger SF
       self.LoadHisto('LepMVA_elec', basepath+'inputs/SFLepMVA/electight.root', 'EGamma_SF2D') #
       self.LoadHisto('LepMVA_muon', basepath+'inputs/SFLepMVA/muontight.root', 'EGamma_SF2D') #
-      #self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_ab') # pt, ab
-      #self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_ab') # pt, ab
+      #self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, ab
+      #self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, ab
       #self.LoadHisto('RecoEB',    basepath+'./inputs/ElecReco_EB_30_100.root',  'g_scalefactors') # Barrel
       #self.LoadHisto('RecoEE',    basepath+'./inputs/ElecReco_EE_30_100.root',  'g_scalefactors') # Endcap
       #self.LoadHisto('ElecEB',    basepath+'./inputs/sf_tight_id.root',  'g_eff_ratio_pt_barrel') # Endcap loose/medium/tight
@@ -925,20 +925,14 @@ class tt5TeV(analysis):
     
     ### Trigger
     ###########################################
-    #trigger = {
-     #ch.Elec:t.HLT_HIEle17_WPLoose_Gsf,
-     #ch.Muon:t.HLT_HIMu17, #HLT_HIL3Mu20
-     #ch.ElMu:t.HLT_HIMu17 or t.HLT_HIEle17_WPLoose_Gsf, #t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf,
-     #ch.ElEl:t.HLT_HIEle17_WPLoose_Gsf,
-     #ch.MuMu:t.HLT_HIMu17# or t.HLT_HIL3DoubleMu0
-    #}
     trigger = {
-    ch.Elec:t.HLT_HIEle20_WPLoose_Gsf,
-    ch.Muon:t.HLT_HIMu17, #HLT_HIL3Mu20
-    ch.ElMu:t.HLT_HIMu17 or t.HLT_HIEle20_WPLoose_Gsf, #t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf,
-    ch.ElEl:t.HLT_HIEle20_WPLoose_Gsf,
-    ch.MuMu:t.HLT_HIMu17# or t.HLT_HIL3DoubleMu0
+     ch.Elec:t.HLT_HIEle17_WPLoose_Gsf,
+     ch.Muon:t.HLT_HIMu17, #HLT_HIL3Mu20
+     ch.ElMu:t.HLT_HIMu17 or t.HLT_HIEle17_WPLoose_Gsf, #t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf,
+     ch.ElEl:t.HLT_HIEle17_WPLoose_Gsf,
+     ch.MuMu:t.HLT_HIMu17# or t.HLT_HIL3DoubleMu0
     }
+
     passTrig = trigger[ich]
 
     # TrigerSF

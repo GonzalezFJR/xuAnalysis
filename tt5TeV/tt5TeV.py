@@ -11,6 +11,7 @@ from modules.puWeightProducer import puWeight_5TeV
 from modules.PrefireCorr import PrefCorr5TeV
 from modules.GetBTagSF import BtagReader
 from modules.SFreader import SFreader
+from modules.TMVAreader import MVATool, MVAVar
 #from MuonTrigSFPbPb import GetMuonTrigSF, GetMuonTrigEff, GetMuonEff, GetMuonEffDimuon
 
 ttnomname = 'TT'
@@ -253,8 +254,26 @@ class tt5TeV(analysis):
     self.JetPtCut  = 25
     self.LepPtCut  = 10
     self.Lep0PtCut = 20
-    self.metcut    = 40
+    self.metcut    = 30
     self.doLepMVA  = True
+
+    # Load TMVA reader
+    pathToWeights = '/nfs/fanae/user/sscruz/TW_train/AnalysisPAF/plotter/TW/StableWeights/bdtForTWv4/weights/TMVAClassification_GradBoost_2000_0.01.weights.xml'
+    tempfunc = lambda ev : 1
+    mvavars = [
+      MVAVar("TnLooseCentral",        func = lambda ev : ev.TnLooseCentral),
+      MVAVar("TnBTotal",              func = lambda ev : tempfunc(ev)),
+      MVAVar("TDilepMETJetPt",        func = lambda ev : tempfunc(ev)),
+      MVAVar("TTHTtot",               func = lambda ev : tempfunc(ev)),
+      MVAVar("TTJet1_pt",             func = lambda ev : tempfunc(ev)),
+      MVAVar("TTJetLooseCentralpt",   func = lambda ev : tempfunc(ev)),
+      MVAVar("TDilepMETJetPt_THTtot", func = lambda ev : tempfunc(ev)),
+      MVAVar("TMSys",                 func = lambda ev : tempfunc(ev)),
+      MVAVar("TC_jll_v2",             func = lambda ev : tempfunc(ev)),
+      MVAVar("THTLepOverHT",          func = lambda ev : tempfunc(ev)),
+      MVAVar("TDilepJetPt",           func = lambda ev : tempfunc(ev)),
+    ]
+    self.mva = MVATool("BDT", pathToWeights, mvavars)
 
   def resetObjects(self):
     self.selLeptons = []
@@ -351,8 +370,8 @@ class tt5TeV(analysis):
           self.NewHisto('NBtagNJets', ichan,ilevel,isyst, 7, -0.5, 6.5)
 
           # Leptons
-          self.NewHisto('Lep0Pt', ichan,ilevel,isyst, 24, 0, 120)
-          self.NewHisto('Lep1Pt', ichan,ilevel,isyst, 24, 0, 120)
+          self.NewHisto('Lep0Pt', ichan,ilevel,isyst, 20, 20, 120)
+          self.NewHisto('Lep1Pt', ichan,ilevel,isyst, 16, 10, 90)
           self.NewHisto('Lep0Eta', ichan,ilevel,isyst, 50, -2.5, 2.5)
           self.NewHisto('Lep1Eta', ichan,ilevel,isyst, 50, -2.5, 2.5)
           self.NewHisto('Lep0Phi', ichan,ilevel,isyst, 20, -1, 1)
@@ -368,15 +387,15 @@ class tt5TeV(analysis):
           if ichan == chan[ch.ElMu]:
             self.NewHisto('ElecEta', 'ElMu',ilevel,isyst, 50, -2.5, 2.5)
             self.NewHisto('MuonEta', 'ElMu',ilevel,isyst, 50, -2.5, 2.5)
-            self.NewHisto('ElecPt', 'ElMu',ilevel,isyst, 24, 0, 120)
-            self.NewHisto('MuonPt', 'ElMu',ilevel,isyst, 24, 0, 120)
+            self.NewHisto('ElecPt', 'ElMu',ilevel,isyst, 20, 10, 110)
+            self.NewHisto('MuonPt', 'ElMu',ilevel,isyst, 20, 10, 110)
             self.NewHisto('ElecPhi', 'ElMu',ilevel,isyst, 20, -1, 1)
             self.NewHisto('MuonPhi', 'ElMu',ilevel,isyst, 20, -1, 1)
 
           # Jets
-          self.NewHisto('Jet0Pt',   ichan,ilevel,isyst, 60, 0, 300)
-          self.NewHisto('Jet1Pt',   ichan,ilevel,isyst, 50, 0, 250)
-          self.NewHisto('JetAllPt', ichan,ilevel,isyst, 60, 0, 300)
+          self.NewHisto('Jet0Pt',   ichan,ilevel,isyst, 14,25, 200)
+          self.NewHisto('Jet1Pt',   ichan,ilevel,isyst, 14,25, 200)
+          self.NewHisto('JetAllPt', ichan,ilevel,isyst, 14,25, 200)
           self.NewHisto('Jet0Eta',   ichan,ilevel,isyst, 50, -2.5, 2.5)
           self.NewHisto('Jet1Eta',   ichan,ilevel,isyst, 50, -2.5, 2.5)
           #self.NewHisto('JetAllEta', ichan,ilevel,isyst, 50, -2.5, 2.5)
@@ -498,8 +517,8 @@ class tt5TeV(analysis):
     self.SetWeight(isyst)
     if not self.SS: self.GetHisto('Yields',   ich, '', isyst).Fill(ilev, self.weight)
     else          : self.GetHisto('YieldsSS', ich, '', isyst).Fill(ilev, self.weight)
-    if not self.SS and ich == ch.ElMu and ilev == lev.jets2 and isyst == systematic.nom:
-      print '%i    %i'%(self.run, self.event)
+    #if not self.SS and ich == ch.ElMu and ilev == lev.jets2 and isyst == systematic.nom:
+    #  print '%i    %i'%(self.run, self.event)
 
   def FillDYHistos(self, leptons, ich, ilev):
     ''' Fill DY histos used for the R_out/in method for DY estimate '''
@@ -837,10 +856,10 @@ class tt5TeV(analysis):
     ### Trigger
     ###########################################
     trigger = {
-     ch.Elec:t.HLT_HIEle20_WPLoose_Gsf,
+     ch.Elec:t.HLT_HIEle17_WPLoose_Gsf,
      ch.Muon:t.HLT_HIMu17, #HLT_HIL3Mu20
-     ch.ElMu:t.HLT_HIMu17 or t.HLT_HIEle20_WPLoose_Gsf, #t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf,
-     ch.ElEl:t.HLT_HIEle20_WPLoose_Gsf,
+     ch.ElMu:t.HLT_HIMu17 or t.HLT_HIEle17_WPLoose_Gsf, #t.HLT_HIL3Mu20 or t.HLT_HIEle20_WPLoose_Gsf,
+     ch.ElEl:t.HLT_HIEle17_WPLoose_Gsf,
      ch.MuMu:t.HLT_HIMu17# or t.HLT_HIL3DoubleMu0
     }
     passTrig = trigger[ich]
@@ -882,6 +901,9 @@ class tt5TeV(analysis):
       elif self.sampleDataset == datasets.DoubleMuon:
         if   ich == ch.MuMu: passTrig = trigger[ich]
         else:                passTrig = False
+
+    setattr(t, 'TnLooseCentral', 40)
+    tWmvaVal = self.mva(t)
 
     ### Event weight and othe global variables
     ###########################################

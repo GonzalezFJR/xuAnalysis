@@ -27,6 +27,18 @@ class Plot:
     hname = self.histoName if not isinstance(self.histoName, list) else self.histoName[0]
     return self.GetOutPath()+hname
 
+  def SetRangeX(self, rangeX=[0,0], x1=None):
+   if x1==None:
+     if not isinstance(rangeX, list) or len(rangeX) != 2:
+       print 'WARNING: trying to set range X with wrong object...'
+       return
+     self.rangeX = rangeX
+   else:
+     if isinstance(rangeX, list):
+       print 'WARNING: trying to set range X with wrong object...'
+       return
+     self.rangeX = [rangeX, x1]
+
   def SetHistoPad(self, x0 = 0.0, y0 = 0.23, x1 = 1, y1 = 1):
     self.hpadx0 = x0
     self.hpady0 = y0
@@ -315,6 +327,7 @@ class Plot:
     self.verbose = 1
     self.Tex = []
     self.doRatio = doRatio
+    self.SetRangeX()
  
     ### Pads
     self.SetHistoPad()
@@ -513,6 +526,8 @@ class Stack(Plot):
     gPad.SetTicky();
     if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
     self.hStack.Draw('hist')
+    x0, x1 = self.rangeX
+    if x0 < x1: self.hStack.GetXaxis().SetRangeUser(x0, x1)
     if hasattr(self, 'MCstatUnc'): self.MCstatUnc.Draw("e2,same")
     if hasattr(self, 'MCnormUnc'): self.MCnormUnc.Draw("e2,same")
     if hasattr(self, 'MCunc'):     self.MCunc    .Draw("e2,same")
@@ -562,25 +577,30 @@ class Stack(Plot):
     if self.doRatio:
       self.ratio.cd()
       legr=self.SetLegendRatio()
+      x0, x1 = self.rangeX
       if hasattr(self, 'hRatioStatUnc'):
+        if x0 < x1: self.hRatioStatUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioStatUnc.Draw('e2same')
         self.hRatioStatUnc.SetLineWidth(0)
         self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioStatUnc, 'Stat', 'f')
       if hasattr(self, 'hRatioNormUnc'):
+        if x0 < x1: self.hRatioNormUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioNormUnc.Draw('e2same')
         self.hRatioNormUnc.SetLineWidth(0)
         self.hRatioNormUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioNormUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioNormUnc, 'Bkg norm', 'f')
       if hasattr(self, 'hRatioUnc'    ): 
+        if x0 < x1: self.hRatioUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioUnc.Draw('e2same')
         self.hRatioUnc.SetLineWidth(0)
         self.hRatioUnc.SetMinimum(self.PlotRatioMin)
         self.hRatioUnc.SetMaximum(self.PlotRatioMax)
         legr.AddEntry(self.hRatioUnc, 'Tot unc', 'f')#'Stat #oplus Syst', 'f')
       if hasattr(self, 'hRatio'):
+        if x0 < x1: self.hRatio.GetXaxis().SetRangeUser(x0, x1)
         self.hRatio.Draw('pE0X0,same')
         self.hRatio.SetMaximum(self.PlotRatioMax)
         self.hRatio.SetMinimum(self.PlotRatioMin)

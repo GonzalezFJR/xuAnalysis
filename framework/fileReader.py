@@ -24,7 +24,7 @@ def findValidRootfiles(path, sampleName = '', getOnlyNumberedFiles = False, verb
       #if len(files) == 0:
       #  files += findValidRootfiles(path, 'Tree_'+s, getOnlyNumberedFiles, verbose, FullPaths)
     return files
-  if not path[-1] == '/': path += '/'
+  if not path.endswith('/'): path += '/'
   if verbose: print ' >> Looking for files in path: ' + path
   for f in os.listdir(path):
     if not f[-5:] == '.root': continue

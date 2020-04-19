@@ -261,7 +261,7 @@ class DYDD:
    t.line('%'+'Drell-Yan estimate for %s and level \'%s\''%('SF channels' if doSF else 'all channels (no MET cut) ',self.GetLevel()))
    t.bar()
    s = lambda tit,vee,vmm,vem : t.line(t.fix(tit,20) + t.vsep() + t.fix(vee,22,'c') + t.vsep()+ t.fix(vmm,22,'c') + t.vsep() + t.fix(vem,22,'c'))
-   v = lambda val, err : '%1.3f'%val + t.pm() + '%1.3f'%err
+   v = lambda val, err : '%1.2f'%val + t.pm() + '%1.2f'%err
    d = lambda val, err : '%1.0f'%val + t.pm() + '%1.2f'%err
    s('','ee','$\mu\mu$','e$\mu$')
    t.sep()

@@ -24,6 +24,14 @@ def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit
   hm.SetHisto(name, rebin)
   for pr in processes: print '%s : %1.2f'%(pr, hm.indic[pr][name].Integral())
   s.SetHistosFromMH(hm)
+  # Blind
+  #hData  = s.TotMC.Clone("Asimov")
+  #hData.SetLineWidth(0); hData.SetMarkerStyle(20); hData.SetMarkerColor(kGray)
+  #hData2 = hData.Clone("Asimov2")
+  #hData2.Divide(hData)
+  #s.SetDataHisto(hData)
+  #s.SetRatio(hData2)
+
   s.SetTextChan('')
   s.SetRatioMin(2-maxscale)
   s.SetRatioMax(maxscale)

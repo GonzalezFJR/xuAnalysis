@@ -12,15 +12,14 @@ from scripts.DrellYanDataDriven import DYDD
 outpath = '/nfs/fanae/user/juanr/CMSSW_10_2_13/src/tt5TeV/histos/'
 
 def CreateDatacard(name = 'ttxsec_ElMu', verbose = True):
-  sig = 'tt'
   pathToFile = '/nfs/fanae/user/juanr/CMSSW_10_2_5/src/xuAnalysis/modules/CreateDatacards.py'
   pathOut    = outpath
   #unc = 'MuonEff, ElecEff, Trig, Pref, MuonES, Btag, MisTag, TopPt, FSR, ISR, UE, PU, Uncl, JESCor, JESUnCor, JER' # mtop, hdamp
   #unc = 'MuonEff, ElecEff, Trig, Pref, MuonES, Btag, MisTag, TopPt, FSR, ISR, UE,  Uncl, JESCor, JESUnCor, hdamp' # mtop, hdamp
   unc = "MuonEff, ElecEff, TrigEff, Prefire, JES, JER, Prefire, PU, PDF, Scale, ISR, FSR, hdamp, UE"
-  bkg  = 'VV, tW, Nonprompt, DY'
-  norm = '1.30, 1.20, 1.50, 1.30, 1'
-  signal = 'tt'
+  bkg  = 'VV, tt, Nonprompt, DY'
+  norm = '1.30, 1.05, 1.50, 1.30, 1'
+  signal = 'tW'
   command = 'python %s %s -p %s -s %s -u "%s" -b "%s" -n "%s"'%(pathToFile, name, pathOut, signal, unc, bkg, norm)
   if verbose: print 'Executing %s ...'%command
   os.system(command)
@@ -39,10 +38,10 @@ def SaveHisto(name, chan, level, outname='', rebin=1):
   hm.SetHisto(hname, rebin)
 
   if level == '2jetsnomet': level = '2jets'
-  d = DYDD(path,outpath,chan,level, DYsamples=processDic['DY'], DataSamples=processDic['data'], lumi=Lumi, histonameprefix='', hname = 'DYHistoElMu')# if chan == 'ElMu' else 'DYHisto')
-  DYy, DYerr = d.GetDYDD()
-  DYMC = hm.indic['DY'][hname].Integral()
-  #hm.indic['DY'][hname].Scale(DYy/DYMC if DYMC!=0 else 1)
+  #d = DYDD(path,outpath,chan,level, DYsamples=processDic['DY'], DataSamples=processDic['data'], lumi=Lumi, histonameprefix='', hname = 'DYHistoElMu')# if chan == 'ElMu' else 'DYHisto')
+  #DYy, DYerr = d.GetDYDD()
+  #DYMC = hm.indic['DY'][hname].Integral()
+  #hm.indic['DY'][hname].Scale(DYy/DYMC)
 
   # Add ISR, FSR
   nom   = hm.indic['tt'][hname].Clone('nom')
@@ -77,46 +76,14 @@ def SaveHisto(name, chan, level, outname='', rebin=1):
   hm.indic['tt'][hname+'_'+'ScaleUp'  ] = hmeup
   hm.indic['tt'][hname+'_'+'ScaleDown'] = hmedo
 
+  hm.indic['data'][hname] = hm.GetSumBkg()
+
   hm.Save(outpath+'%s'%(outname))
 
 # Create xsec datacards
-level = '2jets'
+level = 'dilepton'
 for chan in ['ElMu', 'MuMu', 'ElEl']:
-  SaveHisto('Lep0Eta', chan, level, outname='ttxsec_%s'%chan, rebin=50)
-  CreateDatacard(name = 'ttxsec_%s'%chan)
+  SaveHisto('BDT1j1b', chan, level, outname='tWxsec_%s'%chan, rebin=2)
+  CreateDatacard(name = 'tWxsec_%s'%chan)
 exit()
 
-# Save rootfiles with final histograms
-level = 'dilepton'
-SaveHisto('DYMass', 'ElEl', level, rebin=5)
-SaveHisto('DYMass', 'MuMu', level, rebin=5)
-
-# 2jets but no met for ee, mumu
-level = '2jetsnomet'
-SaveHisto('MET', 'ElEl', level, rebin=5)
-SaveHisto('MET', 'MuMu', level, rebin=5)
-
-# Electron and muon for ElMu
-chan = 'ElMu'
-for level in ['dilepton', '2jets']:
-  for tag in ['Elec', 'Muon']:
-    SaveHisto(tag+'Pt', chan, level, rebin=5)
-    SaveHisto(tag+'Eta', chan, level, rebin=5)
-    SaveHisto(tag+'Phi', chan, level, rebin=5)
-
-# Kinematic variables
-# NJets, HT, MET, Lep0Pt, Lep1Pt, Lep0Eta, Lep1Eta, Lep0Phi, Lep1Phi, DilepPt, InvMass, Jet0Pt, Jet1Pt, JetAllPt
-for level in ['dilepton', '2jets']:
-  for chan in ['ElEl', 'MuMu', 'ElMu']:
-    SaveHisto('NJets', chan, level, rebin=1)
-    SaveHisto('HT', chan, level, rebin=1)
-    SaveHisto('MET', chan, level, rebin=1)
-    SaveHisto('Lep0Pt', chan, level, rebin=1)
-    SaveHisto('Lep1Pt', chan, level, rebin=1)
-    SaveHisto('Lep0Eta', chan, level, rebin=1)
-    SaveHisto('Lep1Eta', chan, level, rebin=1)
-    SaveHisto('DilepPt', chan, level, rebin=1)
-    SaveHisto('InvMass', chan, level, rebin=1)
-    SaveHisto('Jet0Pt', chan, level, rebin=1)
-    SaveHisto('Jet1Pt', chan, level, rebin=1)
-    #SaveHisto('JetAllPt', chan, level, rebin=1)

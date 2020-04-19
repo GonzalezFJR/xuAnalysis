@@ -145,7 +145,7 @@ def DrawFig(xsecfile = '', values = ''):
   h2.GetXaxis().SetTitleOffset(0.85);
   h2.GetYaxis().SetTitle("");
   yaxis = h2.GetYaxis();
-  #for i in range(1, h2.GetYaxis().GetNbins()): h2.GetYaxis().SetBinLabel(i, '')
+  for i in range(1, h2.GetYaxis().GetNbins()): h2.GetYaxis().SetBinLabel(i, '')
   
   hempty = TH1F()
   legends = []

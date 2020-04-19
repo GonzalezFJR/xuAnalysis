@@ -11,7 +11,7 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 #path = '../temp5TeV/sep17/'
 #path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/sep22/'
 #folder = '6apr/met40pt2020/'
-folder = '6apr/lepmva2010met40jet25/'
+folder = '6apr/lepMVA/'
 path = '/mnt_pool/ciencias_users/user/juanr/dev/xuAnalysis/temp5TeV/'+folder
 outpath = '/nfs/fanae/user/juanr/www/tt5TeV/'+folder
 
@@ -36,7 +36,7 @@ colors ={
 'VV'  : kTeal+5,
 'Nonprompt': kGray+2,
 'tW'  : kOrange+1,
-'DY'  : kAzure+2,
+'DY'  : kAzure-8,
 'tt'  : kRed+1,
 'data': 1}
 

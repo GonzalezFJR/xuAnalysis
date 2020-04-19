@@ -130,8 +130,10 @@ class tt5TeV(analysis):
     # Load SF files
     if not self.isData:
       # Lepton and trigger SF
-      self.LoadHisto('LepMVA_elec', basepath+'inputs/SFLepMVA/electight.root', 'EGamma_SF2D') #
-      self.LoadHisto('LepMVA_muon', basepath+'inputs/SFLepMVA/muontight.root', 'EGamma_SF2D') #
+      self.LoadHisto('LepMVA_elec',      basepath+'inputs/SFLepMVA/final_ele_loosetotightSF.root', 'EGamma_SF2D') #
+      self.LoadHisto('LepMVA_muon',      basepath+'inputs/SFLepMVA/final_mu_loosetotightSF.root', 'EGamma_SF2D') #
+      self.LoadHisto('LepMVA_elec_reco', basepath+'inputs/SFLepMVA/final_ele_recotolooseSF.root', 'EGamma_SF2D') #
+      self.LoadHisto('LepMVA_muon_reco', basepath+'inputs/SFLepMVA/final_mu_recotolooseSF.root', 'EGamma_SF2D') #
       #self.LoadHisto('MuonIsoSF', basepath+'./inputs/MuonISO.root', 'NUM_TightRelIso_DEN_TightIDandIPCut_pt_abseta') # pt, ab
       #self.LoadHisto('MuonIdSF',  basepath+'./inputs/MuonID.root',  'NUM_TightID_DEN_genTracks_pt_abseta') # pt, ab
       #self.LoadHisto('RecoEB',    basepath+'./inputs/ElecReco_EB_30_100.root',  'g_scalefactors') # Barrel
@@ -170,7 +172,7 @@ class tt5TeV(analysis):
               self.sfr.LoadHisto(getSFpath(fl, dat, 'MuHLTEff', 'Negative'), fname, getH(s), getN(flav, 'HLTneg', dat, s))
 
     # To apply b tagging SF
-    self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Medium', 2017)
+    self.BtagSF   = BtagReader('DeepCSV', 'mujets', 'Loose', 2017)
 
     # Uncertainties
     self.doSyst   = False if ('noSyst' in self.options or self.isData) else True
@@ -562,7 +564,6 @@ class tt5TeV(analysis):
 	    self.GetHisto('Jet1Pt2j2b',   ich,ilev,isys).Fill(j1pt, self.weight)
 	    self.GetHisto('Jet1Eta2j2b',   ich,ilev,isys).Fill(j1eta, self.weight) 
     if (njet==2 and nbtag==1): 
-      print(tWmvaVal2j1b)
       self.GetHisto('BDT2j1b',ich,ilev,isys).Fill(tWmvaVal2j1b, self.weight)
       self.GetHisto('Jet0Pt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
       self.GetHisto('Jet0Eta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)
@@ -671,8 +672,8 @@ class tt5TeV(analysis):
     for jet in jets:
       pt = jet.Pt(); eta = jet.Eta()
       tagger = jet.GetDeepCSV(); flav = jet.GetFlav() if not self.isData else -999999
-      #if self.BtagSF.IsBtag(tagger, flav, pt, eta, systIndex): nbtag += 1
-      if tagger > 0.4941: nbtag += 1
+      if self.BtagSF.IsBtag(tagger, flav, pt, eta, systIndex): nbtag += 1
+      #if tagger > 0.4941: nbtag += 1
     return nbtag
 
   def insideLoop(self, t):
@@ -682,12 +683,13 @@ class tt5TeV(analysis):
 
     ### Lepton selection
     ###########################################
-    if not self.isData: nGenLep = t.nGenDressedLepton 
+    #if not self.isData: nGenLep = t.nGenDressedLepton 
+    if not self.isData: nGenLep = GetNGenLeps(t)
     if self.isTT and not self.doTTbarSemilep and  nGenLep < 2: return
     if self.doTTbarSemilep and  nGenLep >= 2: return
     if self.isTT:
       genLep = []
-      for i in range(nGenLep):
+      for i in range(t.nGenDressedLepton):
         p = TLorentzVector()
         p.SetPtEtaPhiM(t.GenDressedLepton_pt[i], t.GenDressedLepton_eta[i], t.GenDressedLepton_phi[i], t.GenDressedLepton_mass[i])
         pdgid = abs(t.GenDressedLepton_pdgId[i])
@@ -820,6 +822,7 @@ class tt5TeV(analysis):
     self.SFelec = 1; self.SFmuon = 1; self.SFelecErr = 0; self. SFmuonErr = 0
     self.TrigSF = 1; self.TrigSFerr = 0; self.TrigSFUp = 1; self.TrigSFDo = 1;
     self.SFmuonUp = 1; self.SFmuonDo = 1; self.SFelecUp = 1; self.SFelecDo = 1;
+    quad = lambda x,y : sqrt(x*x+y*y)
     if not self.isData:
       for lep in self.selLeptons:
         if lep.IsMuon():
@@ -827,10 +830,12 @@ class tt5TeV(analysis):
             eta = abs(lep.Eta()); pt = lep.Pt();
             if eta >= 2.4: eta = 2.39;
             if pt  >= 120: pt = 119;
-            sf, err = self.GetSFandErr('LepMVA_muon', eta, pt)
-            self.SFmuon   *= sf
-            self.SFmuonUp *= (sf+err)
-            self.SFmuonDo *= (sf-err)
+            sf , err  = self.GetSFandErr('LepMVA_muon',      eta, pt)
+            sfr, errr = self.GetSFandErr('LepMVA_muon_reco', eta, pt)
+            fer = quad(err, errr)
+            self.SFmuon   *= sf*sfr
+            self.SFmuonUp *= (sf*sfr+(fer))
+            self.SFmuonDo *= (sf*sfr-(fer))
           else:
             self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonID',   0)
             self.SFmuon   *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'MuonIso',  0)
@@ -843,10 +848,12 @@ class tt5TeV(analysis):
             eta = abs(lep.Eta()); pt = lep.Pt();
             if eta >= 2.4: eta = 2.39;
             if pt  >= 120: pt = 119;
-            sf, err = self.GetSFandErr('LepMVA_elec', eta, pt)
-            self.SFelec   *= sf
-            self.SFelecUp *= (sf+err)
-            self.SFelecDo *= (sf-err)
+            sf,  err  = self.GetSFandErr('LepMVA_elec',      eta, pt)
+            sfr, errr = self.GetSFandErr('LepMVA_elec_reco', eta, pt)
+            fer = quad(err, errr)
+            self.SFmuon   *= sf*sfr
+            self.SFmuonUp *= (sf*sfr+(fer))
+            self.SFmuonDo *= (sf*sfr-(fer))
           else:
             #sf, err = self.GetSFandErr('ElecSF', lep.Eta(), lep.Pt())
             self.SFelec    *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  0)
@@ -902,7 +909,7 @@ class tt5TeV(analysis):
     #self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, 0)
     met    = getattr(t, self.metptvar)
     metphi = getattr(t, self.metphivar)
-    self.pmet.SetPtEtaPhiM(met, 0, metphi, met)
+    self.pmet.SetPtEtaPhiM(met, 0, metphi, 0)
     if not self.isData and self.doSyst and self.doJECunc:
       self.pmetJESUp.SetPtEtaPhiM(t.MET_pt_jesTotalUp,   0, t.MET_phi_jesTotalUp,   0) 
       self.pmetJESDo.SetPtEtaPhiM(t.MET_pt_jesTotalDown, 0, t.MET_phi_jesTotalDown, 0) 
@@ -957,6 +964,9 @@ class tt5TeV(analysis):
         self.TrigSF   = self.sfr.GetSF2(mu.Eta(), mu.Pt(), el.Eta(), el.Pt(), nameMu, nameEl,  0)
         self.TrigSFUp = self.sfr.GetSF2(mu.Eta(), mu.Pt(), el.Eta(), el.Pt(), nameMu, nameEl,  1)
         self.TrigSFDo = self.sfr.GetSF2(mu.Eta(), mu.Pt(), el.Eta(), el.Pt(), nameMu, nameEl, -1)
+
+    # FOR THE MOMENT, NO TRIGGER SF
+    self.TrigSF = 1; self.TrigSFUp = 1; self.TrigSFDo = 1;
 
     ### Remove overlap events in datasets
     # In tt @ 5.02 TeV, 

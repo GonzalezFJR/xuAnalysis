@@ -358,3 +358,26 @@ def replaceWords(string, word, newstring):
   import re
   return re.sub(r'\b%s\b'%word, newstring, string)
 
+def GetNGenLeps(t):
+  nlep = 0
+  indices = []
+  for i in range(t.nGenPart):
+    if abs(t.GenPart_pdgId[i]) not in [11, 13]: continue
+    if not t.GenPart_status[i] == 1: continue
+    mindex = t.GenPart_genPartIdxMother[i]
+    if not mindex >= 0: continue
+    mid = abs(t.GenPart_pdgId[mindex])
+    if not mid in [15, 24, 11, 13]: continue
+    gmindex = t.GenPart_genPartIdxMother[mindex]
+    if not gmindex >= 0: continue
+    gmid = abs(t.GenPart_pdgId[gmindex])
+    if gmid not in  [6, 24, 15, 13]: continue
+    indices.append(i)
+    #if not (t.GenPart_statusFlags[i] & 13): continue
+    #if (t.GenPart_statusFlags[i] & 2): continue
+    nlep+=1
+  ndr = t.nGenDressedLepton
+  if ndr > nlep: nlep = ndr
+  return nlep
+
+

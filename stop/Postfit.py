@@ -18,7 +18,7 @@ year ='comb'#2016
 ms = 245
 ml =  100
 region = 'SR' #'ttmt2'
-syst = 'ElecES, MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, TopPt, hdamp, UE, PU, JESCor, JESUnCor, mtop, ISR, FSR, MisTag, nongauss, PDF, Scale, ISR, FSR' # MisTag, Pref
+syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, TopPt, hdamp, UE, PU, JESCor, JESUnCor, mtop, ISR, FSR, MisTag, nongauss, PDF, Scale, ISR, FSR' # MisTag, Pref
 
 #path[year] = pathToTrees(year, chan, region)
 
@@ -32,7 +32,7 @@ bkg = ['VV', 'ttW', 'Nonprompt', 'ttZ', 'DY', 'tW']
 #path = '../stop_v6Mod/Unc/%s/%i/mass%i_%i/'%(region,year, ms, ml)
 folder = '15jun/'
 GetPath = lambda region, year, ms, ml, ch : baseoutpath+'/Unc/%s/%s/%s/mass%i_%i/'%(region, ch, str(year), ms, ml)
-webpath  = '/nfs/fanae/user/juanr/www/stopLegacy/nanoAODv6/unblind/15jun/'
+webpath  = '/nfs/fanae/user/andreatf/www/stopLegacy/nanoAODv6/15jun/'
 GetOutpath = lambda region, year, ms, ml, ch : webpath+'/PostFit/'+folder#%(region, ch, str(year))#, ms, ml)
 path    = GetPath(region,year, ms, ml,ch)
 outpath = GetOutpath(region,year, ms, ml,ch)
@@ -129,6 +129,9 @@ def DrawPostFit(ms=235, ml=60, htype='fit_s', var='dnn', ch='', year=''):
   s.AddTex(chlab, x=0.15, y=0.84, s=0.04)
   s.DrawStack(xtit, 'Events')
   s.SetLogY()
+  s.SetZoom(False)
+  if var=='dnn' and region=='SR':
+	s.SetZoom(True)
   s.SetOutName('log_'+outname)
   s.SetPlotMinimum(1)
   s.SetPlotMaxScale(1200)
@@ -143,8 +146,8 @@ year = 2018
 for c in ['ee', 'emu', 'mumu', ['ee', 'emu', 'mumu']]:
   for y in [2016, 2017, 2018, [2016,2017,2018]]:
     #for ms, ml in [[225,50],[235,60],[275,100],[275,70],[245,100]]:
-    for ms, ml in [[205,40]]:
+    for ms, ml in [[225,50]]:
       for tag in ['prefit','fit_b', 'fit_s']:
-        for var in ['dnn']:#, 'met']:
+        for var in ['dnn','met']:#, 'met']:
           DrawPostFit(ms, ml, tag, var, c, y)
 

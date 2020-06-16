@@ -257,12 +257,21 @@ class Plot:
   def SetCanvas(self):
     self.canvas  = None; self.plot    = None; self.ratio = None
     c = TCanvas('c', 'c', 10, 10, 1600, 1200)
-    if self.doRatio:
+    if self.doZoom:
+      c.Divide(1,3)
+      plot  = c.GetPad(1)
+      ratio = c.GetPad(2)
+      mini = c.GetPad(3)
+    elif self.doRatio:
       c.Divide(1,2)
       plot  = c.GetPad(1)
       ratio = c.GetPad(2)
     else:
       plot = c.GetPad(0)
+    if self.doZoom:
+	  #c.cd()
+	  mini.SetPad(0.75, 0.4, 0.95, 0.7)
+	  mini.SetLogy()
     #if self.doRatio: 
     plot.SetPad( self.hpadx0, self.hpady0, self.hpadx1, self.hpady1)
     plot.SetMargin(self.hpadMleft, self.hpadMright, self.hpadMbottom, self.hpadMtop)
@@ -304,7 +313,7 @@ class Plot:
     self.canvas = c
     self.plot = plot
     if self.doRatio: self.ratio = ratio
-
+    if self.doZoom: self.mini=mini
   def SetAxisPlot(self, h):
     h.GetYaxis().SetTitle(self.axisYtit)
     h.GetYaxis().SetTitleSize(self.axisYsize)
@@ -343,13 +352,14 @@ class Plot:
     self.canvas.Print(self.GetOutName()+'.pdf', 'pdf')
     self.canvas.Print(self.GetOutName()+'.png', 'png')
 
-  def Initialize(self, outpath = './', outname = 'temp', doRatio = True):
+  def Initialize(self, outpath = './', outname = 'temp', doRatio = True,doZoom=False):
     self.SetOutPath(outpath)
     self.SetOutName(outname)
     self.verbose = 1
     self.Tex = []
     self.Line = []
     self.doRatio = doRatio
+    self.doZoom=doZoom
     self.SetRangeX()
  
     ### Pads
@@ -390,8 +400,8 @@ class Plot:
   #############################################################################################
   # Init
 
-  def __init__(self, outPath = './', outname = 'temp', doRatio = True):
-    self.Initialize(outpath, outname, doRatio)
+  def __init__(self, outPath = './', outname = 'temp', doRatio = True, doZoom=False):
+    self.Initialize(outpath, outname, doRatio,doZoom)
 
 
 ###############################################################################################
@@ -499,7 +509,7 @@ class HistoComp(Plot):
     gPad.SetTicky();
     self.Save()
 
-  def __init__(self, outpath = './', outname = 'temp', doRatio = True, doNorm = False, autoRatio = False):
+  def __init__(self, outpath = './', outname = 'temp', doRatio = True, doNorm = False, autoRatio = False, doZoom=False):
     self.Initialize(outpath, outname, doRatio)
     self.doNorm = doNorm
     self.autoRatio = autoRatio
@@ -513,7 +523,8 @@ class Stack(Plot):
 
   def SetStack(self, h):
     self.hStack = h
-
+  def SetZoom(self,z):
+	self.doZoom=z
   def SetTotMC(self, a):
     self.TotMC = a
 
@@ -616,6 +627,44 @@ class Stack(Plot):
       for h in self.overlapHistos: leg.AddEntry(h, h.GetName(), 'l')
       if hasattr(self, 'hData'): leg.AddEntry(self.hData, 'data', 'pe')
       leg.Draw()
+      
+    if self.doZoom:
+      self.mini.cd()
+      gPad.SetTickx();
+      gPad.SetTicky();
+      #if not os.path.isdir(self.GetOutPath()): os.makedirs(self.GetOutPath())
+      self.hStack2=self.hStack.Clone("hStack2")
+      self.hStack2.Draw('hist')
+      if hasattr(self, 'MCstatUnc') and self.MCstatUnc != None: self.MCstatUnc.Draw("e2,same")
+      if hasattr(self, 'MCnormUnc') and self.MCnormUnc != None: self.MCnormUnc.Draw("e2,same")
+      if hasattr(self, 'MCunc')     and self.MCunc     != None: self.MCunc    .Draw("e2,same")
+
+      self.hStack2.GetYaxis().SetTitle("")
+    # Extra histograms
+      for h in self.overlapHistos:
+        h.Draw("hist,same")
+
+    # Errors in data
+      if hasattr(self, 'hData'):
+        self.hData.SetBinErrorOption(TH1.kPoisson)
+        self.hData.Sumw2(False);
+        self.hData.Draw('psameE0X0')#self.data.GetDrawStyle())
+      self.hStack2.GetXaxis().SetRangeUser(16,20) #XLIMITS
+      self.hStack2.GetYaxis().SetLabelSize(0.075)
+      self.hStack2.GetXaxis().SetLabelSize(0.075)
+      self.hStack2.GetXaxis().SetNdivisions(4)
+      # Set Maximum
+      datamax = self.hData.GetMaximum() if hasattr(self, 'hData') else -999
+      bkgmax = self.TotMC.GetMaximum() if hasattr(self, 'TotMC') else self.hStack2.GetStack().Last().GetMaximum()
+      dmax = max(datamax, bkgmax)
+      
+      #if isinstance(self.PlotMaximum, float): self.hStack2.SetMaximum(self.PlotMaximum)
+      self.hStack2.SetMaximum(dmax-dmax*0.9)
+      self.hStack2.SetMinimum(10)
+      # Set titles...
+      #TGaxis.SetMaxDigits(2)
+      #self.SetAxisPlot(self.hStack)
+      #self.mini.Draw()
 
     # Ratio
     if self.doRatio:
@@ -733,8 +782,8 @@ class Stack(Plot):
     self.AddOverlapHisto(h)
      
 
-  def __init__(self, outpath = './', outname = 'temp', doRatio = True, HM='', colors=''):
-    self.Initialize(outpath, outname, doRatio)
+  def __init__(self, outpath = './', outname = 'temp', doRatio = True, HM='', colors='',doZoom=True):
+    self.Initialize(outpath, outname, doRatio,doZoom)
     self.colors = colors
     self.HM = HM
     self.overlapHistos = []

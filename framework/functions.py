@@ -134,13 +134,14 @@ class object:
 #################################################################################    
 class lepton(object):
 
-  def __init__(self, pvec = TLorentzVector(), charge = 0, pdgid = -1, mcmatch=-1, passTightID = True):
+  def __init__(self, pvec = TLorentzVector(), charge = 0, pdgid = -1, genID =-1, mcmatch=-1, passTightID = True):
     self.SetP(pvec)
     self.SetCharge(charge)
     self.SetFlav(pdgid)
     self.resetValues()
     self.mcmatch = mcmatch
     self.passTightID = passTightID
+    self.genID = genID
   ###############################
   ### Set methods
 
@@ -237,8 +238,8 @@ def InvMass(obj1, obj2 = 0, obj3 = 0):
     ob = TLorentzVector(obj1[0].p)
     for o in obj1[1:]: ob+=o.p
     return ob.M()
-  elif obj3 == 0: return (obj1.p+obj2.p).M()
-  else:           return (obj1.p+obj2.p+obj3.p).M()
+  elif obj3 == 0: return (obj1.p+obj2.p).M() if not isinstance(obj1, TLorentzVector) else (obj1+obj2).M()
+  else:           return (obj1.p+obj2.p+obj3.p).M() if not isinstance(obj1, TLorentzVector) else (obj1+obj2+ob3).M()
 
 def DiPt(obj1, obj2):
   ''' Di-object pT '''
@@ -380,4 +381,10 @@ def GetNGenLeps(t):
   if ndr > nlep: nlep = ndr
   return nlep
 
-
+def GetMinInvMass(leps):
+  if len(leps) < 2: return 0
+  mll = []
+  for i in range(len(leps)):
+    for j in range(i):
+      mll.append(InvMass(leps[i], leps[j]))
+  return min(mll)

@@ -49,7 +49,8 @@ class looper(AnalysisCreator):
       if ' ' in sampleName: sampleName = sampleName.replace(' ', '')
       if os.path.isfile('%s/%s.root'%(self.outpath, sampleName)):
         if not sampleName in self.loadDic.keys(): self.loadDic[sampleName] = {}
-        print 'Reading %s from %s...'%(sampleName, self.outpath)
+        self.verbose = True
+        if self.verbose: print 'Reading %s from %s...'%(sampleName, self.outpath)
         f = TFile.Open('%s/%s.root'%(self.outpath, sampleName))
         hlist = f.GetListOfKeys()        
         for l in hlist:

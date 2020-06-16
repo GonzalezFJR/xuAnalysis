@@ -1,6 +1,6 @@
 import os,sys
 #import ROOT
-from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis
+from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis, TGraphAsymmErrors
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
 from ROOT import gPad, gROOT, gSystem
 from ROOT.TMath import Sqrt as sqrt
@@ -8,6 +8,20 @@ average = lambda x: sum(x)/len(x)
 gROOT.SetBatch(1)
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/')
 from TopHistoReader import TopHistoReader
+
+
+def GetRatioHistoUncFromHisto(h, color=kAzure+2, style=1000):
+  nb = h.GetNbinsX()
+  hUnc = h.Clone('hunc')
+  for i in range(0, nb+2):
+    b  = h.GetBinContent(i)
+    bu = h.GetBinError(i)
+    hUnc.SetBinContent(i, 1)
+    hUnc.SetBinError(i, bu/b if b > 0 else 0)
+  hUnc.SetFillColorAlpha(color, 0.5)
+  hUnc.SetFillStyle(style)
+  hUnc.SetDirectory(0)
+  return hUnc
 
 class Plot:
 
@@ -86,7 +100,7 @@ class Plot:
     if isinstance(process, dict): self.legnames = process
     else: self.legnames[process] = name
 
-  def SetLegendRatioPos(self, x0 = 0.18, y0 = 0.85, x1 = 0.60, y1 = 0.91, size = 0.065, ncol = 2):
+  def SetLegendRatioPos(self, x0 = 0.18, y0 = 0.85, x1 = 0.70, y1 = 0.91, size = 0.065, ncol = 3):
     self.legratx0 = x0
     self.legratx1 = x1
     self.legraty0 = y0
@@ -152,6 +166,13 @@ class Plot:
     tl.SetTextFont(42);
     tl.SetTextSize(s);
     self.Tex.append(tl)
+
+  def AddLine(self, x0, y0, x1, y1, color=1, width=2, style=2):
+    tl = TLine(x0, y0, x1, y1)
+    tl.SetLineColor(color)
+    tl.SetLineWidth(width)
+    tl.SetLineStyle(style)
+    self.Line.append(tl)
 
   def SetTextLumi(self, texlumi = '%2.1f fb^{-1} (13 TeV)', texlumiX = 0.67, texlumiY = 0.97, texlumiS = 0.05, doinvfb = False):
     self.texlumi  = texlumi
@@ -271,6 +292,7 @@ class Plot:
       tch.SetTextSize(self.texchS);
       self.Tex.append(tch)
     for r in self.Tex: r.Draw()
+    for l in self.Line: l.Draw()
 
     TGaxis.SetMaxDigits(3)
     if self.doSetLogY: plot.SetLogy()
@@ -326,6 +348,7 @@ class Plot:
     self.SetOutName(outname)
     self.verbose = 1
     self.Tex = []
+    self.Line = []
     self.doRatio = doRatio
     self.SetRangeX()
  
@@ -379,6 +402,7 @@ class HistoComp(Plot):
       cp.AddHisto(hdata, 'pe', 'e2', 'Data')
       cp.AddHisto(hMC,   'hist', '', 'MC')
       cp.autoRatio = True
+      cp.PlotWithData = True
       cp.Draw()
   '''
 
@@ -426,7 +450,7 @@ class HistoComp(Plot):
     self.plot.SetLogy(doSetLogy)
 
     if self.doRatio: 
-      if self.autoRatio:
+      if self.autoRatio and not self.PlotWithData:
         hratio = self.histos[0][0].Clone("hratio")
         self.SetAxisRatio(hratio)
         if len(self.binLabels) > 0: 
@@ -438,6 +462,25 @@ class HistoComp(Plot):
           htempRat = hratio.Clone(h[0].GetName()+'hratio')
           htempRat.Divide(htemp)
           self.AddRatioHisto(htempRat, h[1], h[2])
+      elif self.autoRatio:
+        # The last histogram is data
+        hratio = self.histos[0][0].Clone("hratio")
+        self.SetAxisRatio(hratio)
+        if len(self.binLabels) > 0: 
+          for i in range(len(self.binLabels)):
+            hratio.GetXaxis().SetBinLabel(i+1,self.binLabels[i])
+        nbins = hratio.GetNbinsX()
+        for i in range(0,nbins+1):
+          c = hratio.GetBinContent(i)
+          e = hratio.GetBinError(i)
+          hratio.SetBinContent(i, 1)
+          hratio.SetBinError(i, e/c if c!= 0 else 0)
+        self.AddRatioHisto(hratio, self.histos[0][1], self.histos[0][2])
+        for h in self.histos[1:]: 
+          htemp    = h[0].Clone(h[0].GetName()+'ratio')
+          htemp.Divide(self.histos[0][0])
+          self.AddRatioHisto(htemp, h[1], h[2])
+
       self.ratio.cd()
       if len(self.ratioh) >= 1:
         self.SetAxisRatio(self.ratioh[0][0])
@@ -496,7 +539,7 @@ class Stack(Plot):
 
   def SetRatioNormUnc(self, h):
     self.hRatioNormUnc = h
-    self.SetLegendRatioPos(x0=0.18, y0=0.85, x1=0.70, y1=0.91, size=0.065, ncol = 3)
+    #self.SetLegendRatioPos(x0=self.legratx0, y0=legraty0, x1=legratx1, y1=legraty1, size=legratTextSize, ncol = legratNcol)
 
   def SetRatioUnc(self, h):
     self.hRatioUnc = h
@@ -528,9 +571,9 @@ class Stack(Plot):
     self.hStack.Draw('hist')
     x0, x1 = self.rangeX
     if x0 < x1: self.hStack.GetXaxis().SetRangeUser(x0, x1)
-    if hasattr(self, 'MCstatUnc'): self.MCstatUnc.Draw("e2,same")
-    if hasattr(self, 'MCnormUnc'): self.MCnormUnc.Draw("e2,same")
-    if hasattr(self, 'MCunc'):     self.MCunc    .Draw("e2,same")
+    if hasattr(self, 'MCstatUnc') and self.MCstatUnc != None: self.MCstatUnc.Draw("e2,same")
+    if hasattr(self, 'MCnormUnc') and self.MCnormUnc != None: self.MCnormUnc.Draw("e2,same")
+    if hasattr(self, 'MCunc')     and self.MCunc     != None: self.MCunc    .Draw("e2,same")
 
     # Extra histograms
     for h in self.overlapHistos:
@@ -538,8 +581,9 @@ class Stack(Plot):
 
     # Errors in data
     if hasattr(self, 'hData'):
-      self.hData.SetBinErrorOption(TH1.kPoisson)
-      self.hData.Sumw2(False);
+      if not isinstance(self.hData, TGraphAsymmErrors):
+        self.hData.SetBinErrorOption(TH1.kPoisson)
+        self.hData.Sumw2(False);
       self.hData.Draw('psameE0X0')#self.data.GetDrawStyle())
 
     # Set Maximum
@@ -557,8 +601,8 @@ class Stack(Plot):
     if self.doRatio: 
       self.SetAxisRatio(self.hRatio)
       self.SetAxisRatio(self.hRatioUnc)
-      if hasattr(self, 'hRatioStatUnc'): self.SetAxisRatio(self.hRatioStatUnc)
-      if hasattr(self, 'hRatioNormUnc'): self.SetAxisRatio(self.hRatioNormUnc)
+      if hasattr(self, 'hRatioStatUnc') and self.hRatioStatUnc != None: self.SetAxisRatio(self.hRatioStatUnc)
+      if hasattr(self, 'hRatioNormUnc') and self.hRatioNormUnc != None: self.SetAxisRatio(self.hRatioNormUnc)
    
     # Legend
     if hasattr(self, 'processes'):
@@ -578,21 +622,21 @@ class Stack(Plot):
       self.ratio.cd()
       legr=self.SetLegendRatio()
       x0, x1 = self.rangeX
-      if hasattr(self, 'hRatioStatUnc'):
+      if hasattr(self, 'hRatioStatUnc') and self.hRatioStatUnc != None:
         if x0 < x1: self.hRatioStatUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioStatUnc.Draw('e2same')
         self.hRatioStatUnc.SetLineWidth(0)
         self.hRatioStatUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioStatUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioStatUnc, 'Stat', 'f')
-      if hasattr(self, 'hRatioNormUnc'):
+      if hasattr(self, 'hRatioNormUnc') and self.hRatioNormUnc != None:
         if x0 < x1: self.hRatioNormUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioNormUnc.Draw('e2same')
         self.hRatioNormUnc.SetLineWidth(0)
         self.hRatioNormUnc.SetMaximum(self.PlotRatioMax)
         self.hRatioNormUnc.SetMinimum(self.PlotRatioMin)
         legr.AddEntry(self.hRatioNormUnc, 'Bkg norm', 'f')
-      if hasattr(self, 'hRatioUnc'    ): 
+      if hasattr(self, 'hRatioUnc'    ) and self.hRatioUnc != None: 
         if x0 < x1: self.hRatioUnc.GetXaxis().SetRangeUser(x0, x1)
         self.hRatioUnc.Draw('e2same')
         self.hRatioUnc.SetLineWidth(0)
@@ -608,6 +652,7 @@ class Stack(Plot):
       legr.Draw()
     else: 
       for r in self.Tex: r.Draw()
+      for l in self.Line: l.Draw() 
 
     if len(self.binLabels) > 0: 
       for i in range(len(self.binLabels)):
@@ -644,18 +689,26 @@ class Stack(Plot):
   def SetRatioUncStyle(self, color = kAzure+2, alpha = 0.2, fill = 1000):
     self.hRatioUnc.SetFillColorAlpha(color, alpha)
     self.hRatioUnc.SetFillStyle(fill)
+    self.hRatioUnc.SetMarkerSize(0)
+    self.hRatioUnc.SetMarkerColorAlpha(0,0)
 
   def SetRatioStatUncStyle(self, color=kOrange+1, alpha = 0.8, fill = 1000):
     self.hRatioStatUnc.SetFillColorAlpha(color, alpha)
     self.hRatioStatUnc.SetFillStyle(fill)
+    self.hRatioStatUnc.SetMarkerSize(0)
+    self.hRatioStatUnc.SetMarkerColorAlpha(0,0)
 
   def SetRatioNormUncStyle(self, color=kPink-4, alpha=0.3, fill=3144):
     self.hRatioNormUnc.SetFillColorAlpha(color, alpha)
     self.hRatioNormUnc.SetFillStyle(fill)
+    self.hRatioNormUnc.SetMarkerSize(0)
+    self.hRatioNormUnc.SetMarkerColorAlpha(0,0)
 
   def SetUncStyle(self, color = kGray+2, alpha = 0.9, fill = 3444):
     self.MCunc.SetFillColorAlpha(color, alpha)
     self.MCunc.SetFillStyle(fill)
+    self.MCunc.SetMarkerSize(0)
+    self.MCunc.SetMarkerColorAlpha(0,0)
 
   def SetStatUncStyle(self, color = kAzure+7, alpha = 0.9, fill = 3444):
     self.MCstatUnc.SetFillColorAlpha(color, alpha)
@@ -664,9 +717,9 @@ class Stack(Plot):
   def AddOverlapHisto(self, h):
     self.overlapHistos.append(h)
 
-  def AddSignalHisto(self, hs, color = 1, mode = 'overlap', ratioBkg = True):
+  def AddSignalHisto(self, hs, color = 1, mode = 'overlap', ratioBkg = True, name=''):
     ''' mode = overlap, stack, ontop '''
-    h = hs.Clone(); h.SetDirectory(0)
+    h = hs.Clone(name); h.SetDirectory(0)
     h.SetLineColor(color)
     h.SetLineWidth(2)
     if mode == 'overlap' or mode == 'ontop': h.SetFillStyle(0)
@@ -753,6 +806,7 @@ class HistoUnc(HistoComp):
     self.doNorm = doNorm
     self.DrawStatUnc = drawStatErr
     self.autoRatio = False
+    self.PlotWithData = False
     self.histos = []
     self.ratioh = []
     self.SetPlotMaxScale(1.3)

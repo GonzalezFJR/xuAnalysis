@@ -385,7 +385,7 @@ TString TextDatacard::GetText(){
   if(!doBeestonBarlow) out += totalStatDatacard;
   //for(Int_t i = 0; i < nProcesses*nHistoBins*nChannels; i++) out += statUnc[i].GetLine();
   for(i = 0; i < nNuisances; i++)            out += systUnc[i].GetLine();
-  if(doBeestonBarlow) out += "* autoMCStats 0";
+  if(doBeestonBarlow) out += "* autoMCStats 10";
   return out;
 }
 

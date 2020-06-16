@@ -189,7 +189,7 @@ class AnalysisCreator:
     cfg += '#options : \n' if self.options == '' else 'options : %s\n'%self.options
     cfg += '#nEvents : 1000\n' if self.nEvents == 0 else 'nEvents : %i\n'%self.nEvents
     cfg += '#year : 2016\n' if not self.year in [2016,2017,2018] else 'year : %i\n'%self.year
-    cfg += '#xsec : \n' if not self.xsec != 'xsec' else 'xsec : %s\n'%self.xsec
+    cfg += '#xsec : \n' if not hasattr(self, 'xsec') or self.xsec == 'xsec' else 'xsec : %s\n'%self.xsec
     cfg += 'verbose : %i\n'%self.verbose
     cfg += 'nSlots : %i\n'%self.nSlots
     cfg += 'selection : %s\n'%self.analysisName

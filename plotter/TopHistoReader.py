@@ -1,6 +1,6 @@
 import os,sys
 #import ROOT
-from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis, TChain
+from ROOT import TH1F, TH1, TFile, TCanvas, TPad, THStack, TLatex, TLegend, TGaxis, TChain, TGraphAsymmErrors
 from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCyan, kBlack
 from ROOT import gPad, gROOT
 from ROOT.TMath import Sqrt as sqrt
@@ -12,6 +12,26 @@ sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalys
 
 #from ttbar.ttanalysis import ch, chan, lev, level, dataset, datasets, systematic, systlabel  
 level = {0:'dilepton', 1:'ZVeto', 2:'MET', 3:'2jets', 4:'1btag'}
+
+def HistoFromTGraph(gr):
+  from array import array
+  n = gr.GetN()
+  x = array('d',[0])
+  y = array('d',[0])
+  gr.GetPoint(0, x, y)
+  x0 = x[0]
+  gr.GetPoint(1, x, y)
+  x1 = x[0]
+  d = (x1-x0)/2
+  b0 = x0-d
+  bN = b0 + 2*d*n
+  h = TH1F(gr.GetName(), gr.GetTitle(), n, b0, bN)
+  for i in range(n):
+    gr.GetPoint(i, x, y)
+    h.SetBinContent(i+1, y[0])
+    h.SetBinError(  i+1, sqrt(y[0]))
+  h.SetDirectory(0)
+  return h
 
 class TopHistoReader:
  ''' Reads histograms created with the ttanalysis '''
@@ -67,6 +87,9 @@ class TopHistoReader:
  def SetYieldsSSname(self, n = "SSYields"):
    self.YieldsSSname = n
 
+ def SetPathInTree(self, pit=''):
+   self.pathInTree = pit
+
  def GetHistoName(self):
    ''' Craft histo name from var, chan, level '''
    name = (self.histoprefix + '_' if self.histoprefix != '' else '') + self.var + '_' + self.chan + '_' + self.level
@@ -90,10 +113,11 @@ class TopHistoReader:
    if not hasattr(f, name): return False
    else: return True
 
- def GetNamedHisto(self, name, pr = '', rebin = -1):
+ def GetNamedHisto(self, name, pr = '', rebin = -1, pathInTree=''):
    ''' Load an histo from process pr '''
    if pr    != '': self.SetProcess(pr)
    if rebin != -1: self.rebin = rebin
+   if pathInTree=='': pathInTree = self.pathInTree
    pr = self.process
    if ',' in self.process: self.process = self.process.replace(' ', '').split(',')
    if isinstance(self.process, list):
@@ -115,27 +139,36 @@ class TopHistoReader:
        while n[-1] == ' ': n = n[:-1]
        h.Add(self.GetNamedHisto(n, pr, rebin))
      return h
+   if isinstance(pathInTree, list):
+     h = self.GetNamedHisto(name, pr, rebin, pathInTree[0])
+     for pit in pathInTree[1:]: h.Add(self.GetNamedHisto(name, pr, rebin, pit))
+     return h
 
    filename = self.path + self.fileprefix + pr
+   if pathInTree != '' and not pathInTree.endswith('/'): pathInTree+='/'
    if not filename.endswith('.root'): filename += '.root'
    if self.verbose: print ' >> Opening file: ' + filename
    f = TFile.Open(filename)
-   if self.verbose: print ' >> Looking for histo: ' + name
-   if not hasattr(f, name):
+   if self.verbose: print ' >> Looking for histo: ' + pathInTree + name
+   if not hasattr(f, pathInTree+name):
      if name == self.GetHistoName() and self.syst != '':
        hnosyst = self.var + '_' + self.chan + '_' + self.level
-       if hasattr(f, hnosyst):
+       if hasattr(f, pathInTree+hnosyst):
          #print 'WARNING: no systematic %s for histo %s in process %s!! Returning nominal...'%(self.syst, hnosyst, pr)
          return 
      else:
-       print 'ERROR: not found histogram ' + name + ' in file: ' + filename
+       print 'ERROR: not found histogram ' + pathInTree+name + ' in file: ' + filename
        return False
    if self.syst != '':
      hsyst = name + '_' + self.syst
      if hasattr(f, hsyst): name = hsyst
      #else: print 'WARNING: not found systematic %s for histogram %s in sample %s'%(self.syst, name, filename)
-   h = f.Get(name)
+   h = f.Get(pathInTree+name)
 
+   #if isinstance(h, TGraphAsymmErrors): 
+   #  h.SetMarkerSize(1.); h.SetMarkerColor(1); h.SetMarkerStyle(20); h.SetLineColor(1)
+   #  return h
+   if isinstance(h, TGraphAsymmErrors): h = HistoFromTGraph(h)
    h.Rebin(self.rebin)
    nb = h.GetNbinsX()
    if self.doStackOverflow:
@@ -292,18 +325,21 @@ class TopHistoReader:
    if self.IsHisto(process, name): hnames.append(name)
    return hnames
    
- def GetHistoDic(self, processDic, hname, systlist, systdic = {}):
+ def GetHistoDic(self, processDic, hname, systlist, systdic = {}, pathInTree=''):
+   self.SetPathInTree(pathInTree)
    if isinstance(hname, str) and ',' in hname: hname = hname.replace(' ', '').split(',') 
+   if isinstance(pathInTree, str) and ',' in pathInTree: pathInTree = pathInTree.replace(' ', '').split(',')
    if isinstance(hname, list): 
      for histoname in hname:
-       self.GetHistoDic(processDic, histoname, systlist, systdic)
+       self.GetHistoDic(processDic, histoname, systlist, systdic,pathInTree)
      return self.histodic
    processes = processDic.keys()
    for pr in processes:
      h = TH1F()
      if hname == "%s": hname = hname%pr
      h = self.GetNamedHisto(hname, processDic[pr], rebin=self.rebin)
-     self.AddToHistoDic(h, pr, hname)
+     hnam = pr if isinstance(hname, list) and len(hname) > 1 else hname
+     self.AddToHistoDic(h, pr, hnam)
      for syst in systlist:
        hnames = self.GetSystHistoNames(processDic[pr], hname, syst)
        for hsyst in hnames:
@@ -330,6 +366,7 @@ class TopHistoReader:
     self.ReComputeStatUnc = True 
     self.SetFileNamePrefix(fileprefix)
     self.SetHistoNamePrefix(histoprefix)
+    self.SetPathInTree()
     self.histodic = {}
 
     self.SetPath(path)
@@ -748,6 +785,9 @@ class HistoManager:
   def SetProcessDic(self, pd):
     self.processDic = pd
 
+  def SetPathInTree(self, pit=''):
+    self.pathInTree = pit
+
   def SetSystDic(self, systdic):
     self.systdic = systdic
 
@@ -764,9 +804,39 @@ class HistoManager:
     self.rebin = rebin
 
   def SetInputDicFromReader(self):
-    hdic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname, self.systdic)
+    hdic = self.thr.GetHistoDic(self.processDic, self.histoname, self.systname, self.systdic, self.pathInTree)
     self.indic = hdic
     return hdic
+
+  def ReArrangeDic(self, matchdic={}):
+    newdic = {}
+    usedprocesses = []
+    for pr in matchdic:
+      newdic[pr] = {}
+      fpr = matchdic[pr][0]
+      usedprocesses.append(fpr)
+      newdic[pr][pr] = self.indic[fpr][fpr]
+      for s in self.systlabels:
+        hname = '%s_%s'%(fpr, s)
+        if hname in self.indic[fpr]:
+          newdic[pr]['%s_%s'%(pr, s)] = self.indic[fpr][hname]
+      for subpr in matchdic[pr][1:]:
+        usedprocesses.append(subpr)
+        newdic[pr][pr].Add(self.indic[subpr][subpr])
+        for s in self.systlabels:
+          hname = '%s_%s'%(subpr, s)
+          nhname = '%s_%s'%(pr, s)
+          if hname in self.indic[subpr]:
+            if nhname in newdic[pr]:
+              newdic[pr][nhname].Add(self.indic[subpr][hname])
+            else:
+              newdic[pr][nhname] = self.indic[subpr][hname]
+    for k in self.indic:
+      if k in usedprocesses: continue
+      newdic[k] = self.indic[k]
+    self.indic = newdic
+    self.SetProcessList(newdic.keys())
+    print self.indic
 
   def GetHistoName(self):
     return self.histoname
@@ -838,6 +908,7 @@ class HistoManager:
     n = [hnom.GetBinContent(i) for i in range(0, nb+2)]
     if not isinstance(hsyst, list): hsyst = [hsyst]
     var  = [ [(h.GetBinContent(i)-n[i]) for i in range(0, nb+2)] for h in hsyst]
+    evar  = [ [(h.GetBinContent(i)-n[i])/(n[i] if n[i] != 0 else 1)*100 for i in range(0, nb+2)] for h in hsyst]
     nsyst = len(var)
     meansyst = []
     if nsyst == 0:
@@ -864,27 +935,28 @@ class HistoManager:
       hnom.SetBinContent(i, nv)
     return hnom
 
-  def GetNormHisto(self, direc = 'Up', pr = ''):
+  def GetNormHisto(self, direc = 'Up', pr = '', hnom = None):
     if pr not in self.normUnc: return self.sumdic[''].Clone("norm"+pr)
     fact = self.normUnc[pr]
     if isinstance(self.histoname, list):
       print("GetNormHisto] : WARNING - norm histo not implemented for list of histos")
       return self.sumdic[''].Clone("norm"+pr)
-    hnam = self.histoname if self.histoname != '%s' else self.processList[0]
-    h = self.indic[self.processList[0]][hnam].Clone("norm"+self.processList[0])
-    if pr == self.processList[0]:
-      if direc in ['Up', 'up']: h.Scale(1+fact)
-      else                    : h.Scale(1-fact)
+    hnam = self.histoname if self.histoname != '%s' else pr#self.processList[0]
+    if not pr in self.processList: 
+      print("[GetNormHisto] : WARNING - process %s unknown!"%pr)
+      return self.sumdic[''].Clone("norm"+pr)
+    h = self.indic[pr][hnam].Clone("norm"+self.processList[0])
+    if direc in ['Up', 'up']: h.Scale(1+fact)
+    else                    : h.Scale(1-fact)
     h.SetDirectory(0)
-    if len(self.processList) > 1:
-      for proc in self.processList[1:]:
-        hnam = self.histoname if self.histoname != '%s' else proc
-        hpr = self.indic[proc][hnam].Clone("norm"+proc)
-        if proc == pr:
-          if direc in ['Up', 'up']: hpr.Scale(1+fact)
-          else                    : hpr.Scale(1-fact)
-        h.Add(hpr)
-    return  h
+    if hnom != None:
+      nb = self.indic[pr][hnam].GetNbinsX()
+      for i in range(0, nb+1):
+        n = hnom.GetBinContent(i)
+        r = self.indic[pr][hnam].GetBinContent(i)
+        v = h.GetBinContent(i)
+        h.SetBinContent(i, n + (v - r))
+    return h
     #self.sumdic["norm"] = h
 
   def HasNormUnc(self):
@@ -922,8 +994,12 @@ class HistoManager:
         else: 
           listOfHistos = [self.sumdic[s] for s in listOfGoodSyst]
         unc.append(self.GetDifUnc(self.sumdic[''], listOfHistos))
+    # Add norm uncertainties
     for h in nsyst:
-      unc.append(self.GetDifUnc(self.sumdic[''], h))
+      hnom = self.sumdic['']
+      unc.append(self.GetDifUnc(hnom, h))
+      v = self.GetDifUnc(hnom, h)
+      for i in range(len(v)): v[i] = v[i]/(hnom.GetBinContent(i) if hnom.GetBinContent(i)!= 0 else 1)*100
     sum2 = []
     nlen = len(unc[0])
     for i in range(nlen):
@@ -952,12 +1028,23 @@ class HistoManager:
     hnom = sumdic[''].Clone('hnom')
     nsyst = []
     if len(syst) > 0 and syst[0] == 'bkgnorm': 
-      syst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]
+      syst = [ [self.GetNormHisto('Up', pr, hnom), self.GetNormHisto('Down', pr, hnom)] for pr in self.normUnc]
+      h0, h1 = syst[0]
+      nb = h0.GetNbinsX()
+      for i in range(1, nb):
+        n = hnom.GetBinContent(i)
+        v0 = h0.GetBinContent(i)
+        v1 = h1.GetBinContent(i)
+        if n == 0: n = 1
+        #print '[%i] : [%1.2f, %1.2f, %1.2f]'%(i, (n-v0)/n, (n-v1)/n, (v1-v0)/(v1+v0)/2)
     elif includeNorm:
-      nsyst = [ [self.GetNormHisto('Up', pr), self.GetNormHisto('Down', pr)] for pr in self.normUnc]
+      nsyst = [ [self.GetNormHisto('Up', pr, hnom), self.GetNormHisto('Down', pr, hnom)] for pr in self.normUnc]
     unc = self.GetSum2Unc(syst, includeStat, nsyst)
     nbins = hnom.GetNbinsX()
-    for i in range(0,nbins+2): hnom.SetBinError(i, unc[i])
+    relunc = unc
+    for i in range(0,nbins+2): 
+      hnom.SetBinError(i, unc[i])
+      relunc[i] = unc[i]/(hnom.GetBinContent(i) if hnom.GetBinContent(i)!=0 else 1)*100
     hnom.SetDirectory(0)
     hnom.SetFillStyle(3444)
     hnom.SetFillColor(kGray+2)
@@ -976,7 +1063,7 @@ class HistoManager:
     h = self.indic[self.dataname][hnam].Clone("hdata")
     h.SetMarkerSize(1.2)
     h.SetMarkerStyle(20)
-    h.SetDirectory(0)
+    if not isinstance(h, TGraphAsymmErrors): h.SetDirectory(0)
     if isinstance(self.histoname, list):
       for hname in self.histoname[1:]: h.Add(self.indic[self.dataname][hname])
     return h
@@ -988,13 +1075,16 @@ class HistoManager:
     # Data / All bkg
     hbkg  = self.GetSumBkg()
     h     = self.GetDataHisto().Clone("hratio") if self.dataname in self.indic.keys() else self.GetSumBkg().Clone("hratio")
+    if isinstance(h, TGraphAsymmErrors): h = HistoFromTGraph(h)
     h.SetDirectory(0)
     h.Divide(hbkg)
     #hdata = self.GetDataHisto()
-    #nb = h.GetNbinsX()
-    #for i in range(0, nb+2):
-    #  d = hdata.GetBinContent(i)
-    #  b = hbkg. GetBinContent(i)
+    if self.dataname in self.indic.keys():
+      nb = h.GetNbinsX()
+      for i in range(0, nb+2):
+        d = h.GetBinContent(i)
+        b = hbkg. GetBinContent(i)
+        h.SetBinError(i, sqrt(d)/b if b!= 0 else sqrt(d))
     return h
      
   def GetRatioHistoUnc(self, syst = '', includeStat=True, includeNorm=False, color=kAzure+2, style=1000): # syst = stat for stat unc
@@ -1045,6 +1135,7 @@ class HistoManager:
     self.SetSystList(syslist)
     self.sumdic = {}
     self.systlabels = []
+    self.SetPathInTree()
     self.SetProcessDic(processDic)
     self.SetSystDic(systdic)
     self.SetTopReader(path)
@@ -1075,7 +1166,12 @@ class HistoManager:
       #print '>>>> hadding process: %s'%pr
       for hname in self.indic[pr].keys():
         #print '   ---> hname = ', hname
-        self.indic[pr][hname].Add(HM.indic[pr][hname])
+        if not pr in HM.indic.keys():
+          print 'WARNING: key %s not found in target histo manager'%pr
+        elif not hname in HM.indic[pr].keys():
+          print 'WARNING: key %s not found in target histo manager [%s]'%(hname,pr)
+        else:
+          self.indic[pr][hname].Add(HM.indic[pr][hname])
     self.LookForSystLabels()
     self.SumHistos()
     return self
@@ -1166,6 +1262,7 @@ class HistoManager:
       self.SetInputDicFromReader()
     self.LookForSystLabels()
     self.SumHistos()
+    print self.indic
 
 def PrintTableYields(self, bkg=None, signal=False, doData=False):
   pass

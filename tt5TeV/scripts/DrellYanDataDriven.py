@@ -1,10 +1,11 @@
 import os,sys
 sys.path.append(os.path.abspath(__file__).rsplit('/xuAnalysis_all/',1)[0]+'/xuAnalysis_all/')
 from plotter.TopHistoReader import TopHistoReader, OutText
-from plotter.Plotter import Stack
+from plotter.Plotter import Stack, HistoComp
 
 from ROOT.TMath import Sqrt as sqrt
-from ROOT import THStack, TH1F, kGray, kAzure
+from ROOT import THStack, TH1F, kGray, kAzure, TLine
+from ROOT import  kRed, kAzure
 square  = lambda x : x*x
 SumSquare = lambda x : sqrt(sum([square(i) for i in x]))
 
@@ -158,6 +159,7 @@ class DYDD:
    rinElec, errElec = self.GetDataIn(elname, level)
    rinMuon, errMuon  = self.GetDataIn(muname, level)
    k = (rinElec/rinMuon if rinMuon != 0 else 0) if chan == elname else (rinMuon/rinElec if rinElec != 0 else 0)
+   k = sqrt(k)
    kerr = k*SumSquare([errElec/(2*rinElec) if rinElec != 0 else 0,errMuon/(2*rinMuon) if rinMuon !=0 else 0])
    return k, kerr
 
@@ -211,7 +213,7 @@ class DYDD:
      err = SF*SumSquare([er/e if e!= 0 else 0, mr/m if m != 0 else 0])
    return SF,err
 
- def DrawHisto(self, doSF = False, name = '', chan = '', level = '', rebin = 1):
+ def DrawHisto(self, doSF = False, name = '', chan = '', level = '', rebin = 1, log = True):
    self.SetChanAndLevel('', level)
    self.SetMode('SF' if doSF else 'OF')
    if name == '': name = 'DYDD_%s_%s'%('SF' if doSF else 'OF',self.GetLevel())
@@ -220,7 +222,7 @@ class DYDD:
    hemu  = self.GetDYhisto('ElMu', level, True)
    hData.SetMarkerStyle(20); hData.SetMarkerColor(1); hData.SetLineColor(1); hData.SetMarkerSize(1.3)
    hMC.SetFillStyle(1000); hMC.SetLineColor(kAzure-8); hMC.SetFillColor(kAzure-8);
-   hemu.SetFillStyle(1000); hemu.SetLineColor(kGray+2); hemu.SetFillColor(kGray+2)
+   hemu.SetFillStyle(1000); hemu.SetLineColor(kGray); hemu.SetFillColor(kGray)
    hData.Rebin(rebin); hemu.Rebin(rebin); hMC.Rebin(rebin)
    ke, kee   = self.GetKfactor(elname)
    km, kme   = self.GetKfactor(muname)
@@ -236,21 +238,83 @@ class DYDD:
    s.SetXtitle(size = 0.06, offset = 0.8, nDiv = 510, labSize = 0.05)
    s.SetTextCMS(cmstex = 'CMS', x = 0.13, y = 0.88, s = 0.06)
    s.SetTextCMSmode(texcmsMode = 'Preliminary', x = 0.225, y = 0.875, s = 0.052)
-   s.SetLumi(296.1)
+   s.SetLumi(304.32)
    s.SetTextLumi(texlumi = '%2.1f pb^{-1} (5.02 TeV)', texlumiX = 0.68, texlumiY = 0.95, texlumiS = 0.045)
    s.SetDataHisto(hData)
    s.SetColors(colors)
    s.SetStack(hs)
-   s.SetOutName('DYestimate_%s%s'%(chan, level))
+   s.SetOutName('DYestimate_%s%s'%(chan, level) + ('_log' if log else ''))
    s.SetOutPath(self.outpath)
-   s.SetLogY(True)
-   s.SetPlotMaxScale(10)
-   s.SetPlotMinimum(0.5)
+   plotMinimum = 0.5 if log else 0
+   plotMaxScale = 10 if log else 1.3
+   s.SetLogY(log)
+   s.SetPlotMaxScale(plotMaxScale)
+   s.SetPlotMinimum(plotMinimum)
+   maximum = hData.GetMaximum()*(5 if log else 1.2)
+   s.AddLine(76, 0.5, 76, maximum)
+   s.AddLine(106, 0.5, 106, maximum)
    s.processes = processes
    s.SetLegendPos(x0=0.60, y0=0.55, x1=0.93, y1=0.91, size=0.042, ncol=1)
    s.DrawStack('m_{%s} (GeV)'%rlab)
 
+ def DrawClosureMCeff(self, level='dilepton', outpath='~/www/temp/', ratio=[0.9,1.1]):
+   self.SetMode('OF')
+   self.SetChanAndLevel('', level)
+   ke, kee   = self.GetKfactor(elname)
+   km, kme   = self.GetKfactor(muname)
+   print 'ke = %1.2f +/- %1.2f'%(ke, kee)
+   print 'km = %1.2f +/- %1.2f'%(km, kme)
+
+   hdata = TH1F('d1', 'd1', 2, 0, 2)
+   hpred = TH1F('h1', 'h1', 2, 0, 2)
+   err = lambda l : sqrt(sum([x*x for x in l]))
+   '''
+   hee1   = self.GetDYhisto(elname, level, False)
+   hmm1   = self.GetDYhisto(muname, level, False)
+   ee1 = hee1.Integral(); mm1 = hmm1.Integral()
+
+   hdata.SetBinContent(1, ee1); hdata.SetBinError(1, sqrt(ee1));
+   hdata.SetBinContent(2, mm1); hdata.SetBinError(2, sqrt(mm1));
+   hpred.SetBinContent(1, mm1*ke1); hpred.SetBinError(1, mm1*ke1*( err([sqrt(mm1)/mm1, kee1/ke1]) ))
+   hpred.SetBinContent(2, ee1*km1); hpred.SetBinError(2, ee1*km1*( err([sqrt(ee1)/ee1, kme1/km1]) ))
+   '''
+   sampName = 'TT'
+   hname = 'Lep0Eta'
+   h_emu = self.t.GetNamedHisto('%s_%s_%s'%(hname, 'ElMu', level), sampName)
+   h_ee  = self.t.GetNamedHisto('%s_%s_%s'%(hname, 'ElEl', '2jetsnomet' if level == '2jets' else level), sampName)
+   h_mu  = self.t.GetNamedHisto('%s_%s_%s'%(hname, 'MuMu', '2jetsnomet' if level == '2jets' else level), sampName)
+   y_emu = h_emu.Integral()*304.32
+   y_mu  = h_mu .Integral()*304.32
+   y_ee  = h_ee .Integral()*304.32
+   d_ee = 0.5*y_emu*ke; d_ee_err = d_ee*(kee/ke)
+   d_mu = 0.5*y_emu*km; d_mu_err = d_mu*(kme/km)
+   hdata.SetBinContent(1, y_ee); hdata.SetBinError(1, y_ee/sqrt(h_ee.GetEntries()));
+   hdata.SetBinContent(2, y_mu); hdata.SetBinError(2, y_mu/sqrt(h_mu.GetEntries()));
+   hpred.SetBinContent(1, d_ee); hpred.SetBinError(1, d_ee_err)
+   hpred.SetBinContent(2, d_mu); hpred.SetBinError(2, d_mu_err)
+
+   p = HistoComp(outpath, doRatio = True, doNorm = False)
+   hdata .SetLineWidth(1); hdata .SetMarkerSize(1.2); hdata .SetMarkerColor(1); hdata .SetMarkerStyle(20)
+   hdata.SetFillColor(0); hdata.SetFillStyle(0)
+   hpred.SetFillStyle(3144); hpred.SetFillColor(kAzure-8)
+   p.SetPlotMaxScale(1.5)
+   p.SetLumi(304.32)
+   p.AddHisto(hpred, 'l', 'e2', '0.5 x k_{ll} x t#bar{t} e#mu MC', kAzure+2, 2)
+   p.AddHisto(hdata, 'pe', '','Same-flavor t#bar{t} MC', 1)
+   p.SetBinLabels(['ee','#mu#mu'])
+   p.SetYratioTitle('Ratio')
+   p.SetYtitle('t#bar{t} events')
+   rmin, rmax = ratio
+   p.SetLegendPos(0.15, 0.6, 0.5, 0.8, ncol=1)
+   p.SetRatioMin(rmin); p.SetRatioMax(rmax)
+   p.SetOutName('DYDDeffClosure_'+level)
+   p.autoRatio = True
+   p.PlotWithData = True
+   p.Draw(0)
+
  def PrintDYestimate(self, doSF = False, name = '', level = ''):
+   hee   = self.GetDYhisto(elname, level, False)
+   hmm   = self.GetDYhisto(muname, level, False)
    self.SetChanAndLevel('', level)
    self.SetMode('SF' if doSF else 'OF')
    if name == '': name = 'DYDD_%s_%s'%('SF' if doSF else 'OF',self.GetLevel())
@@ -334,7 +398,7 @@ class DYDD:
    t.bar()
    t.write()
 
- def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', lumi = 296.1, massRange = [91-15, 91+15], mode = '', histonameprefix = 'H', hname = 'DY_InvMass'):
+ def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', DYsamples = 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50', DataSamples = 'HighEGJet,SingleMuon, DoubleMuon', lumi = 304.32, massRange = [91-15, 91+15], mode = '', histonameprefix = 'H', hname = 'DY_InvMass'):
    self.SetPath(path)
    self.SetOutPath(outpath)
    self.t = TopHistoReader(path)

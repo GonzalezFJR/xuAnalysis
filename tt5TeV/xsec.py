@@ -4,7 +4,7 @@ sys.path.append(basepath)
 
 from scripts.DrellYanDataDriven import DYDD
 from scripts.NonpromptDataDriven import NonpromptDD
-from scripts.CrossSection import CrossSection
+from scripts.CrossSection import CrossSection, Lumi
 
 process = processDic
 DYsamples   = processDic['DY']
@@ -24,7 +24,7 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = False):
   bkg.append(['tW',            process['tW'],   0.20])
   bkg.append(['Nonprompt lep', process['Nonprompt'], 0.50])
   if not doDD:# or chan == 'MuMu' or chan == 'ElEl':
-    bkg.append(['DY',            process['DY'],   0.30])
+    bkg.append(['DY',            process['DY'],   0.00])
   bkg.append(['VV',            process['VV'],   0.30])
   signal   = ['tt',            process['tt']]
   data     = process['data']
@@ -32,13 +32,13 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = False):
   modunc = "pdf, scale"#, isr, fsr"
 
   x.ReadHistos(path, chan, lev, bkg = bkg, signal = signal, data = data, expUnc = expunc, modUnc = modunc)
-  x.SetLumi(296.1)
-  x.SetLumiUnc(0.013)
-  x.AddModUnc('Underlying Event','TT_TuneCP5up','TT_TuneCP5down')
-  x.AddModUnc('hdamp','TT_hdampUP','TT_hdampDOWN')
+  x.SetLumi(Lumi)
+  x.SetLumiUnc(0.015)
+  #x.AddModUnc('Underlying Event','TT_TuneCP5up','TT_TuneCP5down')
+  #x.AddModUnc('hdamp','TT_hdampUP','TT_hdampDOWN')
 
   thr = TopHistoReader(path)
-  thr.SetLumi(296.1)
+  thr.SetLumi(Lumi)
   hname = 'Lep0Eta_%s_%s'%(chan, lev)
   if os.path.isfile(path+'/TTPS.root'):
     nom   = thr.GetNamedHisto(hname, 'TTPS').Integral()
@@ -80,6 +80,6 @@ def xsec(chan = 'ElMu', lev = '2jets', doDD = False):
   x.AddToTxt('ttxsec', labdic[chan])
 
 lev = '2jets'
-xsec('ElMu',lev,1)
-xsec('MuMu',lev,1)
-xsec('ElEl',lev,1)
+xsec('ElMu',lev,0)
+xsec('MuMu',lev,0)
+xsec('ElEl',lev,0)

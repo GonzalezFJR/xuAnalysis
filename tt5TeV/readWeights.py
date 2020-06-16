@@ -27,7 +27,7 @@ outpath = './outputs/'
 
 ## PDF and scale systematics
 def DrawWeightSystematics(sample, chan = 'ElMu', lev = '2jets'):
-  w = WeightReader(path, outpath, chan, lev, sampleName = sample, pathToTrees=pathToTrees, motherfname=motherfname, PDFname = 'PDFweights', ScaleName = 'ScaleWeights', lumi = 296.1, histoprefix='') #59.7
+  w = WeightReader(path, outpath, chan, lev, sampleName = sample, pathToTrees=pathToTrees, motherfname=motherfname, PDFname = 'PDFweights', ScaleName = 'ScaleWeights', lumi = 304.32, histoprefix='') #59.7
   w.PrintMEscale('ScaleWeights_'+chan+'_'+lev)
   w.PrintPDFyields('PDFweights_'+chan+'_'+lev)
   #w.PrintPSunc('PSunc_'+chan+'_'+lev)

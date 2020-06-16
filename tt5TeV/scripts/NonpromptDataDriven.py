@@ -141,7 +141,7 @@ class NonpromptDD:
    t.write()
 
  ### Init
- def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', process = {}, prompt = [], nonprompt = [], lumi = 296.1, histonameprefix = 'H', yieldsSSname = 'SSYields'):
+ def __init__(self, path, outpath = './temp/', chan = 'ElMu', level = '2jets', process = {}, prompt = [], nonprompt = [], lumi = 304.32, histonameprefix = 'H', yieldsSSname = 'SSYields'):
    self.SetPath(path)
    self.t = TopHistoReader(self.GetPath())
    self.t.SetHistoNamePrefix(histonameprefix)

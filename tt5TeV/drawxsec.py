@@ -65,6 +65,7 @@ def DrawFig(xsecfile = '', values = ''):
   outdir = outpath
   measurements = []
   if os.path.isfile(xsecfile):
+    print 'Reading file: ', xsecfile
     f = open(xsecfile)
     for l in f.readlines():
       if l.replace(' ', '') in ['', '\\']: continue
@@ -104,7 +105,7 @@ def DrawFig(xsecfile = '', values = ''):
       
   gstat.SetFillColorAlpha(kTeal+2, 0.8);
   gstat.SetLineWidth  (0);
-  gstat.SetMarkerColor(kWhite);
+  gstat.SetMarkerColor(1);#kWhite);
   gstat.SetMarkerSize (0.8);
   gstat.SetMarkerStyle(kFullCircle);
   gsyst.SetFillColor(kCyan+2);
@@ -113,7 +114,7 @@ def DrawFig(xsecfile = '', values = ''):
   glumi.SetLineWidth(0);
 
   
-  canvas = TCanvas('c', 'c')
+  canvas = TCanvas('c', 'c', 10, 10, 1200, 800)
   canvas.SetLeftMargin(canvas.GetRightMargin());
   margin = 0.9
   xmin = xsec*(1-margin); xmax = xsec*(1+margin)
@@ -135,7 +136,7 @@ def DrawFig(xsecfile = '', values = ''):
   gsyst.Draw("p2,same");
   gstat.Draw("p2,same");
 
-  text.append(DrawTLatex(42, 0.65, 0.935, 0.04, 12, '296.1 pb^{-1} (5.02 TeV)'))
+  text.append(DrawTLatex(42, 0.65, 0.935, 0.04, 12, '304.3 pb^{-1} (5.02 TeV)'))
   text.append(DrawTLatex(61, 0.10, 0.93, 0.06, 11, "CMS"))
   text.append(DrawTLatex(52, 0.195, 0.925, 0.052, 11, "Preliminary"))
 

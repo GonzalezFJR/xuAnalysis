@@ -5,6 +5,7 @@ from ROOT.TMath import Sqrt as sqrt
 from plotter.OutText import OutText
 
 from tt5TeV import lev, level, invlevel
+Lumi = 304.32#296.1
 
 class CrossSection:
   
@@ -222,9 +223,9 @@ class CrossSection:
     effunc = self.GetEffUnc()
     accunc = self.GetAccUnc()
     bkgunc2 = 0
-    for b in [x.GetName() for x in self.bkg]: bkgunc2 = self.GetXsecBkgRelUnc(b)*self.GetXsecBkgRelUnc(b)
+    for b in [x.GetName() for x in self.bkg]: bkgunc2 += self.GetXsecBkgRelUnc(b)*self.GetXsecBkgRelUnc(b)
     return sqrt(effunc*effunc + accunc*accunc + bkgunc2)
- 
+
   def GetXsecLumiUnc(self):
     ''' Returns the xsec lumi uncertainty on cross section '''
     #return self.GetXsec()*(1/self.GetLumi() - 1/(self.GetLumi() * (1+self.GetLumiUnc()) ))
@@ -379,7 +380,7 @@ class CrossSection:
     files = GetFiles(self.pathToTrees, self.motherfname)
     for f in files: self.treesow.Add(f)
 
-  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = 296.1, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = [], histoPrefix = ''):
+  def ReadHistos(self, path, chan = 'ElMu', level = '2jets', lumi = Lumi, lumiunc = 0.04, bkg = [], signal = [], data = '', expUnc = [], modUnc = [], histoPrefix = ''):
     ''' Set the xsec from histos '''
     if isinstance(expUnc, str): expUnc = expUnc.replace(' ', '').split(',')
     if isinstance(modUnc, str): modUnc = modUnc.replace(' ', '').split(',')
@@ -415,7 +416,7 @@ class CrossSection:
     if 'pdf' in modUnc or 'PDF' in modUnc or 'Scale' in modUnc or 'ME' in modUnc or 'scale' in modUnc:
       pathToTrees = self.pathToTrees #'/pool/ciencias/userstorage/juanr/nanoAODv4/5TeV/5TeV_5sept/'
       motherfname = self.motherfname #'TT_TuneCP5_PSweights_5p02TeV'
-      w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=296.1, histoprefix=histoPrefix)
+      w = WeightReader(path, '',chan, level, sampleName='TT', pathToTrees=pathToTrees, motherfname=motherfname, PDFname='PDFweights', ScaleName='ScaleWeights', lumi=Lumi, histoprefix=histoPrefix)
       #w.SetSampleName(signalName)
       if 'pdf' in modUnc or 'PDF' in modUnc: self.AddModUnc('PDF',w.GetPDFandAlphaSunc())
       if 'scale' in modUnc or 'ME' in modUnc: self.AddModUnc('Scale ME',w.GetMaxRelUncScale())
@@ -426,7 +427,7 @@ class CrossSection:
   def __init__(self, outpath = './temp/', lev = '', chan = '', genEvents = 1, fiduEvents = 1, textformat = "txt"):
     self.SetTextFormat(textformat)
     self.SetThXsec(68.9)
-    self.SetLumi(296.1)
+    self.SetLumi(Lumi)
     self.SetLumiUnc(0.035) # Relative
     self.SetChan(chan); self.SetLevel(lev)
     self.SetGenEvents(genEvents)   

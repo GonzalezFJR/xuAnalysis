@@ -12,6 +12,8 @@ from modules.PrefireCorr import PrefCorr5TeV
 from modules.GetBTagSF import BtagReader
 from modules.SFreader import SFreader
 from modules.TMVAreader import MVATool, MVAVar
+from modules.ElecScaleSmear import elecScale5TeV
+from framework.EventLog import EventLog
 #from MuonTrigSFPbPb import GetMuonTrigSF, GetMuonTrigEff, GetMuonEff, GetMuonEffDimuon
 
 ttnomname = 'TT'
@@ -31,10 +33,11 @@ class lev():
   ZVeto    = 1
   MET      = 2
   jets2    = 3
-  btag1    = 4
-  ww       = 5
-level = {lev.dilepton:'dilepton', lev.ZVeto:'ZVeto', lev.MET:'MET', lev.jets2:'2jets', lev.btag1:'1btag', lev.ww:'ww'}
-invlevel = {'dilepton':lev.dilepton, 'ZVeto':lev.ZVeto, 'MET':lev.MET, '2jets':lev.jets2, '1btag':lev.btag1, 'ww':lev.ww}
+  jets2nomet = 4
+  btag1    = 5
+  ww       = 6
+level = {lev.dilepton:'dilepton', lev.ZVeto:'ZVeto', lev.MET:'MET', lev.jets2:'2jets', lev.jets2nomet:'2jetsnomet', lev.btag1:'1btag', lev.ww:'ww'}
+invlevel = {'dilepton':lev.dilepton, 'ZVeto':lev.ZVeto, 'MET':lev.MET, '2jets':lev.jets2, '2jetsnomet':lev.jets2nomet, '1btag':lev.btag1, 'ww':lev.ww}
 
 ### Systematic uncertainties
 class systematic():
@@ -73,9 +76,9 @@ class datasets():
   MuonEG     = 4
 dataset = {datasets.SingleElec:'HighEGJet', datasets.SingleMuon:'SingleMuon', datasets.DoubleMuon:'DoubleMuon'}
 
-
 def GetElecPt(pt, eta, ecorr = 1, isdata = False):
   # ecorr: correction factor [calibrated energy]/[miniAOD energy]
+  return pt
   fact = 1
   if abs(eta) < 1.479: #barrel
     fact = (1.016-0.0035) if isdata else 1.005
@@ -85,6 +88,7 @@ def GetElecPt(pt, eta, ecorr = 1, isdata = False):
 
 tr = TRandom(500)
 def GetElecPtSmear(pt, eta, isdata = False):
+  return pt
   if(isdata): return pt
   mass = 91.1876
   val = 1.786 if abs(eta) < 1.479 else 3.451
@@ -128,6 +132,8 @@ class tt5TeV(analysis):
 
   def init(self):
     # Load SF files
+    self.evtlog = EventLog([])#evtlist)
+    self.elecES = elecScale5TeV()
     if not self.isData:
       # Lepton and trigger SF
       self.LoadHisto('LepMVA_elec',      basepath+'inputs/SFLepMVA/final_ele_loosetotightSF.root', 'EGamma_SF2D') #
@@ -257,8 +263,11 @@ class tt5TeV(analysis):
     self.JetPtCut  = 25
     self.LepPtCut  = 10
     self.Lep0PtCut = 20
-    self.metcut    = 30
+    self.metcut    = 40
     self.doLepMVA  = True
+    
+    self.doMuonScaleCorrections = True
+    self.doElecScaleCorrections = True
 
     # Load TMVA reader
     pathToWeights = '/nfs/fanae/user/sscruz/TW_train/AnalysisPAF/plotter/TW/StableWeights/bdtForTWv4/weights/TMVAClassification_GradBoost_2000_0.01.weights.xml'
@@ -328,9 +337,9 @@ class tt5TeV(analysis):
     self.NewHisto('MET_MuMu_2jetsnomet', '', '', '', 30,0,150)
 
     ### Yields histos
-    if self.isTT: self.NewHisto('FiduEvents', '', '', '', 5,0,5)
     for key_chan in chan:
       ichan = chan[key_chan]
+      if self.isTT: self.NewHisto('FiduEvents', ichan, '', '', 5,0,5)
       for key_syst in systlabel.keys():
         if not self.doSyst and key_syst != systematic.nom: continue
         isyst = systlabel[key_syst]
@@ -437,8 +446,8 @@ class tt5TeV(analysis):
           self.NewHisto('Jet0noBEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
           self.NewHisto('Jet1noBPt2j1b',   ichan,ilevel,isyst, 14, 25, 200)
           self.NewHisto('Jet1noBEta2j1b',   ichan,ilevel,isyst, 50, -2.5, 2.5)
-          self.NewHisto('BDT1j1b',   ichan,ilevel,isyst, 50,-1, 1)
-          self.NewHisto('BDT2j1b',   ichan,ilevel,isyst, 50,-1, 1)
+          self.NewHisto('BDT1j1b',   ichan,ilevel,isyst, 100,-0.8, -0.2)#-1, 1)
+          self.NewHisto('BDT2j1b',   ichan,ilevel,isyst, 100,-1, 1)
   def FillHistograms(self, leptons, jets, pmet, ich, ilev, isys):
     ''' Fill all the histograms. Take the inputs from lepton list, jet list, pmet '''
     if self.SS: return               # Do not fill histograms for same-sign events
@@ -499,7 +508,8 @@ class tt5TeV(analysis):
     elif njet == 1: nbtagnjetsnum = nbtag + 1
     elif njet == 2: nbtagnjetsnum = nbtag + 3
     else          : nbtagnjetsnum = 6
-    self.GetHisto('NBtagNJets', ich, ilev,isys).Fill(nbtagnjetsnum, self.weight)
+    if ich == ch.ElMu or (met > self.metcut and (abs(mll-91)>15)):
+      self.GetHisto('NBtagNJets', ich, ilev,isys).Fill(nbtagnjetsnum, self.weight)
     
     if ((njet == 1 and nbtag==1) or (njet == 2 and nbtag==1) or (njet == 2 and nbtag==2)):
       if (njet == 1 and nbtag==1): nbtagnjetsnum2 = 0
@@ -553,32 +563,33 @@ class tt5TeV(analysis):
     #  self.GetHisto('JetAllDCsv', ich,ilev,isys).Fill(ijet.GetDeepCSV(), self.weight)
     
     #tW
-    if (njet==1 and nbtag==1):
-      self.GetHisto('BDT1j1b',ich,ilev,isys).Fill(tWmvaVal1j1b, self.weight)
-      self.GetHisto('Jet0Pt1j1b',   ich,ilev,isys).Fill(jets[0].Pt(), self.weight)
-      self.GetHisto('Jet0Eta1j1b',   ich,ilev,isys).Fill(jets[0].Eta(), self.weight)
+    if ich == ch.ElMu or (met > self.metcut and (abs(mll-91)>15)):
+      if (njet==1 and nbtag==1):
+        self.GetHisto('BDT1j1b',ich,ilev,isys).Fill(tWmvaVal1j1b, self.weight)
+        self.GetHisto('Jet0Pt1j1b',   ich,ilev,isys).Fill(jets[0].Pt(), self.weight)
+        self.GetHisto('Jet0Eta1j1b',   ich,ilev,isys).Fill(jets[0].Eta(), self.weight)
     
-    if (njet==2 and nbtag==2):
-	    self.GetHisto('Jet0Pt2j2b',   ich,ilev,isys).Fill(j0pt, self.weight)
-	    self.GetHisto('Jet0Eta2j2b',   ich,ilev,isys).Fill(j0eta, self.weight)
-	    self.GetHisto('Jet1Pt2j2b',   ich,ilev,isys).Fill(j1pt, self.weight)
-	    self.GetHisto('Jet1Eta2j2b',   ich,ilev,isys).Fill(j1eta, self.weight) 
-    if (njet==2 and nbtag==1): 
-      self.GetHisto('BDT2j1b',ich,ilev,isys).Fill(tWmvaVal2j1b, self.weight)
-      self.GetHisto('Jet0Pt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
-      self.GetHisto('Jet0Eta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)
-      self.GetHisto('Jet1Pt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
-      self.GetHisto('Jet1Eta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
-      if (j0deepcsv > 0.4941):
-        self.GetHisto('Jet0BPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
-        self.GetHisto('Jet0BEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)		
-        self.GetHisto('Jet1noBPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
-        self.GetHisto('Jet1noBEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
-      elif (j1deepcsv > 0.4941):
-        self.GetHisto('Jet1BPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
-        self.GetHisto('Jet1BEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)		
-        self.GetHisto('Jet0noBPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
-        self.GetHisto('Jet0noBEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight) 
+      if (njet==2 and nbtag==2):
+	      self.GetHisto('Jet0Pt2j2b',   ich,ilev,isys).Fill(j0pt, self.weight)
+	      self.GetHisto('Jet0Eta2j2b',   ich,ilev,isys).Fill(j0eta, self.weight)
+	      self.GetHisto('Jet1Pt2j2b',   ich,ilev,isys).Fill(j1pt, self.weight)
+	      self.GetHisto('Jet1Eta2j2b',   ich,ilev,isys).Fill(j1eta, self.weight) 
+      if (njet==2 and nbtag==1): 
+        self.GetHisto('BDT2j1b',ich,ilev,isys).Fill(tWmvaVal2j1b, self.weight)
+        self.GetHisto('Jet0Pt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+        self.GetHisto('Jet0Eta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)
+        self.GetHisto('Jet1Pt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+        self.GetHisto('Jet1Eta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
+        if (j0deepcsv > 0.4941):
+          self.GetHisto('Jet0BPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+          self.GetHisto('Jet0BEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight)		
+          self.GetHisto('Jet1noBPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+          self.GetHisto('Jet1noBEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)
+        elif (j1deepcsv > 0.4941):
+          self.GetHisto('Jet1BPt2j1b',   ich,ilev,isys).Fill(j1pt, self.weight)
+          self.GetHisto('Jet1BEta2j1b',   ich,ilev,isys).Fill(j1eta, self.weight)		
+          self.GetHisto('Jet0noBPt2j1b',   ich,ilev,isys).Fill(j0pt, self.weight)
+          self.GetHisto('Jet0noBEta2j1b',   ich,ilev,isys).Fill(j0eta, self.weight) 
 
   def FillYieldsHistos(self, ich, ilev, isyst):
     ''' Fill histograms for yields. Also for SS events for the nonprompt estimate '''
@@ -722,31 +733,34 @@ class tt5TeV(analysis):
           if pdgid == 5: ngenBJet+=1
     
         # Fill fidu yields histo 
+        histoname = 'FiduEvents_%s'%chan[genChan]
         if genMll >= 20 and genLep[0].Pt() >= self.Lep0PtCut:
-          self.obj['FiduEvents'].Fill(lev.dilepton)
+          self.obj[histoname].Fill(lev.dilepton)
           if genChan == ch.ElEl or genChan == ch.MuMu:
             if abs(genMll - 90) > 15:
-              self.obj['FiduEvents'].Fill(lev.ZVeto)
+              self.obj[histoname].Fill(lev.ZVeto)
               if genMET > self.metcut:
-                self.obj['FiduEvents'].Fill(lev.MET)
+                self.obj[histoname].Fill(lev.MET)
                 if ngenJet >= 2:
-                  self.obj['FiduEvents'].Fill(lev.jets2)
-                  if ngenBJet >= 1: self.obj['FiduEvents'].Fill(lev.btag1)
+                  self.obj[histoname].Fill(lev.jets2)
+                  if ngenBJet >= 1: self.obj[histoname].Fill(lev.btag1)
           else:
-            self.obj['FiduEvents'].Fill(lev.ZVeto)
-            self.obj['FiduEvents'].Fill(lev.MET)
+            self.obj[histoname].Fill(lev.ZVeto)
+            self.obj[histoname].Fill(lev.MET)
             if ngenJet >= 2:
-              self.obj['FiduEvents'].Fill(lev.jets2)
-              if ngenBJet >= 1: self.obj['FiduEvents'].Fill(lev.btag1)
+              self.obj[histoname].Fill(lev.jets2)
+              if ngenBJet >= 1: self.obj[histoname].Fill(lev.btag1)
     
     ##### Muons
     for i in range(t.nMuon):
       p = TLorentzVector()
-      p.SetPtEtaPhiM(t.Muon_pt[i], t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
+      muonpt = t.Muon_pt[i] if not self.doMuonScaleCorrections else t.Muon_corrected_pt[i]
+      p.SetPtEtaPhiM(muonpt, t.Muon_eta[i], t.Muon_phi[i], t.Muon_mass[i])
       charge = t.Muon_charge[i]
       dxy = abs(t.Muon_dxy[i])
       dz  = abs(t.Muon_dz[i] )
       passLepMVAID = True
+      genPartFlav  = t.Muon_genPartFlav[i] if not self.isData else 1
 
       if not self.doLepMVA:
         # Tight ID
@@ -759,7 +773,8 @@ class tt5TeV(analysis):
         if t.Muon_sip3d[i] > 8                  : continue
         if dxy > 0.05 or dz > 0.1               : continue
         if t.Muon_jetIdx[i] >= 0:
-          if t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522: passLepMVAID = False
+          if     t.Jet_btagDeepB[t.Muon_jetIdx[i]] > 0.1522: passLepMVAID = False
+          if not t.Jet_btagDeepB[t.Muon_jetIdx[i]] > -999.  : passLepMVAID = False
         if t.Muon_miniPFRelIso_all[i] > 0.325 : passLepMVAID = False
         if t.Muon_mvaTTH[i] < 0.55            : passLepMVAID = False
         #if t.Muon_miniIsoId[i] < 4: passLepMVAID = False
@@ -767,17 +782,28 @@ class tt5TeV(analysis):
       # pT < 12 GeV, |eta| < 2.4
       if p.Pt() < self.LepPtCut or abs(p.Eta()) > 2.4: continue
       if (self.doLepMVA and passLepMVAID) or not self.doLepMVA:
-        self.selLeptons.append(lepton(p, charge, 13))
+        lep = lepton(p, charge, 13, genID = genPartFlav)
+        setattr(lep, 'jetId', t.Muon_jetIdx[i])
+        self.selLeptons.append(lep)
        
     ##### Electrons
     for i in range(t.nElectron):
       p      = TLorentzVector()
       pt     = t.Electron_pt[i]
       eta    = t.Electron_eta[i]
-      ecorr  = t.Electron_eCorr[i] if not self.isData else 1
-      ptcorr = GetElecPt(pt, eta, ecorr, self.isData)
-      ptcorr = GetElecPtSmear(ptcorr, eta, self.isData)
-      p.SetPtEtaPhiM(ptcorr, eta, t.Electron_phi[i], t.Electron_mass[i])
+      phi    = t.Electron_phi[i]
+      m      = t.Electron_mass[i]
+      ecorr  = t.Electron_eCorr[i]
+      r9     = t.Electron_r9[i]
+      if self.doElecScaleCorrections:
+        run = 306936
+        self.elecES.SetPrevCor(ecorr)
+        if self.isData:
+          pt, m = self.elecES.GetScaleCorr(run, pt, eta, phi, m, r9)
+        else: 
+          pt, m = self.elecES.GetSmearCorr(run, pt, eta, phi, m, r9)
+
+      p.SetPtEtaPhiM(pt, eta, phi, m)
       charge   = t.Electron_charge[i]
       etaSC    = abs(p.Eta());
       dEtaSC   = t.Electron_deltaEtaSC[i]
@@ -785,6 +811,7 @@ class tt5TeV(analysis):
       R9       = t.Electron_r9[i]
       dxy      = abs(t.Electron_dxy[i])
       dz       = abs(t.Electron_dz[i] )
+      genPartFlav  = t.Electron_genPartFlav[i] if not self.isData else 1
       passLepMVAID =  True
 
       if not self.doLepMVA:
@@ -805,19 +832,28 @@ class tt5TeV(analysis):
         if (t.Electron_miniPFRelIso_all[i] > 0.085): passLepMVAID = False
         if t.Electron_jetIdx[i] >= 0:
           if t.Jet_btagDeepB[t.Electron_jetIdx[i]] > 0.1522: passLepMVAID = False
+          if not t.Jet_btagDeepB[t.Electron_jetIdx[i]] > -999.: passLepMVAID = False
 
       # pT > 12 GeV, |eta| < 2.4
       if not convVeto: continue
       if p.Pt() < self.LepPtCut or abs(p.Eta()) > 2.5: continue
       if (self.doLepMVA and passLepMVAID) or (not self.doLepMVA):
-        self.selLeptons.append(lepton(p, charge, 11))
+        lep = lepton(p, charge, 11, genID = genPartFlav)
+        setattr(lep, 'jetId', t.Electron_jetIdx[i])
+        self.selLeptons.append(lep)
 
     leps = self.selLeptons
     pts  = [lep.Pt() for lep in leps]
     self.selLeptons = [lep for _,lep in sorted(zip(pts,leps))]
     self.selLeptons.reverse()
+    leps = self.selLeptons
 
-      
+    # Is dilep or semilep?
+    isprompt = True
+    #if len(leps) >= 2: isprompt = (leps[0].genID==1 or leps[0].genID==15) and (leps[1].genID==1 or leps[1].genID==15)
+    #if self.isTT and not self.doTTbarSemilep and  nGenLep < 2 and not isprompt: return
+    #if self.doTTbarSemilep and (nGenLep >= 2 or isprompt): return
+
     # Lepton SF
     self.SFelec = 1; self.SFmuon = 1; self.SFelecErr = 0; self. SFmuonErr = 0
     self.TrigSF = 1; self.TrigSFerr = 0; self.TrigSFUp = 1; self.TrigSFDo = 1;
@@ -851,9 +887,9 @@ class tt5TeV(analysis):
             sf,  err  = self.GetSFandErr('LepMVA_elec',      eta, pt)
             sfr, errr = self.GetSFandErr('LepMVA_elec_reco', eta, pt)
             fer = quad(err, errr)
-            self.SFmuon   *= sf*sfr
-            self.SFmuonUp *= (sf*sfr+(fer))
-            self.SFmuonDo *= (sf*sfr-(fer))
+            self.SFelec   *= sf*sfr
+            self.SFelecUp *= (sf*sfr+(fer))
+            self.SFelecDo *= (sf*sfr-(fer))
           else:
             #sf, err = self.GetSFandErr('ElecSF', lep.Eta(), lep.Pt())
             self.SFelec    *= self.sfr.GetSF(lep.Eta(), lep.Pt(), 'ElecEff',  0)
@@ -874,12 +910,21 @@ class tt5TeV(analysis):
       jid = t.Jet_jetId[i]
       flav = t.Jet_hadronFlavour[i] if not self.isData else -999999;
       # Jet ID > 1, tight Id
-      if not jid > 1: continue
+
+      #if not jid > 1: continue
       # |eta| < 2.4 
       if abs(p.Eta()) > 2.4: continue
       j = jet(p, csv, flav, jid, deepcsv, deepflav)
+      
       #if csv >= 0.8484 : j.SetBtag() ### Misssing CSVv2 SFs !!!! 
-      if not j.IsClean(self.selLeptons, 0.4): continue
+      #if not j.IsClean(self.selLeptons, 0.4): continue
+      #### Cleaning a la CMStools
+      isClean = True
+      for lep in self.selLeptons:
+        if lep.jetId == i: isClean = False
+      if not isClean: continue
+
+      if not jid > 1: continue
       if (abs(p.Eta())<4.7 and p.Pt>20): 
         jveto=jet(p, csv, flav, jid, deepcsv, deepflav)
         self.vetoJets.append(jveto)
@@ -904,6 +949,7 @@ class tt5TeV(analysis):
       self.selJetsJESDo = SortByPt(self.selJetsJESDo)
       self.selJetsJERUp = SortByPt(self.selJetsJERUp)
       self.selJetsJERDo = SortByPt(self.selJetsJERDo)
+   
 
     ##### MET
     #self.pmet.SetPtEtaPhiE(t.MET_pt, 0, t.MET_phi, 0)
@@ -942,7 +988,7 @@ class tt5TeV(analysis):
 
     passTrig = trigger[ich]
 
-    # TrigerSF
+    # TriggerSF
     if not self.isData:
       if   ich == ch.MuMu:
         mupos = l0 if l0.charge > 0 else l1
@@ -973,7 +1019,7 @@ class tt5TeV(analysis):
     if self.isData:
       if   self.sampleDataset == datasets.SingleElec:
         if   ich == ch.ElEl: passTrig = trigger[ch.ElEl]
-        elif ich == ch.ElMu: passTrig = trigger[ch.Elec] and not trigger[ch.Muon]
+        elif ich == ch.ElMu: passTrig = trigger[ch.ElEl] and not trigger[ch.MuMu]
         else:                passTrig = False
       elif self.sampleDataset == datasets.SingleMuon:
         if   ich == ch.MuMu: passTrig = trigger[ch.MuMu]
@@ -993,7 +1039,7 @@ class tt5TeV(analysis):
           if self.vetoJets[i].Pt() < 25:
             looseCentralPt.append(self.vetoJets[i].Pt())
             nLooseCentral=nLooseCentral+1
-            if self.selJets[0].GetDeepCSV()> 0.4941:
+            if self.vetoJets[i].GetDeepCSV()> 0.4941:
 		      nBTotal=nBTotal+1       
       DilepMETjetPt=(self.selJets[0].p+self.pmet+self.selLeptons[0].p+self.selLeptons[1].p).Pt()
       MSys=(self.selJets[0].p+self.pmet+self.selLeptons[0].p+self.selLeptons[1].p).M()
@@ -1060,20 +1106,21 @@ class tt5TeV(analysis):
     self.SetWeight(systematic.nom)
     weight = self.weight
     
-    if not passTrig: return
+    if not len(leps) >= 2: return
+    l0 = leps[0]; l1 = leps[1]
     self.SS = l0.charge*l1.charge > 0
+   
+    if not passTrig: return
     for isyst in systlabel.keys():
       if not self.doSyst and isyst != systematic.nom: continue
       if self.isData and isyst != systematic.nom: continue
       leps, jets, pmet = self.SetVariables(isyst)
       nJets = len(jets)
       nBtag = self.GetNBtagJets(jets, isyst)
-      if not len(leps) >= 2: continue
-      l0 = leps[0]; l1 = leps[1]
 
       ### Dilepton pair
-      if l0.Pt() < self.Lep0PtCut: continue
-      if InvMass(l0,l1) < 20: continue
+      if l0.Pt() < self.Lep0PtCut and l1.Pt() < self.Lep0PtCut: continue
+      if GetMinInvMass(leps) < 20: continue
       self.FillAll(ich, lev.dilepton, isyst, leps, jets, pmet)
       if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.dilepton)
 
@@ -1107,12 +1154,12 @@ class tt5TeV(analysis):
   
       ### Z Veto + MET cut
       if ich == ch.MuMu or ich == ch.ElEl:
+        if nJets >= 2:# and isyst == systematic.nom:
+          #self.GetHisto('MET', ich, '2jetsnomet', -1).Fill(pmet.Pt(), self.weight)
+          self.FillAll(ich, lev.jets2nomet, isyst, leps, jets, pmet)
         if abs(InvMass(l0,l1) - 91) < 15: continue
         self.FillAll(ich, lev.ZVeto, isyst, leps, jets, pmet)
         if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.ZVeto)
-        if nJets >= 2 and isyst == systematic.nom:
-          # Fill MET histos for events with 2 jets 
-          self.GetHisto('MET', ich, '2jetsnomet', -1).Fill(pmet.Pt(), self.weight)
         if pmet.Pt() < self.metcut: continue
         self.FillAll(ich,lev.MET,isyst,leps,jets,pmet)
         if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.MET)
@@ -1121,6 +1168,7 @@ class tt5TeV(analysis):
       if nJets < 2: continue
       self.FillAll(ich, lev.jets2, isyst, leps, jets, pmet)
       if self.isTTnom and isyst == systematic.nom: self.FillLHEweights(t, ich, lev.jets2)
+      #if isyst == systematic.nom and ich == ch.ElMu and not self.SS: print 'Found:', self.run, ' ', self.event
 
       ### 1 b-tag, CSVv2 Medium
       if nBtag < 1: continue 

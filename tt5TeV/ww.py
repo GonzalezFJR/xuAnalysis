@@ -8,6 +8,27 @@ from ROOT import kRed, kOrange, kBlue, kTeal, kGreen, kGray, kAzure, kPink, kCya
 from ROOT import TCanvas, gROOT
 gROOT.SetBatch(1)
 
+### Definition of the processes
+processDic = {
+'WW'  : 'WWTo2L2Nu',
+'VZ'  : 'WZTo3LNU,ZZTo2L2Nu,ZZTo4L',
+'W+Jets': 'W0JetsToLNu,W1JetsToLNu,W2JetsToLNu,W3JetsToLNu',#'WJetsToLNu,TTsemilep',
+'top'  : 'tW_noFullHad,  tbarW_noFullHad, TT, TTsemilep',
+'DY'  : 'DYJetsToLL_M_10to50,DYJetsToLL_MLL50',
+'data': 'HighEGJet, SingleMuon'}##SingleMuon
+processes = ['VZ', 'W+Jets', 'DY', 'top', 'WW']
+
+### Definition of colors for the processes
+colors ={
+'WW'  : kTeal+5,
+'W+Jets': kGray+2,
+'VZ'  : kOrange+1,
+'DY'  : kAzure+2,
+'top'  : kRed+1,
+'data': 1}
+
+
+
 hm = HistoManager(processes, systematics, '', path=path, processDic=processDic, lumi = Lumi)
 
 def Draw(var = 'H_Lep0Pt_ElMu_2jets', ch = '', lev = 'dilepton', rebin = 1, xtit = '', ytit = 'Events', doStackOverflow = False, binlabels = '', setLogY = False, maxscale = 1.6):

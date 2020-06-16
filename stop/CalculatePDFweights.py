@@ -92,6 +92,7 @@ parser.add_argument('--mLSP',         default=100  , help = 'Neutralino mass')
 parser.add_argument('--BS',          action='store_true'  , help = 'Do BS region')
 parser.add_argument('--SR',          action='store_true'  , help = 'Do signal region')
 parser.add_argument('--region',       default='SR'  , help = 'Select the region')
+parser.add_argument('--chan','-c',       default='emu'  , help = 'Select the channel')
 parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
  
 #args = parser.parse_args()
@@ -100,6 +101,7 @@ args, unknown = parser.parse_known_args()
 ms   = int(args.mStop)
 ml   = int(args.mLSP)
 year = int(args.year)
+chan = args.chan
 sendJobs = args.sendJobs
 argprocess = ''
 
@@ -112,10 +114,12 @@ if args.BS: region = 'BS'
 if args.SR: region = 'SR'
 
 # Set constants
-outpath = baseoutpath+'/PDFunc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
+outpath = baseoutpath+'/PDFunc/%s/%s/%i/mass%i_%i/'%(region, chan, year, ms, ml)
 os.system("mkdir -p %s"%outpath)
 
 # Create the looper, set readOutput to true to read previous temporary rootfiles created for each sample
+path = {}
+path[year] = pathToTrees(year, chan, region)
 pathToFiles = path[year]
 l = looper(path=pathToFiles if region=='SR' else pathBS[year], nSlots=nSlots, treeName = 'MiniTree', options = 'merge', outpath = outpath+'tempfiles/', readOutput=True)#, sendJobs=sendJobs)
 

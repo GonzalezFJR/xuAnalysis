@@ -37,3 +37,11 @@ You need to have:
 - FSR uncertainy for 2016
 
 
+### Summary scripts
+- CreateRootFiles.py
+- ReadFromCombineRootfile.py
+- ttmt2Tails.py
+- SS.py
+- CalculatePDFweights.py
+- RunFSR2016.py
+- CraftUncertainties.py

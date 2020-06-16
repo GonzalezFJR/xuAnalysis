@@ -1,6 +1,6 @@
 import os, sys
 #from config import *
-from config import GetLumi, path, pathBS, baseoutpath, webpath, model
+from config import GetLumi, baseoutpath, webpath, model, pathToTrees
 basepath = os.path.abspath(__file__).rsplit('/xuAnalysis/',1)[0]+'/xuAnalysis/'
 sys.path.append(basepath)
 from plotter.TopHistoReader import TopHistoReader, HistoManager
@@ -16,12 +16,13 @@ doSaveHistos = False
 doPlot = True
 
 parser = argparse.ArgumentParser(description='To select masses and year')
-parser.add_argument('--year',         default='2018'   , help = 'Year')
+parser.add_argument('--year','-y',    default='2018'   , help = 'Year')
 parser.add_argument('--mStop',        default=275  , help = 'Stop mass')
 parser.add_argument('--mLSP',         default=100  , help = 'Neutralino mass')
 parser.add_argument('--BS',          action='store_true'  , help = 'Do BS region')
 parser.add_argument('--SR',          action='store_true'  , help = 'Do signal region')
 parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
+parser.add_argument('--chan','-c'   , default='emu'  , help = 'Select channel')
  
 #args = parser.parse_args()
 args, unknown = parser.parse_known_args()
@@ -29,6 +30,7 @@ args, unknown = parser.parse_known_args()
 ms   = int(args.mStop)
 ml   = int(args.mLSP)
 year = int(args.year) if args.year.isdigit() else args.year
+chan = args.chan
 sendJobs = args.sendJobs
 
 region = 'SR'
@@ -38,8 +40,12 @@ treeName="MiniTree"
 syst = 'MuonEff, ElecEff, Trig, JER, MuonES, Uncl, Btag, MisTag, PU, JESCor, JESUnCor, ElecES'
 systlist = [x+y for x in syst.replace(' ','').split(',') for y in ['Up','Down']]
 
-GetOutPath = lambda year, region : baseoutpath+'/ttmt2/%s/%s/'%(str(year), region)
-outpath = GetOutPath(year, region) 
+path = {}
+path[year] = pathToTrees(year, chan, region)
+
+#GetOutPath = lambda year, region : baseoutpath+'/ttmt2/%s/%s/'%(str(year), region)
+GetOutPath = lambda year, region, chan, ms, ml :  baseoutpath+'/ttmt2/%s/%s/%s/mass%i_%i/'%(region, chan, str(year), ms, ml)
+outpath = GetOutPath(year, region, chan, ms, ml) 
 
 vardic = {
 'mt2'      : 'm_{T2} (GeV)',
@@ -149,7 +155,7 @@ prob1 = self.pd1.GetProb(values)
 '''%(ms, ml)
 
 if doSaveHistos:
-  l = looper(path=path[year] if not region=='BS' else pathBS[year], nSlots = 4, treeName = 'MiniTree', options = 'merge', outpath = GetOutPath(year, region)+'/tempfiles/', readOutput=True)
+  l = looper(path=path[year] if not region=='BS' else pathBS[year], nSlots = 4, treeName = 'MiniTree', options = 'merge', outpath = GetOutPath(year, region, chan, ms, ml)+'/tempfiles/', readOutput=True)
   l.AddHeader('from framework.mva import ModelPredict\n')
   l.AddInit('      self.pd1 = ModelPredict("%s")\n'%model)
   
@@ -224,9 +230,9 @@ if doSaveHistos:
 ########################### Plot
 #########################################################################
 
-GetWebpath = lambda  year, region : webpath+'/ttmt2Tails/%s/%s/'%(str(year), region)
-path    = GetOutPath(year, region)
-outpath = GetWebpath(year, region)
+GetWebpath = lambda  year, region, chan, ms, ml : webpath+'/ttmt2Tails/%s/%s/%s/%s_%s'%(region, chan, str(year), str(ms), str(ml))
+path    = GetOutPath(year, region, chan, ms, ml)
+outpath = GetWebpath(year, region, chan, ms, ml)
 
 titdic = {
   'mt2' : 'm_{T2} (GeV)',
@@ -281,18 +287,30 @@ colors ={
 def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   pr = [ 'ttZ', 'tW', 'Othernonprompt', 'tWnonprompt', 'Semileptonictt', 'ttDilepNonprompt', 'ttnongaus', 'ttgaus', 'tt']
   if isinstance(year, str):
-    hm   = HistoManager(pr, syst, path=GetOutPath(2016, region), signalList = 'stop')
-    hm.ReadHistosFromFile(var)
-    hm17 = HistoManager(pr, syst, path=GetOutPath(2017, region), signalList = 'stop')
-    hm17.ReadHistosFromFile(var)
-    hm18 = HistoManager(pr, syst, path=GetOutPath(2018, region), signalList = 'stop')
-    hm18.ReadHistosFromFile(var)
-    hm.Add(hm17).Add(hm18)
+    if chan=='all':
+      hm     = HistoManager(pr, syst, path=GetOutPath(2016, region, 'emu'  , ms, ml), signalList = 'stop'); hm    .ReadHistosFromFile(var)
+      hm17   = HistoManager(pr, syst, path=GetOutPath(2017, region, 'emu'  , ms, ml), signalList = 'stop'); hm17  .ReadHistosFromFile(var)
+      hm18   = HistoManager(pr, syst, path=GetOutPath(2018, region, 'emu'  , ms, ml), signalList = 'stop'); hm18  .ReadHistosFromFile(var)
+      hmee   = HistoManager(pr, syst, path=GetOutPath(2016, region, 'ee'   , ms, ml), signalList = 'stop'); hmee  .ReadHistosFromFile(var)
+      hm17ee = HistoManager(pr, syst, path=GetOutPath(2017, region, 'ee'   , ms, ml), signalList = 'stop'); hm17ee.ReadHistosFromFile(var)
+      hm18ee = HistoManager(pr, syst, path=GetOutPath(2018, region, 'ee'   , ms, ml), signalList = 'stop'); hm18ee.ReadHistosFromFile(var)
+      hmmm   = HistoManager(pr, syst, path=GetOutPath(2016, region, 'mumu' , ms, ml), signalList = 'stop'); hmmm  .ReadHistosFromFile(var)
+      hm17mm = HistoManager(pr, syst, path=GetOutPath(2017, region, 'mumu' , ms, ml), signalList = 'stop'); hm17mm.ReadHistosFromFile(var)
+      hm18mm = HistoManager(pr, syst, path=GetOutPath(2018, region, 'mumu' , ms, ml), signalList = 'stop'); hm18mm.ReadHistosFromFile(var)
+      hm.Add(hm17).Add(hm18).Add(hmee).Add(hm17ee).Add(hm18ee).Add(hmmm).Add(hm17mm).Add(hm18mm)
+    else:
+      hm   = HistoManager(pr, syst, path=GetOutPath(2016, region, chan, ms, ml), signalList = 'stop')
+      hm.ReadHistosFromFile(var)
+      hm17 = HistoManager(pr, syst, path=GetOutPath(2017, region, chan, ms, ml), signalList = 'stop')
+      hm17.ReadHistosFromFile(var)
+      hm18 = HistoManager(pr, syst, path=GetOutPath(2018, region, chan, ms, ml), signalList = 'stop')
+      hm18.ReadHistosFromFile(var)
+      hm.Add(hm17).Add(hm18)
   else: 
     hm = HistoManager(pr, syst, path=path, signalList = 'stop')
   hm.ReadHistosFromFile(var)
   #hm.AddNormUnc({'tt':0.06, 'ttgaus':0.06, 'ttnongaus':0.3, 'ttDilepNonprompt':30, 'Semileptonictt':0.3, 'tWnonprompt':0.3, 'Nonprompt':0.3, 'ttZ':0.3,'tW':0.15})
-  outdir = GetWebpath(year, region)
+  outdir = GetWebpath(year, region, chan, ms, ml)
   s = Stack(outpath=outdir+'/stackplots/')
   s.SetLegendName(legendNames)
   s.SetColors(colors)
@@ -323,22 +341,34 @@ def StackPlot(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   s.SetPlotMinimum(1.)
   s.SetPlotMaxScale(1200)
   s.DrawStack(xtit, 'Events')
-
+  
 def StackPlotFancyRatios(var = 'mt2', xtit = 'm_{T2} (GeV)'):
   pr = [ 'ttZ', 'tW', 'Othernonprompt', 'tWnonprompt', 'Semileptonictt', 'ttDilepNonprompt', 'ttnongaus', 'ttgaus', 'tt']
   if isinstance(year, str):
-    hm   = HistoManager(pr, '', path=GetOutPath(2016, region), signalList = 'stop')
-    hm.ReadHistosFromFile(var)
-    hm17 = HistoManager(pr, '', path=GetOutPath(2017, region), signalList = 'stop')
-    hm17.ReadHistosFromFile(var)
-    hm18 = HistoManager(pr, '', path=GetOutPath(2018, region), signalList = 'stop')
-    hm18.ReadHistosFromFile(var)
-    hm.Add(hm17).Add(hm18)
+    if chan=='all':
+        hm     = HistoManager(pr, syst, path=GetOutPath(2016, region, 'emu'  , ms, ml), signalList = 'stop'); hm    .ReadHistosFromFile(var)
+        hm17   = HistoManager(pr, syst, path=GetOutPath(2017, region, 'emu'  , ms, ml), signalList = 'stop'); hm17  .ReadHistosFromFile(var)
+        hm18   = HistoManager(pr, syst, path=GetOutPath(2018, region, 'emu'  , ms, ml), signalList = 'stop'); hm18  .ReadHistosFromFile(var)
+        hmee   = HistoManager(pr, syst, path=GetOutPath(2016, region, 'ee'   , ms, ml), signalList = 'stop'); hmee  .ReadHistosFromFile(var)
+        hm17ee = HistoManager(pr, syst, path=GetOutPath(2017, region, 'ee'   , ms, ml), signalList = 'stop'); hm17ee.ReadHistosFromFile(var)
+        hm18ee = HistoManager(pr, syst, path=GetOutPath(2018, region, 'ee'   , ms, ml), signalList = 'stop'); hm18ee.ReadHistosFromFile(var)
+        hmmm   = HistoManager(pr, syst, path=GetOutPath(2016, region, 'mumu' , ms, ml), signalList = 'stop'); hmmm  .ReadHistosFromFile(var)
+        hm17mm = HistoManager(pr, syst, path=GetOutPath(2017, region, 'mumu' , ms, ml), signalList = 'stop'); hm17mm.ReadHistosFromFile(var)
+        hm18mm = HistoManager(pr, syst, path=GetOutPath(2018, region, 'mumu' , ms, ml), signalList = 'stop'); hm18mm.ReadHistosFromFile(var)
+        hm.Add(hm17).Add(hm18).Add(hmee).Add(hm17ee).Add(hm18ee).Add(hmmm).Add(hm17mm).Add(hm18mm)
+    else:
+      hm   = HistoManager(pr, syst, path=GetOutPath(2016, region, chan, ms, ml), signalList = 'stop')
+      hm.ReadHistosFromFile(var)
+      hm17 = HistoManager(pr, syst, path=GetOutPath(2017, region, chan, ms, ml), signalList = 'stop')
+      hm17.ReadHistosFromFile(var)
+      hm18 = HistoManager(pr, syst, path=GetOutPath(2018, region, chan, ms, ml), signalList = 'stop')
+      hm18.ReadHistosFromFile(var)
+      hm.Add(hm17).Add(hm18)
   else: 
     hm = HistoManager(pr, '', path=path, signalList = 'stop')
-  hm.ReadHistosFromFile(var)
+    hm.ReadHistosFromFile(var)
   #hm.AddNormUnc({'tt':0.06, 'ttgaus':0.06, 'ttnongaus':0.3, 'ttDilepNonprompt':30, 'Semileptonictt':0.3, 'tWnonprompt':0.3, 'Nonprompt':0.3, 'ttZ':0.3,'tW':0.15})
-  outdir = GetWebpath(year, region)
+  outdir = GetWebpath(year, region, chan, ms, ml)
   s = Stack(outpath=outdir+'/stackplots/')
   s.SetLegendName(legendNames)
   s.SetColors(colors)

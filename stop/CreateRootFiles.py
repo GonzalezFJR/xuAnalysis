@@ -17,13 +17,15 @@ gROOT.SetBatch(1)
 import argparse
 
 parser = argparse.ArgumentParser(description='To select masses and year')
-parser.add_argument('--year',         default=2018   , help = 'Year')
+parser.add_argument('--year','-y',    default=2018   , help = 'Year')
 parser.add_argument('--mStop',        default=275  , help = 'Stop mass')
 parser.add_argument('--mLSP',         default=100  , help = 'Neutralino mass')
 parser.add_argument('--BS',          action='store_true'  , help = 'Do BS region')
 parser.add_argument('--SR',          action='store_true'  , help = 'Do signal region')
 parser.add_argument('--region',       default='SR'  , help = 'Select the region')
+parser.add_argument('--channel','-c', default='emu'  , help = 'Select the channel')
 parser.add_argument('--sendJobs','-j'   , action='store_true'  , help = 'Send jobs!')
+
  
 #args = parser.parse_args()
 args, unknown = parser.parse_known_args()
@@ -32,12 +34,12 @@ ms   = int(args.mStop)
 ml   = int(args.mLSP)
 year = int(args.year)
 sendJobs = args.sendJobs
+chan = args.channel
 #nSlots = args.nSlots
 #argprocess = args.process
 #if   ',' in argprocess: argprocess = argprocess.replace(' ', '').split(',')
 #elif argprocess != '' : argprocess = [argprocess]
 argprocess = ''
-
 treeName="MiniTree"
 nSlots = 1
 
@@ -48,8 +50,17 @@ region = args.region
 if args.BS: region = 'BS'
 if args.SR: region = 'SR'
 
+path = {}
+path[year] = pathToTrees(year, chan, region)
+
+if chan in ['ee', 'mumu']:
+  for y in [2016, 2017, 2018]:
+    processDic[y]['stop_test'] = 'stop'
+    processDic[y]['tt_test'] = 'TTTo2L2Nu' if y != 2016 else 'TT'
+
+
 # Set constants
-outpath = baseoutpath+'/Unc/%s/%i/mass%i_%i/'%(region, year, ms, ml)
+outpath = baseoutpath+'/Unc/%s/%s/%i/mass%i_%i/'%(region, chan, year, ms, ml)
 os.system("mkdir -p %s"%outpath)
 
 # Create the looper, set readOutput to true to read previous temporary rootfiles created for each sample
@@ -92,7 +103,7 @@ hemsel = '''
    if t.TIsHEM: return
 '''
 selection = '''
- if self.outname.startswith('stop'):
+ if self.outname in ['stop', 'stop_test']:
    mStop = t.Tm_stop; mLSP = t.Tm_LSP%s
  elif self.outname == 'Nonprompt':
    passNonprompt = (t.TStatus != 1 and t.TStatus != 22)
@@ -114,6 +125,7 @@ l.AddExpr('weight1', [], '1')
 l.AddExpr('exprW', ['TWeight'], 'TWeight')
 l.AddExpr('vmet', ['TMET'], 'TMET')
 l.AddExpr('vmt2', ['TMT2'], 'TMT2')
+l.AddExpr('vmt2lblb', ['TMT2lblb'], 'TMT2lblb')
 l.AddExpr('vht',  ['THT' ], 'THT')
 l.AddExpr('vmll', ['TMll'], 'TMll')
 l.AddExpr('vpd', '', 'prob1', True)
@@ -132,16 +144,17 @@ elif region == 'CR':
   l.AddCut('(TMET < 50 and TMT2 < 80)', ['TMET', 'TMT2'])
 l.AddCut('TNJets >= 2', 'TNJets')
 l.AddCut('TNBtags >= 1', 'TNBtags')
-
 # Add histograms
 cut = ''
 weight = 'exprW'
 l.AddHisto('vpd',  'dnn',  20, 0, 1,   weight = weight, cut = '')
+l.AddHisto('vpd',  'dnnVIPS',  bins=[0.  , 0.05, 0.1 , 0.15, 0.2 , 0.25, 0.3 , 0.35, 0.4 , 0.45, 0.5 ,0.55, 0.6 , 0.65, 0.7 , 0.75, 0.8 , 0.85, 0.9 , 0.95, 0.98, 1.0],   weight = weight, cut = '')
 l.AddHisto('vpd',  'dnn_10bins',  10, 0, 1,   weight = weight, cut = '')
 l.AddHisto('vpd',  'dnn_30bins',  30, 0, 1,   weight = weight, cut = '')
 l.AddHisto('vpd',  'dnn_40bins',  40, 0, 1,   weight = weight, cut = '')
 l.AddHisto('vpd',  'dnn_5bins',  5, 0, 1,   weight = weight, cut = '')
 l.AddHisto('TMll', 'mll', 30, 0, 300, weight = weight, cut = '')
+l.AddHisto('TMT2lblb', 'mtwlblb', 30, 0, 300, weight = weight, cut = '')
 if region == 'SR':
   l.AddHisto('TMET', 'met', 25, 50, 300, weight = weight, cut = '')
   l.AddHisto('TMET', 'met_5bins', 5, 50, 300, weight = weight, cut = '')
@@ -149,6 +162,16 @@ if region == 'SR':
   l.AddHisto('TMT2', 'mt2_4bins', 4, 80, 160, weight = weight, cut = '')
   l.AddHisto('TMT2', 'mt2_3bins', 3, 80, 160, weight = weight, cut = '')
   l.AddHisto('TMT2', 'mt2_2bins', 2, 80, 160, weight = weight, cut = '')
+  l.AddHisto('TMT2',     'mt2_dnng80',     8,  80, 160, weight = weight, cut = 'vpd>0.80')
+  l.AddHisto('TMET',     'met_dnng80',     25, 50, 300, weight = weight, cut = 'vpd>0.80')
+  l.AddHisto('TMT2lblb', 'mt2lblb_dnng80', 25, 50, 300, weight = weight, cut = 'vpd>0.80')
+  l.AddHisto('TMT2',     'mt2_dnng90',     8,  80, 160, weight = weight, cut = 'vpd>0.90')
+  l.AddHisto('TMET',     'met_dnng90',     25, 50, 300, weight = weight, cut = 'vpd>0.90')
+  l.AddHisto('TMT2lblb', 'mt2lblb_dnng90', 25, 50, 300, weight = weight, cut = 'vpd>0.90')
+  l.AddHisto('TMT2',     'mt2_dnng95',     8,  80, 160, weight = weight, cut = 'vpd>0.95')
+  l.AddHisto('TMET',     'met_dnng95',     25, 50, 300, weight = weight, cut = 'vpd>0.95')
+  l.AddHisto('TMT2lblb', 'mt2lblb_dnng95', 25, 50, 300, weight = weight, cut = 'vpd>0.95')
+
 else:
   l.AddHisto('TMET', 'met', 30, 0, 300, weight = weight, cut = '')
   l.AddHisto('TMT2', 'mt2', 16, 0, 160, weight = weight, cut = 'vmt2 > 0')
@@ -166,8 +189,44 @@ l.AddHisto('TJet1Eta', 'jet1eta', 30, -2.4, 2.4, weight = weight, cut = '')
 l.AddHisto('THT', 'ht', 40, 0, 800, weight = weight, cut = '')
 l.AddHisto('TNJets', 'njets', 6, 1.5, 7.5, weight = weight, cut = '')
 l.AddHisto('TNBtags', 'nbtags', 3, 0.5, 3.5, weight = weight, cut = '')
-histos  = ['mt2',  'met',  'mll',  'dnn',  'dileppt',  'deltaphi',  'deltaeta',  'ht',  'lep0pt',  'lep1pt',  'lep0eta',  'lep1eta', 'njets', 'nbtags', 'jet0pt', 'jet1pt', 'jet0eta', 'jet1eta'] 
-histos += ['dnn_5bins', 'dnn_10bins', 'dnn_30bins', 'dnn_40bins']
+
+l.AddHisto('TMET', 'met_dnng0p95', 5, 50, 300, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TMT2', 'mt2_dnng0p95', 4, 80, 160, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TMET', 'met_dnng0p90', 5, 50, 300, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TMT2', 'mt2_dnng0p90', 4, 80, 160, weight = weight, cut = 'vpd>0.90')
+'''
+l.AddHisto('TDilep_Pt', 'dileppt_dnng0p95', 6, 0, 300, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TLep0Pt', 'lep0pt_dnng0p95', 9, 20, 200, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TLep1Pt', 'lep1pt_dnng0p95', 6, 20, 140, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TLep0Eta', 'lep0eta_dnng0p95', 8, -2.4, 2.4, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TLep1Eta', 'lep1eta_dnng0p95', 8, -2.4, 2.4, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('deltaphi', 'deltaphi_dnng0p95', 5, 0, 1, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('deltaeta', 'deltaeta_dnng0p95', 5, 0, 5, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TJet0Pt', 'jet0pt_dnng0p95', 9, 0, 450, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('THT', 'ht_dnng0p95', 8, 0, 800, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TNJets', 'njets_dnng0p95', 6, 1.5, 7.5, weight = weight, cut = 'vpd>0.95')
+l.AddHisto('TNBtags', 'nbtags_dnng0p95', 3, 0.5, 3.5, weight = weight, cut = 'vpd>0.95')
+
+l.AddHisto('TDilep_Pt', 'dileppt_dnng0p90', 6, 0, 300, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TLep0Pt', 'lep0pt_dnng0p90', 9, 20, 200, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TLep1Pt', 'lep1pt_dnng0p90', 6, 20, 140, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TLep0Eta', 'lep0eta_dnng0p90', 8, -2.4, 2.4, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TLep1Eta', 'lep1eta_dnng0p90', 8, -2.4, 2.4, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('deltaphi', 'deltaphi_dnng0p90', 5, 0, 1, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('deltaeta', 'deltaeta_dnng0p90', 5, 0, 5, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TJet0Pt', 'jet0pt_dnng0p90', 9, 0, 450, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('THT', 'ht_dnng0p90', 8, 0, 800, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TNJets', 'njets_dnng0p90', 6, 1.5, 7.5, weight = weight, cut = 'vpd>0.90')
+l.AddHisto('TNBtags', 'nbtags_dnng0p90', 3, 0.5, 3.5, weight = weight, cut = 'vpd>0.90')
+'''
+
+histos = ['mt2',  'met',  'mll',  'dnn',  'dileppt',  'deltaphi',  'deltaeta',  'ht',  'lep0pt',  'lep1pt',  'lep0eta',  'lep1eta', 'njets', 'nbtags', 'jet0pt', 'jet1pt', 'jet0eta', 'jet1eta']#, 'mtwlblb'] 
+#histos += ['dnn_10bins', 'dnn_30bins', 'dnn_40bins'] #histos += ['dnnVIPS']#
+#histos += ['dnn_5bins', 'dnn_10bins', 'dnn_30bins', 'dnn_40bins'] #histos += ['dnnVIPS']#
+#histos += ['met_dnng0p95', 'mt2_dnng0p95', 'met_dnng0p90', 'mt2_dnng0p90']
+#histos += ['met_dnng0p95', 'mt2_dnng0p95', 'dileppt_dnng0p95', 'lep0pt_dnng0p95', 'lep0pt_dnng0p95', 'lep1pt_dnng0p95', 'lep0eta_dnng0p95', 'lep1eta_dnng0p95', 'deltaphi_dnng0p95', 'deltaeta_dnng0p95', 'jet0pt_dnng0p95', 'ht_dnng0p95', 'njets_dnng0p95', 'nbtags_dnng0p95']
+#histos += ['met_dnng0p90', 'mt2_dnng0p90', 'dileppt_dnng0p90', 'lep0pt_dnng0p90', 'lep0pt_dnng0p90', 'lep1pt_dnng0p90', 'lep0eta_dnng0p90', 'lep1eta_dnng0p90', 'deltaphi_dnng0p90', 'deltaeta_dnng0p90', 'jet0pt_dnng0p90', 'ht_dnng0p90', 'njets_dnng0p90', 'nbtags_dnng0p90']
+#if region=='SR': histos += ['mt2_dnng80', 'met_dnng80', 'mt2lblb_dnng80', 'mt2_dnng90', 'met_dnng90', 'mt2lblb_dnng90', 'mt2_dnng95', 'met_dnng95', 'mt2lblb_dnng9']
 
 '''
 # Scan in MET
@@ -187,8 +246,8 @@ out = l.Run()
 if sendJobs: exit()
 # Create HistoManager with the out dictionary from the looper
 processes.pop(processes.index('data'))
-print 'processes: ', processes
-hm = HistoManager(processes, path = path[year] if region == 'SR' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000,indic = out)
+#print 'processes: ', processes
+hm = HistoManager(processes, path = path[year] if region == 'SR' else pathBS[year], processDic = processDic[year], lumi = GetLumi(year)*1000.,indic = out)
 
 # Function to save the histograms into combine rootfiles
 def save(name):
